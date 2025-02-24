@@ -9,6 +9,13 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.env
+
+# macOS metadata files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
