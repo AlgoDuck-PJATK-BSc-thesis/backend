@@ -17,4 +17,19 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Data\" />
+      <Folder Include="Modules\Cohort\" />
+      <Folder Include="Modules\Contest\" />
+      <Folder Include="Modules\Problem\" />
+      <Folder Include="Modules\Shop\" />
+      <Folder Include="Modules\User\UserAuth\JWTAuth\" />
+      <Folder Include="Modules\User\Controllers\" />
+      <Folder Include="Modules\User\DTOs\" />
+      <Folder Include="Modules\User\Models\" />
+      <Folder Include="Modules\User\Repositories\" />
+      <Folder Include="Modules\User\Services\" />
+      <Folder Include="Shared\Middleware\" />
+    </ItemGroup>
+
 </Project>

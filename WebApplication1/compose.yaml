@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: WebApplication1/Dockerfile
       args:
-        BUILD_CONFIGURATION: Release
+        BUILD_CONFIGURATION: Debug
     ports:
       - "${WEB_PORT:-8080}:8080"
       - "${WEB_PORT2:-8081}:8081"
