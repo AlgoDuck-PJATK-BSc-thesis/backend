@@ -8,6 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
     </ItemGroup>
 
@@ -18,18 +24,27 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Data\" />
-      <Folder Include="Modules\Cohort\" />
-      <Folder Include="Modules\Contest\" />
-      <Folder Include="Modules\Problem\" />
-      <Folder Include="Modules\Shop\" />
+      <Folder Include="Modules\Cohort\Controllers\" />
+      <Folder Include="Modules\Cohort\DTOs\" />
+      <Folder Include="Modules\Cohort\Repositories\" />
+      <Folder Include="Modules\Cohort\Services\" />
+      <Folder Include="Modules\Contest\Controllers\" />
+      <Folder Include="Modules\Contest\DTOs\" />
+      <Folder Include="Modules\Contest\Repositories\" />
+      <Folder Include="Modules\Contest\Services\" />
+      <Folder Include="Modules\Problem\Controllers\" />
+      <Folder Include="Modules\Problem\DTOs\" />
+      <Folder Include="Modules\Problem\Repositories\" />
+      <Folder Include="Modules\Problem\Services\" />
+      <Folder Include="Modules\Item\Controllers\" />
+      <Folder Include="Modules\Item\DTOs\" />
+      <Folder Include="Modules\Item\Repositories\" />
+      <Folder Include="Modules\Item\Services\" />
       <Folder Include="Modules\User\UserAuth\JWTAuth\" />
       <Folder Include="Modules\User\Controllers\" />
       <Folder Include="Modules\User\DTOs\" />
-      <Folder Include="Modules\User\Models\" />
       <Folder Include="Modules\User\Repositories\" />
       <Folder Include="Modules\User\Services\" />
-      <Folder Include="Shared\Middleware\" />
     </ItemGroup>
 
 </Project>
