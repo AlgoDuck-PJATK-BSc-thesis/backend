@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using WebApplication1.Modules.User.Models;
-using WebApplication1.Modules.Cohort.Models;
-using WebApplication1.Modules.Contest.Models;
-using WebApplication1.Modules.Item.Models;
-using WebApplication1.Modules.Problem.Models;
+using WebApplication1.Modules.UserModule.Models;
+using WebApplication1.Modules.CohortModule.Models;
+using WebApplication1.Modules.ContestModule.Models;
+using WebApplication1.Modules.DuelModule.Models;
+using WebApplication1.Modules.ItemModule.Models;
+using WebApplication1.Modules.ProblemModule.Models;
+using WebApplication1.Modules.AuthModule.Models;
 
 namespace WebApplication1.Data
 {
@@ -13,7 +15,7 @@ namespace WebApplication1.Data
             : base(options)
         {
         }
-        
+
         public DbSet<User> Users { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<Cohort> Cohorts { get; set; }
@@ -37,11 +39,11 @@ namespace WebApplication1.Data
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<UserSolution> UserSolutions { get; set; }
+        public DbSet<Session> Sessions { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
 
             modelBuilder.Entity<ContestProblem>()
                 .HasKey(cp => new { cp.ProblemId, cp.ContestId });
@@ -140,7 +142,6 @@ namespace WebApplication1.Data
                 .HasDefaultValueSql("gen_random_uuid()");
 
 
-            
             
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Cohort)

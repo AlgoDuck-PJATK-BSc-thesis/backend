@@ -24,27 +24,32 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Modules\Cohort\Controllers\" />
-      <Folder Include="Modules\Cohort\DTOs\" />
-      <Folder Include="Modules\Cohort\Repositories\" />
-      <Folder Include="Modules\Cohort\Services\" />
-      <Folder Include="Modules\Contest\Controllers\" />
-      <Folder Include="Modules\Contest\DTOs\" />
-      <Folder Include="Modules\Contest\Repositories\" />
-      <Folder Include="Modules\Contest\Services\" />
-      <Folder Include="Modules\Problem\Controllers\" />
-      <Folder Include="Modules\Problem\DTOs\" />
-      <Folder Include="Modules\Problem\Repositories\" />
-      <Folder Include="Modules\Problem\Services\" />
-      <Folder Include="Modules\Item\Controllers\" />
-      <Folder Include="Modules\Item\DTOs\" />
-      <Folder Include="Modules\Item\Repositories\" />
-      <Folder Include="Modules\Item\Services\" />
-      <Folder Include="Modules\User\UserAuth\JWTAuth\" />
-      <Folder Include="Modules\User\Controllers\" />
-      <Folder Include="Modules\User\DTOs\" />
-      <Folder Include="Modules\User\Repositories\" />
-      <Folder Include="Modules\User\Services\" />
+      <Folder Include="Modules\AuthModule\Controllers\" />
+      <Folder Include="Modules\AuthModule\Services\" />
+      <Folder Include="Modules\CohortModule\Controllers\" />
+      <Folder Include="Modules\CohortModule\DTOs\" />
+      <Folder Include="Modules\CohortModule\Repositories\" />
+      <Folder Include="Modules\CohortModule\Services\" />
+      <Folder Include="Modules\ContestModule\Controllers\" />
+      <Folder Include="Modules\ContestModule\DTOs\" />
+      <Folder Include="Modules\ContestModule\Repositories\" />
+      <Folder Include="Modules\ContestModule\Services\" />
+      <Folder Include="Modules\DuelModule\Controllers\" />
+      <Folder Include="Modules\DuelModule\DTOs\" />
+      <Folder Include="Modules\DuelModule\Repositories\" />
+      <Folder Include="Modules\DuelModule\Services\" />
+      <Folder Include="Modules\ProblemModule\Controllers\" />
+      <Folder Include="Modules\ProblemModule\DTOs\" />
+      <Folder Include="Modules\ProblemModule\Repositories\" />
+      <Folder Include="Modules\ProblemModule\Services\" />
+      <Folder Include="Modules\ItemModule\Controllers\" />
+      <Folder Include="Modules\ItemModule\DTOs\" />
+      <Folder Include="Modules\ItemModule\Repositories\" />
+      <Folder Include="Modules\ItemModule\Services\" />
+      <Folder Include="Modules\UserModule\Controllers\" />
+      <Folder Include="Modules\UserModule\DTOs\" />
+      <Folder Include="Modules\UserModule\Repositories\" />
+      <Folder Include="Modules\UserModule\Services\" />
     </ItemGroup>
 
 </Project>
