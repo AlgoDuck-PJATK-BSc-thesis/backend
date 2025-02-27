@@ -1,21 +1,29 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using WebApplication1.Modules.ItemModule.Models;
 
-namespace WebApplication1.Modules.CohortModule.Models
+namespace WebApplication1.Modules.ContestModule.Models
 {
-    public class Notification
+    public class Contest
     {
         [Key]
-        public Guid NotificationId { get; set; } = Guid.NewGuid();
+        public Guid ContestId { get; set; } = Guid.NewGuid();
+
+        [Required, MaxLength(256)]
+        public string ContestName { get; set; }
 
         [Required]
-        public string Message { get; set; }
+        public string ContestDescription { get; set; }
 
         [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime ContestStartDate { get; set; }
 
-        [ForeignKey("Cohort")]
-        public Guid CohortId { get; set; }
-        public Cohort Cohort { get; set; }
+        [Required]
+        public DateTime ContestEndDate { get; set; }
+
+        [ForeignKey("ItemId")]
+        public Guid ItemId { get; set; }
+        public Item Item { get; set; }
     }
 }
