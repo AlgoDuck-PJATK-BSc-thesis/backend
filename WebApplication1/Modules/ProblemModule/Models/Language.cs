@@ -9,10 +9,12 @@ namespace WebApplication1.Modules.ProblemModule.Models
 
         [Required]
         [MaxLength(256)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [Required]
         [MaxLength(256)]
-        public string Version { get; set; }
+        public required string Version { get; set; }
+        
+        public ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
     }
 }

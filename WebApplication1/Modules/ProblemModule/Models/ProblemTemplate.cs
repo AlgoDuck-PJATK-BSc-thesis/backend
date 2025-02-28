@@ -9,17 +9,17 @@ namespace WebApplication1.Modules.ProblemModule.Models
         public Guid ProblemTemplateId { get; set; } = Guid.NewGuid();
 
         [Required]
-        public string TemplateUrl { get; set; }
+        public required string TemplateUrl { get; set; }
 
         [Required]
-        public string TestCasesUrl { get; set; }
+        public required string TestCasesUrl { get; set; }
 
         [ForeignKey("Problem")]
         public Guid ProblemId { get; set; }
-        public Problem Problem { get; set; }
+        public required Problem Problem { get; set; }
 
         [ForeignKey("Language")]
         public Guid LanguageId { get; set; }
-        public Language Language { get; set; }
+        public required Language Language { get; set; }
     }
 }

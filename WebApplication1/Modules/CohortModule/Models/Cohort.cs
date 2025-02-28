@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using WebApplication1.Modules.UserModule.Models;
+using UserNamespace = WebApplication1.Modules.UserModule.Models;
 
 namespace WebApplication1.Modules.CohortModule.Models
 {
@@ -10,11 +10,14 @@ namespace WebApplication1.Modules.CohortModule.Models
         public Guid CohortId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
-        [Required]
-        public string ImageUrl { get; set; }
+        [Required, MaxLength(256)]
+        public required string ImageUrl { get; set; }
 
-        public ICollection<User> Users { get; set; } = new List<User>();
+        public ICollection<UserNamespace.User> Users { get; set; } = new List<UserNamespace.User>();
+        public ICollection<Message> Messages { get; set; } = new List<Message>();
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
     }
 }

@@ -8,6 +8,6 @@ namespace WebApplication1.Modules.ProblemModule.Models
         public Guid CategoryId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string CategoryName { get; set; }
+        public required string CategoryName { get; set; }
     }
 }

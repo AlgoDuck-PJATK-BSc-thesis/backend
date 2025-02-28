@@ -8,6 +8,6 @@ namespace WebApplication1.Modules.ProblemModule.Models
         public Guid DifficultyId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string DifficultyName { get; set; }
+        public required string DifficultyName { get; set; }
     }
 }

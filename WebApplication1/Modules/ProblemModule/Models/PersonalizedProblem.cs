@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using WebApplication1.Modules.UserModule.Models;
+using UserNamespace = WebApplication1.Modules.UserModule.Models;
 
 namespace WebApplication1.Modules.ProblemModule.Models
 {
@@ -7,10 +7,10 @@ namespace WebApplication1.Modules.ProblemModule.Models
     {
         [ForeignKey("Problem")]
         public Guid ProblemId { get; set; }
-        public Problem Problem { get; set; }
+        public required Problem Problem { get; set; }
 
         [ForeignKey("User")]
         public Guid UserId { get; set; }
-        public User User { get; set; }
+        public required UserNamespace.User User { get; set; }
     }
 }

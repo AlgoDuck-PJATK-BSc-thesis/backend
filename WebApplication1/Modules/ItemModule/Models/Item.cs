@@ -9,20 +9,22 @@ namespace WebApplication1.Modules.ItemModule.Models
         public Guid ItemId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         [Required]
-        public string Picture { get; set; }
+        public required string Picture { get; set; }
 
-        public string? Description { get; set; }
+        public required string? Description { get; set; }
 
         [Required]
-        public int Price { get; set; }
+        public required int Price { get; set; }
 
-        public bool Purchasable { get; set; }
+        public required bool Purchasable { get; set; }
 
         [ForeignKey("Rarity")]
         public Guid RarityId { get; set; }
-        public Rarity Rarity { get; set; }
+        public required Rarity Rarity { get; set; }
+        
+        public ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
     }
 }

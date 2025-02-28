@@ -9,13 +9,13 @@ namespace WebApplication1.Modules.CohortModule.Models
         public Guid NotificationId { get; set; } = Guid.NewGuid();
 
         [Required]
-        public string Message { get; set; }
+        public required string Message { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("Cohort")]
         public Guid CohortId { get; set; }
-        public Cohort Cohort { get; set; }
+        public required Cohort Cohort { get; set; }
     }
 }

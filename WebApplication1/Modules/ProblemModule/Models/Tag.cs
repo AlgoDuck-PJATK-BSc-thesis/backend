@@ -9,6 +9,9 @@ namespace WebApplication1.Modules.ProblemModule.Models
 
         [Required]
         [MaxLength(256)]
-        public string TagName { get; set; }
+        public required string TagName { get; set; }
+        
+        public ICollection<HasTag> HasTags { get; set; } = new List<HasTag>();
+
     }
 }

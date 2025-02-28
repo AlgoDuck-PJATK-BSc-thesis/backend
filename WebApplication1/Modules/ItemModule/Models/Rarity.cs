@@ -8,6 +8,6 @@ namespace WebApplication1.Modules.ItemModule.Models
         public Guid RarityId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string RarityName { get; set; }
+        public required string RarityName { get; set; }
     }
 }

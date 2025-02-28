@@ -9,6 +9,6 @@ namespace WebApplication1.Modules.ProblemModule.Models
 
         [Required]
         [MaxLength(256)]
-        public string StatusName { get; set; }
+        public required string StatusName { get; set; }
     }
 }

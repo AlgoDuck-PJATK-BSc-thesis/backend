@@ -6,10 +6,10 @@ namespace WebApplication1.Modules.ProblemModule.Models
     {
         [ForeignKey("Problem")]
         public Guid ProblemId { get; set; }
-        public Problem Problem { get; set; }
+        public required Problem Problem { get; set; }
 
         [ForeignKey("Tag")]
         public Guid TagId { get; set; }
-        public Tag Tag { get; set; }
+        public required Tag Tag { get; set; }
     }
 }

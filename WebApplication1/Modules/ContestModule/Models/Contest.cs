@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using WebApplication1.Modules.ItemModule.Models;
@@ -11,10 +10,10 @@ namespace WebApplication1.Modules.ContestModule.Models
         public Guid ContestId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
-        public string ContestName { get; set; }
+        public required string ContestName { get; set; }
 
         [Required]
-        public string ContestDescription { get; set; }
+        public required string ContestDescription { get; set; }
 
         [Required]
         public DateTime ContestStartDate { get; set; }
@@ -24,6 +23,9 @@ namespace WebApplication1.Modules.ContestModule.Models
 
         [ForeignKey("ItemId")]
         public Guid ItemId { get; set; }
-        public Item Item { get; set; }
+        public required Item Item { get; set; }
+        
+        public ICollection<ContestProblem> ContestProblems { get; set; } = new List<ContestProblem>();
+
     }
 }

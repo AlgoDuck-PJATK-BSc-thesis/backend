@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using WebApplication1.Modules.UserModule.Models;
+using UserNamespace = WebApplication1.Modules.UserModule.Models;
 
 namespace WebApplication1.Modules.AuthModule.Models
 {
@@ -10,15 +10,16 @@ namespace WebApplication1.Modules.AuthModule.Models
         public Guid SessionId { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(512)]
-        public string RefreshToken { get; set; }
+        public required string RefreshToken { get; set; }
 
         [Required]
         public DateTime RefreshTokenExpiresAt { get; set; }
 
         public bool Revoked { get; set; } = false;
 
-        [ForeignKey("User")]
-        public Guid UserId { get; set; }
-        public User User { get; set; }
+        [ForeignKey(nameof(User))]
+        public required Guid UserId { get; set; }
+        
+        public required UserNamespace.User User { get; set; }
     }
 }
