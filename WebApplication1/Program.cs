@@ -28,6 +28,8 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+app.MapGet("/", () => "Hello world!");
+
 app.MapControllers();
 
 app.Run();
