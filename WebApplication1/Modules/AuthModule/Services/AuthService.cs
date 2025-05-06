@@ -24,7 +24,7 @@ public class AuthService : IAuthService
         _dbContext = dbContext;
     }
 
-    public async Task RegisterAsync(RegisterDto dto)
+    public async Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken)
     {
         var user = new ApplicationUser
         {
@@ -44,7 +44,7 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task LoginAsync(LoginDto dto, HttpResponse response)
+    public async Task LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByNameAsync(dto.Username);
         if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
@@ -63,8 +63,8 @@ public class AuthService : IAuthService
             User = user
         };
 
-        _dbContext.Sessions.Add(session);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.Sessions.AddAsync(session, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.Cookies.Append("jwt", accessToken, new CookieOptions
         {
@@ -83,11 +83,11 @@ public class AuthService : IAuthService
         });
     }
 
-    public async Task RefreshTokenAsync(RefreshDto dto, HttpResponse response)
+    public async Task RefreshTokenAsync(RefreshDto dto, HttpResponse response, CancellationToken cancellationToken)
     {
         var session = await _dbContext.Sessions
             .Include(s => s.User)
-            .FirstOrDefaultAsync(s => s.RefreshToken == dto.RefreshToken);
+            .FirstOrDefaultAsync(s => s.RefreshToken == dto.RefreshToken, cancellationToken);
 
         if (session == null || session.RefreshTokenExpiresAt < DateTime.UtcNow)
         {
@@ -105,11 +105,11 @@ public class AuthService : IAuthService
         });
     }
 
-    public async Task LogoutAsync(Guid userId)
+    public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
     {
         var sessions = _dbContext.Sessions.Where(s => s.UserId == userId);
         _dbContext.Sessions.RemoveRange(sessions);
 
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

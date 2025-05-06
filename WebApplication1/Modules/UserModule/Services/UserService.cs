@@ -15,11 +15,11 @@ namespace WebApplication1.Modules.UserModule.Services
             _dbContext = dbContext;
         }
 
-        public async Task<UserProfileDto> GetProfileAsync(Guid userId)
+        public async Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken)
         {
             var user = await _dbContext.Users
                 .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null)
                 throw new Exception("User not found.");
@@ -36,9 +36,9 @@ namespace WebApplication1.Modules.UserModule.Services
             };
         }
 
-        public async Task UpdateProfileAsync(Guid userId, UpdateUserDto dto)
+        public async Task UpdateProfileAsync(Guid userId, UpdateUserDto dto, CancellationToken cancellationToken)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null)
                 throw new Exception("User not found.");
@@ -47,7 +47,7 @@ namespace WebApplication1.Modules.UserModule.Services
             user.Email = dto.Email;
             user.ProfilePicture = dto.ProfilePicture;
 
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

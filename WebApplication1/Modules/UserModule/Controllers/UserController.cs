@@ -19,26 +19,26 @@ namespace WebApplication1.Modules.UserModule.Controllers
         }
 
         [HttpGet("me")]
-        public async Task<ActionResult<UserProfileDto>> GetMyProfile()
+        public async Task<ActionResult<UserProfileDto>> GetMyProfile(CancellationToken cancellationToken)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var profile = await _userService.GetProfileAsync(Guid.Parse(userId));
+            var profile = await _userService.GetProfileAsync(Guid.Parse(userId), cancellationToken);
             return Ok(profile);
         }
 
         [HttpPut("me")]
-        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateUserDto dto)
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateUserDto dto, CancellationToken cancellationToken)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            await _userService.UpdateProfileAsync(Guid.Parse(userId), dto);
+            await _userService.UpdateProfileAsync(Guid.Parse(userId), dto, cancellationToken);
             return Ok(new { Message = "Profile updated successfully." });
         }
     }

@@ -18,38 +18,38 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [AllowAnonymous]
-    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto, CancellationToken cancellationToken)
     {
-        await _authService.RegisterAsync(dto);
+        await _authService.RegisterAsync(dto, cancellationToken);
         return Ok(new { Message = "User registered successfully." });
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] LoginDto dto)
+    public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken cancellationToken)
     {
-        await _authService.LoginAsync(dto, Response);
+        await _authService.LoginAsync(dto, Response, cancellationToken);
         return Ok(new { Message = "Logged in successfully." });
     }
 
     [HttpPost("refresh")]
     [AllowAnonymous]
-    public async Task<IActionResult> Refresh([FromBody] RefreshDto dto)
+    public async Task<IActionResult> Refresh([FromBody] RefreshDto dto, CancellationToken cancellationToken)
     {
-        await _authService.RefreshTokenAsync(dto, Response);
+        await _authService.RefreshTokenAsync(dto, Response, cancellationToken);
         return Ok(new { Message = "Token refreshed successfully." });
     }
 
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         var userId = User.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        await _authService.LogoutAsync(Guid.Parse(userId));
+        await _authService.LogoutAsync(Guid.Parse(userId), cancellationToken);
 
         Response.Cookies.Delete("jwt");
         Response.Cookies.Delete("refresh_token");

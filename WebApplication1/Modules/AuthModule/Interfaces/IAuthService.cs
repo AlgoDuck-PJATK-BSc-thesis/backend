@@ -4,8 +4,8 @@ namespace WebApplication1.Modules.AuthModule.Interfaces;
 
 public interface IAuthService
 {
-    Task RegisterAsync(RegisterDto dto);
-    Task LoginAsync(LoginDto dto, HttpResponse response);
-    Task RefreshTokenAsync(RefreshDto dto, HttpResponse response);
-    Task LogoutAsync(Guid userId);
+    Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken);
+    Task LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken);
+    Task RefreshTokenAsync(RefreshDto dto, HttpResponse response, CancellationToken cancellationToken);
+    Task LogoutAsync(Guid userId, CancellationToken cancellationToken);
 }
