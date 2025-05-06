@@ -1,13 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+namespace WebApplication1.Modules.UserModule.Models;
 
-namespace WebApplication1.Modules.UserModule.Models
+public class UserRole
 {
-    public class UserRole
-    {
-        [Key]
-        public Guid UserRoleId { get; set; } = Guid.NewGuid();
-
-        [Required, MaxLength(256)]
-        public required string Name { get; set; }
-    }
+    public Guid UserRoleId { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

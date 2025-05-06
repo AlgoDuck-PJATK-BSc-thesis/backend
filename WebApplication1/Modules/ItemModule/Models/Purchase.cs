@@ -12,7 +12,7 @@ namespace WebApplication1.Modules.ItemModule.Models
 
         [ForeignKey("User")]
         public Guid UserId { get; set; }
-        public required UserNamescape.User User { get; set; }
+        public required UserNamescape.ApplicationUser User { get; set; }
 
         public bool Selected { get; set; }
     }

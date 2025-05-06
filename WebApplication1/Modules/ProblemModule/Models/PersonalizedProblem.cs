@@ -11,6 +11,6 @@ namespace WebApplication1.Modules.ProblemModule.Models
 
         [ForeignKey("User")]
         public Guid UserId { get; set; }
-        public required UserNamespace.User User { get; set; }
+        public required UserNamespace.ApplicationUser User { get; set; }
     }
 }
