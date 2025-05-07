@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using WebApplication1.Modules.AuthModule.Interfaces;
 using WebApplication1.Modules.AuthModule.Jwt;
 using WebApplication1.Modules.UserModule.Models;
+using WebApplication1.Shared.Exceptions;
 
 namespace WebApplication1.Modules.AuthModule.Services;
 
@@ -62,7 +63,15 @@ public class TokenService : ITokenService
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var principal = tokenHandler.ValidateToken(token, tokenValidationParams, out _);
-        return principal;
+        
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParams, out _);
+            return principal;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidTokenException("Invalid or malformed token.", ex);
+        }
     }
 }

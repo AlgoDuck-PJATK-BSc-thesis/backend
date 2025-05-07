@@ -5,6 +5,8 @@ using WebApplication1.Modules.AuthModule.Models;
 using WebApplication1.Modules.AuthModule.Interfaces;
 using WebApplication1.Modules.UserModule.Models;
 using WebApplication1.DAL;
+using WebApplication1.Shared.Exceptions;
+
 
 namespace WebApplication1.Modules.AuthModule.Services;
 
@@ -26,6 +28,12 @@ public class AuthService : IAuthService
 
     public async Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken)
     {
+        if (await _userManager.FindByNameAsync(dto.Username) != null)
+            throw new UsernameAlreadyExistsException();
+
+        if (await _userManager.Users.AnyAsync(u => u.Email == dto.Email, cancellationToken))
+            throw new EmailAlreadyExistsException();
+        
         var user = new ApplicationUser
         {
             UserName = dto.Username,
@@ -40,17 +48,19 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded)
         {
-            throw new Exception(string.Join("; ", result.Errors.Select(e => e.Description)));
+            throw new ValidationException(string.Join("; ", result.Errors.Select(e => e.Description)));
         }
     }
 
     public async Task LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByNameAsync(dto.Username);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
-        {
-            throw new Exception("Invalid username or password.");
-        }
+        
+        if (user == null)
+            throw new UserNotFoundException();
+
+        if (!await _userManager.CheckPasswordAsync(user, dto.Password))
+            throw new UnauthorizedException("Invalid password.");
 
         var accessToken = _tokenService.CreateAccessToken(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
@@ -89,9 +99,14 @@ public class AuthService : IAuthService
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.RefreshToken == dto.RefreshToken, cancellationToken);
 
-        if (session == null || session.RefreshTokenExpiresAt < DateTime.UtcNow)
+        if (session == null)
         {
-            throw new Exception("Invalid or expired refresh token.");
+            throw new InvalidTokenException("Refresh token not found.");
+        }
+
+        if (session.RefreshTokenExpiresAt < DateTime.UtcNow)
+        {
+            throw new TokenExpiredException("Refresh token has expired.");
         }
 
         var accessToken = _tokenService.CreateAccessToken(session.User);
@@ -108,6 +123,10 @@ public class AuthService : IAuthService
     public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
     {
         var sessions = _dbContext.Sessions.Where(s => s.UserId == userId);
+        
+        if (!await sessions.AnyAsync(cancellationToken))
+            throw new NotFoundException("No sessions found for user.");
+        
         _dbContext.Sessions.RemoveRange(sessions);
 
         await _dbContext.SaveChangesAsync(cancellationToken);

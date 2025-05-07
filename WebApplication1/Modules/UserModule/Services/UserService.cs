@@ -1,8 +1,8 @@
 using WebApplication1.Modules.UserModule.DTOs;
-using WebApplication1.Modules.UserModule.Models;
 using WebApplication1.Modules.UserModule.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.DAL;
+using WebApplication1.Shared.Exceptions;
 
 namespace WebApplication1.Modules.UserModule.Services
 {
@@ -22,7 +22,7 @@ namespace WebApplication1.Modules.UserModule.Services
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null)
-                throw new Exception("User not found.");
+                throw new UserNotFoundException();
 
             return new UserProfileDto
             {
@@ -41,8 +41,14 @@ namespace WebApplication1.Modules.UserModule.Services
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null)
-                throw new Exception("User not found.");
+                throw new UserNotFoundException();
+            
+            bool emailExists = await _dbContext.Users
+                .AnyAsync(u => u.Email == dto.Email && u.Id != userId, cancellationToken);
 
+            if (emailExists)
+                throw new EmailAlreadyExistsException();
+            
             user.UserName = dto.Username;
             user.Email = dto.Email;
             user.ProfilePicture = dto.ProfilePicture;

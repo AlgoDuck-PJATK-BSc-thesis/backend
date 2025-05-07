@@ -110,6 +110,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<WebApplication1.Shared.Middleware.ErrorHandler>();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
