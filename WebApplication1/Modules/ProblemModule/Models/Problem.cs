@@ -10,11 +10,14 @@ namespace WebApplication1.Modules.ProblemModule.Models
     {
         [Key]
         public Guid ProblemId { get; set; } = Guid.NewGuid();
+        
+        [Required]
+        public Guid AnswerKey { get; set; } = Guid.NewGuid();
 
         [Required, MaxLength(256)]
         public required string ProblemTitle { get; set; }
 
-        [Required]
+        [Required, MaxLength(1024)]
         public required string Description { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
