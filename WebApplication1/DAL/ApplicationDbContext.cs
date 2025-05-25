@@ -170,10 +170,24 @@ namespace WebApplication1.DAL
                 .WithMany(l => l.UserSolutions)
                 .HasForeignKey(us => us.LanguageId);
 
-            modelBuilder.Entity<Message>()
-                .HasOne(m => m.Cohort)
-                .WithMany(c => c.Messages)
-                .HasForeignKey(m => m.CohortId);
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.ToTable("message");
+                entity.HasKey(m => m.MessageId);
+                entity.Property(m => m.MessageId).HasColumnName("message_id");
+                entity.Property(m => m.Content).HasColumnName("content");
+                entity.Property(m => m.CreatedAt).HasColumnName("created_at");
+                entity.Property(m => m.CohortId).HasColumnName("cohort_id");
+                entity.Property(m => m.UserId).HasColumnName("user_id");
+
+                entity.HasOne(m => m.Cohort)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(m => m.CohortId);
+
+                entity.HasOne(m => m.User)
+                    .WithMany()
+                    .HasForeignKey(m => m.UserId);
+            });
 
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.Cohort)

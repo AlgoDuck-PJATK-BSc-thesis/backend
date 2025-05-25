@@ -17,11 +17,11 @@ namespace WebApplication1.Modules.CohortModule.Models
 
         [ForeignKey("Cohort")]
         public Guid CohortId { get; set; }
-        public required Cohort Cohort { get; set; }
+        public Cohort? Cohort { get; set; }
 
         [ForeignKey("User")]
         public Guid UserId { get; set; }
-        public required UserNamespace.ApplicationUser User { get; set; }
+        public UserNamespace.ApplicationUser? User { get; set; }
     }
 }
 

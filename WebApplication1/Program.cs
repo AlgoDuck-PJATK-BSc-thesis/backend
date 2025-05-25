@@ -9,6 +9,9 @@ using WebApplication1.Modules.UserModule.Models;
 using WebApplication1.Modules.AuthModule.Jwt;
 using WebApplication1.Modules.AuthModule.Interfaces;
 using WebApplication1.Modules.AuthModule.Services;
+using WebApplication1.Modules.CohortModule.Chat;
+using WebApplication1.Modules.CohortModule.Interfaces;
+using WebApplication1.Modules.CohortModule.Services;
 using WebApplication1.Modules.UserModule.Interfaces;
 using WebApplication1.Modules.UserModule.Services;
 
@@ -101,6 +104,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+});
+
+builder.Services.AddScoped<ICohortChatService, CohortChatService>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -115,6 +125,7 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 
 await SeedRoles(app.Services);
 
