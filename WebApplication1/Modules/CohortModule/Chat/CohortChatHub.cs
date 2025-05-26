@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using WebApplication1.Modules.CohortModule.DTOs;
-using WebApplication1.Modules.CohortModule.Interfaces;
+using WebApplication1.Modules.CohortModule.Chat.DTOs;
+using WebApplication1.Modules.CohortModule.Chat.Interfaces;
 
 namespace WebApplication1.Modules.CohortModule.Chat;
 

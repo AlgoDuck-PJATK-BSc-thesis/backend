@@ -8,7 +8,7 @@ namespace WebApplication1.Modules.CohortModule.Models
         [Key]
         public Guid NotificationId { get; set; } = Guid.NewGuid();
 
-        [Required]
+        [Required, MaxLength(512)]
         public required string Message { get; set; }
 
         [Required]

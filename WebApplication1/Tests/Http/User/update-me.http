@@ -1,0 +1,10 @@
+### Update current user profile
+PUT http://localhost:5082/api/user/me
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "username": "updated_test_user",
+  "email": "updated_test_user@example.com",
+  "profilePicture": "https://example.com/updated-profile-picture.png"
+}

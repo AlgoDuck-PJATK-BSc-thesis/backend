@@ -1,0 +1,79 @@
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using WebApplication1.DAL;
+using WebApplication1.Modules.CohortModule.Leaderboard.DTOs;
+using WebApplication1.Modules.CohortModule.Leaderboard.Interfaces;
+using WebApplication1.Shared.Exceptions;
+
+namespace WebApplication1.Modules.CohortModule.Leaderboard.Services;
+
+public class CohortLeaderboardService : ICohortLeaderboardService
+{
+    private readonly ApplicationDbContext _dbContext;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public CohortLeaderboardService(ApplicationDbContext dbContext, IHttpContextAccessor httpContextAccessor)
+    {
+        _dbContext = dbContext;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task<List<CohortLeaderboardDto>> GetLeaderboardAsync(Guid cohortId)
+    {
+        var userId = GetCurrentUserId();
+
+        var belongsToCohort = await _dbContext.Users
+            .AnyAsync(u => u.Id == userId && u.CohortId == cohortId);
+
+        if (!belongsToCohort)
+            throw new ForbiddenException("You are not a member of this cohort.");
+
+        var users = await _dbContext.Users
+            .Where(u => u.CohortId == cohortId)
+            .OrderByDescending(u => u.Experience)
+            .Select(u => new
+            {
+                u.Id,
+                u.UserName,
+                u.ProfilePicture,
+                u.Experience
+            })
+            .ToListAsync();
+
+        var leaderboard = new List<CohortLeaderboardDto>();
+        int rank = 1;
+        int position = 1;
+        int? previousExp = null;
+
+        foreach (var user in users)
+        {
+            if (previousExp != user.Experience)
+            {
+                rank = position;
+            }
+
+            leaderboard.Add(new CohortLeaderboardDto
+            {
+                UserId = user.Id,
+                Username = user.UserName!,
+                ProfilePicture = user.ProfilePicture,
+                Experience = user.Experience,
+                Rank = rank
+            });
+
+            previousExp = user.Experience;
+            position++;
+        }
+
+        return leaderboard;
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var userId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guid))
+            throw new UnauthorizedException();
+
+        return guid;
+    }
+}

@@ -1,0 +1,3 @@
+### Logout current user
+POST http://localhost:5082/api/auth/logout
+Authorization: Bearer {{access_token}}

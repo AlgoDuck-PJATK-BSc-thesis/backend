@@ -1,0 +1,7 @@
+### Refresh access token
+POST http://localhost:5082/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh_token}}"
+}

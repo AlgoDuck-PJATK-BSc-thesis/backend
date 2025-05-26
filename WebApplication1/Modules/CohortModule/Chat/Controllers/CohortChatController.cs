@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Modules.CohortModule.DTOs;
-using WebApplication1.Modules.CohortModule.Interfaces;
+using WebApplication1.Modules.CohortModule.Chat.DTOs;
+using WebApplication1.Modules.CohortModule.Chat.Interfaces;
 
-namespace WebApplication1.Modules.CohortModule.Controllers;
+namespace WebApplication1.Modules.CohortModule.Chat.Controllers;
 
 [ApiController]
 [Route("api/cohorts/{cohortId:guid}/chat/messages")]

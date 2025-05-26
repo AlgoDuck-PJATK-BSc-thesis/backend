@@ -15,11 +15,12 @@ namespace WebApplication1.DAL
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+        public override DbSet<ApplicationUser> Users { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public new DbSet<UserRole> UserRoles { get; set; }
 
-        public DbSet<Category> Categories { get; set; }
         public DbSet<Cohort> Cohorts { get; set; }
+        public DbSet<Category> Categories { get; set; }
         public DbSet<Contest> Contests { get; set; }
         public DbSet<ContestProblem> ContestProblems { get; set; }
         public DbSet<Difficulty> Difficulties { get; set; }
@@ -38,7 +39,6 @@ namespace WebApplication1.DAL
         public DbSet<Rarity> Rarities { get; set; }
         public DbSet<Status> Statuses { get; set; }
         public DbSet<Tag> Tags { get; set; }
-        public DbSet<ApplicationUser> Users { get; set; }
         public DbSet<UserSolution> UserSolutions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -64,6 +64,11 @@ namespace WebApplication1.DAL
                       .WithMany()
                       .HasForeignKey(u => u.UserRoleId)
                       .HasConstraintName("fk_user_user_role");
+
+                entity.HasOne(u => u.Cohort)
+                      .WithMany(c => c.Users)
+                      .HasForeignKey(u => u.CohortId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<UserRole>(entity =>
@@ -84,12 +89,20 @@ namespace WebApplication1.DAL
                 entity.Property(s => s.Revoked).HasColumnName("revoked");
                 entity.Property(s => s.UserId).HasColumnName("user_id");
 
-                entity.HasOne<ApplicationUser>(s => s.User)
+                entity.HasOne(s => s.User)
                       .WithMany(u => u.Sessions)
                       .HasForeignKey(s => s.UserId)
                       .HasConstraintName("fk_session_user");
             });
-            
+
+            modelBuilder.Entity<Cohort>(entity =>
+            {
+                entity.HasOne(c => c.CreatedByUser)
+                      .WithMany()
+                      .HasForeignKey(c => c.CreatedByUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
             modelBuilder.Entity<ContestProblem>()
                 .HasKey(cp => new { cp.ContestId, cp.ProblemId });
 
@@ -181,29 +194,18 @@ namespace WebApplication1.DAL
                 entity.Property(m => m.UserId).HasColumnName("user_id");
 
                 entity.HasOne(m => m.Cohort)
-                    .WithMany(c => c.Messages)
-                    .HasForeignKey(m => m.CohortId);
+                      .WithMany(c => c.Messages)
+                      .HasForeignKey(m => m.CohortId);
 
                 entity.HasOne(m => m.User)
-                    .WithMany()
-                    .HasForeignKey(m => m.UserId);
+                      .WithMany()
+                      .HasForeignKey(m => m.UserId);
             });
 
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.Cohort)
                 .WithMany(c => c.Notifications)
                 .HasForeignKey(n => n.CohortId);
-
-            modelBuilder.Entity<Session>()
-                .HasOne(s => s.User)
-                .WithMany(u => u.Sessions)
-                .HasForeignKey(s => s.UserId);
-
-            modelBuilder.Entity<ApplicationUser>()
-                .HasOne(u => u.Cohort)
-                .WithMany(c => c.Users)
-                .HasForeignKey(u => u.CohortId)
-                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

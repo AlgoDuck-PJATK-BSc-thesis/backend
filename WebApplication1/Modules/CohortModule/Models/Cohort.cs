@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using UserNamespace = WebApplication1.Modules.UserModule.Models;
 
@@ -14,6 +13,10 @@ namespace WebApplication1.Modules.CohortModule.Models
 
         [Required, MaxLength(256)]
         public required string ImageUrl { get; set; }
+        
+        public Guid CreatedByUserId { get; set; }
+        
+        public UserNamespace.ApplicationUser CreatedByUser { get; set; } = null!;
 
         public ICollection<UserNamespace.ApplicationUser> Users { get; set; } = new List<UserNamespace.ApplicationUser>();
         public ICollection<Message> Messages { get; set; } = new List<Message>();

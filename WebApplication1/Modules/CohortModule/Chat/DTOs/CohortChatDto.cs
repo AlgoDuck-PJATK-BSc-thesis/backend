@@ -1,4 +1,4 @@
-namespace WebApplication1.Modules.CohortModule.DTOs;
+namespace WebApplication1.Modules.CohortModule.Chat.DTOs;
 
 public class CohortChatDto
 {

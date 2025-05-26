@@ -6,14 +6,18 @@ using System.Text;
 using DotNetEnv;
 using WebApplication1.DAL;
 using WebApplication1.Modules.UserModule.Models;
+using WebApplication1.Modules.UserModule.Interfaces;
+using WebApplication1.Modules.UserModule.Services;
 using WebApplication1.Modules.AuthModule.Jwt;
 using WebApplication1.Modules.AuthModule.Interfaces;
 using WebApplication1.Modules.AuthModule.Services;
-using WebApplication1.Modules.CohortModule.Chat;
 using WebApplication1.Modules.CohortModule.Interfaces;
 using WebApplication1.Modules.CohortModule.Services;
-using WebApplication1.Modules.UserModule.Interfaces;
-using WebApplication1.Modules.UserModule.Services;
+using WebApplication1.Modules.CohortModule.Chat;
+using WebApplication1.Modules.CohortModule.Chat.Interfaces;
+using WebApplication1.Modules.CohortModule.Chat.Services;
+using WebApplication1.Modules.CohortModule.Leaderboard.Interfaces;
+using WebApplication1.Modules.CohortModule.Leaderboard.Services;
 
 Env.Load(); 
 
@@ -85,22 +89,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ICohortService, CohortService>();
+builder.Services.AddScoped<ICohortChatService, CohortChatService>();
+builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") 
+        policy.WithOrigins("http://localhost:5173")
             .AllowCredentials()
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -108,8 +121,6 @@ builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
 });
-
-builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 
 var app = builder.Build();
 
@@ -124,10 +135,12 @@ app.UseMiddleware<WebApplication1.Shared.Middleware.ErrorHandler>();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 
 await SeedRoles(app.Services);
+await SeedUserRoles(app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>());
 
 app.Run();
 
@@ -145,4 +158,27 @@ async Task SeedRoles(IServiceProvider serviceProvider)
             await roleManager.CreateAsync(new IdentityRole<Guid> { Name = role });
         }
     }
+}
+
+async Task SeedUserRoles(ApplicationDbContext db)
+{
+    if (!await db.UserRoles.AnyAsync(r => r.Name == "user"))
+    {
+        db.UserRoles.Add(new UserRole
+        {
+            UserRoleId = Guid.NewGuid(),
+            Name = "user"
+        });
+    }
+
+    if (!await db.UserRoles.AnyAsync(r => r.Name == "admin"))
+    {
+        db.UserRoles.Add(new UserRole
+        {
+            UserRoleId = Guid.NewGuid(),
+            Name = "admin"
+        });
+    }
+
+    await db.SaveChangesAsync();
 }

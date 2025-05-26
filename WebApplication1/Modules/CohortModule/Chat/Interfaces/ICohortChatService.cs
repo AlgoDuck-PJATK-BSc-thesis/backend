@@ -1,6 +1,6 @@
-using WebApplication1.Modules.CohortModule.DTOs;
+using WebApplication1.Modules.CohortModule.Chat.DTOs;
 
-namespace WebApplication1.Modules.CohortModule.Interfaces;
+namespace WebApplication1.Modules.CohortModule.Chat.Interfaces;
 
 public interface ICohortChatService
 {
