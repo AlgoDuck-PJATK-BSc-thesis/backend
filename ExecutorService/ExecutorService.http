@@ -1,0 +1,6 @@
+@ExecutorService_HostAddress = http://localhost:5155
+
+GET {{ExecutorService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
