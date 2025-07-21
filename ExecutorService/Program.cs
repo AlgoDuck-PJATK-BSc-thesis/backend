@@ -11,7 +11,6 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IExecutorRepository, ExecutorRepositoryMock>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
-builder.Services.AddSingleton<IExecutorConfig, ExecutorConfig>();
 builder.Services.AddSingleton<ICompilationHandler, CompilationHandler>();
 
 var app = builder.Build();

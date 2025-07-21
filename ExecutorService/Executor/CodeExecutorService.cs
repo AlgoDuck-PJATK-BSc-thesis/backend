@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using AnalyzerWip.Analyzer.AstAnalyzer;
 using ExecutorService.Analyzer._AnalyzerUtils;
+using ExecutorService.Errors;
 using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
 
@@ -16,7 +17,6 @@ public interface ICodeExecutorService
 
 public class CodeExecutorService(
     IExecutorRepository executorRepository,
-    IExecutorConfig executorConfig,
     ICompilationHandler compilationHandler
     ) : ICodeExecutorService
 {
@@ -24,19 +24,11 @@ public class CodeExecutorService(
 
     private IAnalyzer? _analyzer;
     private CodeAnalysisResult? _codeAnalysisResult;
-    private const string CompilerServiceUrl = "http://172.21.40.155:5137/compile";
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
-        Language lang;
-        try
-        {
-            lang = CheckLanguageSupported(executeRequestDto.Lang);
-        }
-        catch (InvalidOperationException)
-        {
-            return new ExecuteResultDto("", "Err: unsupported language");
-        }
+        var lang = CheckLanguageSupported(executeRequestDto.Lang);
+        
         var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
 
         _analyzer = new AnalyzerSimple(fileData.FileContents.ToString());
@@ -62,15 +54,7 @@ public class CodeExecutorService(
 
     public async Task<ExecuteResultDto> DryExecute(ExecuteRequestDto executeRequestDto)
     {
-        Language lang;
-        try
-        {
-            lang = CheckLanguageSupported(executeRequestDto.Lang);
-        }
-        catch (InvalidOperationException)
-        {
-            return new ExecuteResultDto("", "Err: unsupported language");
-        }
+        var lang = CheckLanguageSupported(executeRequestDto.Lang);
         
         var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
         
@@ -160,7 +144,7 @@ public class CodeExecutorService(
 
     }
     
-    private async Task<UserSolutionData> PrepareFile(string codeB64, Language lang, string exerciseId) // TODO Make the import not constant
+    private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string exerciseId) // TODO Make the import not constant
     {
         var codeBytes = Convert.FromBase64String(codeB64);
         var codeString = Encoding.UTF8.GetString(codeBytes);
@@ -188,8 +172,11 @@ public class CodeExecutorService(
         userSolutionData.FileContents.Insert(writeOffset, testCaseInsertBuilder);
     }
 
-    private Language CheckLanguageSupported(string lang)
+    private string CheckLanguageSupported(string lang)
     {
-        return executorConfig.GetSupportedLanguages().FirstOrDefault(l => l.Name.Equals(lang)) ?? throw new InvalidOperationException(); // TODO make this a custom languageException
+        var executorYmlConfig = YmlConfigReader.ReadExecutorYmlConfig();
+
+        return executorYmlConfig.SUPPORTED_LANGUAGES.FirstOrDefault(l => l.ToLower().Equals(lang)) ??
+            throw new LanguageException($"Language: {lang} not supported");
     }
 }

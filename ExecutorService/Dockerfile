@@ -47,10 +47,14 @@ RUN wget https://github.com/firecracker-microvm/firecracker/releases/download/v1
     rm -rf /var/lib/apt/lists/* && \
     rm -rf release-v1.2.0-x86_64 
 
+RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+        chmod +x /usr/bin/yq
+
 COPY --from=publish /app/publish .
 COPY Executor/fc-scripts fc-scripts
 COPY Executor/app-scripts app-scripts
 COPY entrypoint.sh .
+COPY ExecutorConfig.yml .
     
 
 RUN    echo '/usr/local/bin/firecracker-v1.2.0-x86_64' >> ~/.bashrc && \

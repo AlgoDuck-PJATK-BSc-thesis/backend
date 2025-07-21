@@ -24,6 +24,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             FunctionSignatureException _ => new ExceptionReponseDto(HttpStatusCode.BadRequest, "critical function signature modified. Exiting"),
             JavaSyntaxException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, $"java syntax error: {err.Message}"),
+            LanguageException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Internal server error"),
         };
 

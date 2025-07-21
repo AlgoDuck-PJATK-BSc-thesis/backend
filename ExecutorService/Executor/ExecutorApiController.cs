@@ -7,7 +7,7 @@ namespace ExecutorService.Executor;
 [Route("/api/execute")]
 public class ExecutorApiController(ICodeExecutorService codeExecutorService) : ControllerBase
 {
-    [HttpPost]
+    [HttpPost("full")]
     public async Task<IActionResult> ExecuteCode([FromBody] ExecuteRequestDto executeRequest)
     {
         return Ok(await codeExecutorService.FullExecute(executeRequest));

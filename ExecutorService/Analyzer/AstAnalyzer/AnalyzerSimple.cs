@@ -142,7 +142,6 @@ public class AnalyzerSimple : IAnalyzer
                     .Select(func => func.ClassMember.AsT0)
                     .ToList();
 
-                Console.WriteLine("validation functions\n\n");
                 foreach (var matchedFunction in matchedFunctions)
                 {
                     if (ValidateFunctionSignature(baselineFunc, matchedFunction))
@@ -234,7 +233,6 @@ public class AnalyzerSimple : IAnalyzer
                      },
                 t2 => isValid = compared.FuncArgs[capturedI].Type.IsT2 && compared.FuncArgs[capturedI].Type.AsT2.Value != null && compared.FuncArgs[capturedI].Type.AsT2.Value!.Equals(t2.Value) && compared.FuncArgs[capturedI].Identifier!.Value!.Equals(baseline.FuncArgs[capturedI].Identifier!.Value)
                 );
-            Console.WriteLine($"valid? {isValid}");
             if (!isValid)
             {
                 

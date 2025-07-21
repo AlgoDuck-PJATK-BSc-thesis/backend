@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# TODO read these from .env
-CONTAINER_COUNT=5
-BASE_PORT=5137
+CONTAINER_COUNT=$(yq eval '.COMPILERS.BASE_COUNT' /app/ExecutorConfig.yml)
+BASE_PORT=$(yq eval '.COMPILERS.BASE_PORT' /app/ExecutorConfig.yml)
 
 for i in $(seq 0 $(($CONTAINER_COUNT-1)));
 do

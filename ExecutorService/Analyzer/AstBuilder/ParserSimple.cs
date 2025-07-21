@@ -57,7 +57,6 @@ public class ParserSimple : IParser
             peekedToken = PeekToken(++lookahead);
         }
 
-        Console.WriteLine(PeekToken(lookahead)!.Type);
         return PeekToken(lookahead)!.Type switch
         {
             TokenType.Import => ParseTopLevelStat(),
@@ -79,11 +78,9 @@ public class ParserSimple : IParser
         nodeClass.ClassModifiers = ParseModifiers();
         
         ConsumeIfOfType(TokenType.Class, "class");
-        Console.WriteLine("huh");
         // Environment.Exit(0);
 
         nodeClass.Identifier = ConsumeIfOfType(TokenType.Ident, "class name");
-        Console.WriteLine($"parsing class: {nodeClass.Identifier.Value}");
         nodeClass.ClassScope = ParseClassScope();
         return nodeClass;
     }
@@ -191,8 +188,6 @@ public class ParserSimple : IParser
             }
             else
             {
-                Console.WriteLine(PeekToken().Type);
-                Console.WriteLine(PeekToken()!.Value);
                 throw new JavaSyntaxException("unexpected token");
             }
         }

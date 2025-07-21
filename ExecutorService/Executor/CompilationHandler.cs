@@ -28,6 +28,8 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
     
     public CompilationHandler()
     {
+        var config = YmlConfigReader.ReadExecutorYmlConfig();
+        
         _client = new HttpClient();
         _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         
@@ -42,13 +44,13 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         _portWriter = _availableContainerPorts.Writer;
         _portReader = _availableContainerPorts.Reader;
 
-        for (var i = 0; i < CompilationConfig.DefaultContainerCount; i++)
+        for (var i = 0; i < config.COMPILERS.BASE_COUNT; i++)
         {
-            var containerPort = CompilationConfig.BaselinePort + i;
+            var containerPort = config.COMPILERS.BASE_PORT + i;
             _portWriter.TryWrite(containerPort);
         }
 
-        for (var i = 0; i < CompilationConfig.DefaultThreadCount; i++)
+        for (var i = 0; i < config.COMPILERS.THREAD_COUNT; i++)
         {
             Task.Run(DispatchContainers);
         }

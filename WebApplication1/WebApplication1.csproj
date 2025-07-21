@@ -39,10 +39,7 @@
       <Folder Include="Modules\DuelModule\DTOs\" />
       <Folder Include="Modules\DuelModule\Repositories\" />
       <Folder Include="Modules\DuelModule\Services\" />
-      <Folder Include="Modules\ProblemModule\Controllers\" />
-      <Folder Include="Modules\ProblemModule\DTOs\" />
       <Folder Include="Modules\ProblemModule\Repositories\" />
-      <Folder Include="Modules\ProblemModule\Services\" />
       <Folder Include="Modules\ItemModule\Controllers\" />
       <Folder Include="Modules\ItemModule\DTOs\" />
       <Folder Include="Modules\ItemModule\Repositories\" />

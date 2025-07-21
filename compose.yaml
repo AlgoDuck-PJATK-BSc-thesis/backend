@@ -1,5 +1,9 @@
 ﻿version: '3.8'
 
+networks:
+  app_network:
+    driver: bridge
+
 services:
   webapplication1:
     image: webapplication1
@@ -18,6 +22,19 @@ services:
       - ./WebApplication1:/app
     depends_on:
       - db
+      
+  executor:
+    build:
+      dockerfile: ExecutorService/Dockerfile
+    ports:
+      - "${WEB_PORT:-1337}:1337"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker
+      - /dev/kvm:/dev/kvm
+    cap_add:
+      - SYS_ADMIN
+    privileged: true
 
   db:
     image: postgres:17
