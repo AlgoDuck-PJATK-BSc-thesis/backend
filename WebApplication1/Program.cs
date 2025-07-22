@@ -19,6 +19,9 @@ using WebApplication1.Modules.CohortModule.Chat.Interfaces;
 using WebApplication1.Modules.CohortModule.Chat.Services;
 using WebApplication1.Modules.CohortModule.Leaderboard.Interfaces;
 using WebApplication1.Modules.CohortModule.Leaderboard.Services;
+using WebApplication1.Modules.ProblemModule.Services;
+using WebApplication1.Modules.UserModule.Interfaces;
+using WebApplication1.Modules.UserModule.Services;
 
 Env.Load(); 
 
@@ -95,7 +98,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IExecutorService, WebApplication1.Modules.ProblemModule.Services.ExecutorService>();
+builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();

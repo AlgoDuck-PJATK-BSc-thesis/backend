@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ExecutorService.Executor._ExecutorUtils;
@@ -5,9 +6,17 @@ using WebApplication1.Modules.ProblemModule.Interfaces;
 
 namespace WebApplication1.Modules.ProblemModule.Services;
 
-public class ExecutorService(HttpClient client) : IExecutorService
+public class CodeExecutorService : IExecutorService
 {
     private readonly string _baseUrl = "https://localhost:1337";
+    private readonly HttpClient _client;
+
+    public CodeExecutorService()
+    {
+        _client = new HttpClient();
+        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    }
+    
 
     public async Task<ExecuteResultDto> DryExecuteCode(ExecuteRequestDto executeRequest)
     {
@@ -15,7 +24,7 @@ public class ExecutorService(HttpClient client) : IExecutorService
         {
             Content = new StringContent(JsonSerializer.Serialize(executeRequest), Encoding.UTF8, "application/json")
         };
-        var response = await client.SendAsync(request);
+        var response = await _client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -35,7 +44,7 @@ public class ExecutorService(HttpClient client) : IExecutorService
         {
             Content = new StringContent(JsonSerializer.Serialize(executeRequest), Encoding.UTF8, "application/json")
         };
-        var response = await client.SendAsync(request);
+        var response = await _client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();

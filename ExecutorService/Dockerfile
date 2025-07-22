@@ -6,9 +6,9 @@ EXPOSE 1337
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["./ExecutorService.csproj", "ExecutorService/"]
+COPY ["ExecutorService/ExecutorService.csproj", "ExecutorService/"]
 RUN dotnet restore "ExecutorService/ExecutorService.csproj"
-COPY . "ExecutorService/"
+COPY ExecutorService/ ExecutorService/ 
 WORKDIR "/src/ExecutorService"
 RUN dotnet build "ExecutorService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
@@ -51,10 +51,10 @@ RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
         chmod +x /usr/bin/yq
 
 COPY --from=publish /app/publish .
-COPY Executor/fc-scripts fc-scripts
-COPY Executor/app-scripts app-scripts
-COPY entrypoint.sh .
-COPY ExecutorConfig.yml .
+COPY ExecutorService/Executor/fc-scripts fc-scripts
+COPY ExecutorService/Executor/app-scripts app-scripts
+COPY ExecutorService/entrypoint.sh .
+COPY ExecutorService/ExecutorConfig.yml .
     
 
 RUN    echo '/usr/local/bin/firecracker-v1.2.0-x86_64' >> ~/.bashrc && \

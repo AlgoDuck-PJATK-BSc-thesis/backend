@@ -46,7 +46,7 @@ public class CodeExecutorService(
         else
         {
             // TODO temporary solution I'd like to insert a main if it's not found to test either way
-            return new ExecuteResultDto("", "no main found. Exiting");
+            return new ExecuteResultDto("", "no main function found. Exiting");
         }
 
         return await Exec(fileData);

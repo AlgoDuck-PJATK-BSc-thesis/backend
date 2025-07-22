@@ -5,7 +5,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8C57AD1B-746A-4400-8F42-06ECB3F5D0A8}"
 	ProjectSection(SolutionItems) = preProject
 		.env = .env
-		compose.yaml = compose.yaml
+		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecutorService", "ExecutorService\ExecutorService.csproj", "{BF1CB350-79C4-47B1-AAFC-90A410FB4A8C}"
