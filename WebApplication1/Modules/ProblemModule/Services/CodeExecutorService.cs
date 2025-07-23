@@ -8,7 +8,10 @@ namespace WebApplication1.Modules.ProblemModule.Services;
 
 public class CodeExecutorService : IExecutorService
 {
-    private readonly string _baseUrl = "https://localhost:1337";
+    private static readonly string Hostname = Environment.GetEnvironmentVariable("HOST_NAME") ?? "localhost"; 
+    private static readonly string ExecutorPort = Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"; 
+    private static readonly string BaseUrl = $"http://{Hostname}:{ExecutorPort}";
+    
     private readonly HttpClient _client;
 
     public CodeExecutorService()
@@ -20,7 +23,7 @@ public class CodeExecutorService : IExecutorService
 
     public async Task<ExecuteResultDto> DryExecuteCode(ExecuteRequestDto executeRequest)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/execute/dry")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/api/execute/dry")
         {
             Content = new StringContent(JsonSerializer.Serialize(executeRequest), Encoding.UTF8, "application/json")
         };
@@ -40,7 +43,7 @@ public class CodeExecutorService : IExecutorService
     // repeated because in the future I may end up using different return types who knows
     public async Task<ExecuteResultDto> FullExecuteCode(ExecuteRequestDto executeRequest)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/execute/dry")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/api/execute/dry")
         {
             Content = new StringContent(JsonSerializer.Serialize(executeRequest), Encoding.UTF8, "application/json")
         };

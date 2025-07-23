@@ -7,7 +7,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using OneOf;
 
-namespace AnalyzerWip.Analyzer.AstBuilder;
+namespace ExecutorService.Analyzer.AstBuilder;
 
 public interface IParser
 {

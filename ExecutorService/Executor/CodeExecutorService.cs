@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using AnalyzerWip.Analyzer.AstAnalyzer;
 using ExecutorService.Analyzer._AnalyzerUtils;
+using ExecutorService.Analyzer.AstAnalyzer;
 using ExecutorService.Errors;
 using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
@@ -27,11 +27,11 @@ public class CodeExecutorService(
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
-        var lang = CheckLanguageSupported(executeRequestDto.Lang);
+        var lang = await CheckLanguageSupported(executeRequestDto.Lang);
         
         var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
 
-        _analyzer = new AnalyzerSimple(fileData.FileContents.ToString());
+        _analyzer = new AnalyzerSimple(fileData.FileContents.ToString(), await executorRepository.GetTemplateAsync("0fd5d3a8-48c1-451b-bcdf-cf414cc6d477"));
         _codeAnalysisResult = _analyzer.AnalyzeUserCode();
         
         if (!_codeAnalysisResult.PassedValidation)
@@ -54,7 +54,7 @@ public class CodeExecutorService(
 
     public async Task<ExecuteResultDto> DryExecute(ExecuteRequestDto executeRequestDto)
     {
-        var lang = CheckLanguageSupported(executeRequestDto.Lang);
+        var lang = await CheckLanguageSupported(executeRequestDto.Lang);
         
         var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
         
@@ -159,7 +159,8 @@ public class CodeExecutorService(
 
     private async Task InsertTestCases(UserSolutionData userSolutionData, int writeOffset)
     {
-        var testCases = await executorRepository.GetTestCasesAsync();
+        //TODO hardcoded, change this
+        var testCases = await executorRepository.GetTestCasesAsync("0fd5d3a8-48c1-451b-bcdf-cf414cc6d477");
         
         var testCaseInsertBuilder = new StringBuilder();
         testCaseInsertBuilder.Append("Gson gson = new Gson();\n");
@@ -172,11 +173,11 @@ public class CodeExecutorService(
         userSolutionData.FileContents.Insert(writeOffset, testCaseInsertBuilder);
     }
 
-    private string CheckLanguageSupported(string lang)
+    private async Task<string> CheckLanguageSupported(string lang)
     {
-        var executorYmlConfig = YmlConfigReader.ReadExecutorYmlConfig();
-
-        return executorYmlConfig.SUPPORTED_LANGUAGES.FirstOrDefault(l => l.ToLower().Equals(lang)) ??
-            throw new LanguageException($"Language: {lang} not supported");
+        var supportedLanguages = await executorRepository.GetSupportedLangsAsync();
+        
+        return supportedLanguages.FirstOrDefault(l => l.Name.ToLower().Equals(lang))?.Name ??
+               throw new LanguageException($"Language: {lang} not supported");
     }
 }

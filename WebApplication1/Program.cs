@@ -29,10 +29,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 var jwtSettings = new JwtSettings
 {
-    Key = Env.GetString("JWT_KEY"),
-    Issuer = Env.GetString("JWT_ISSUER"),
-    Audience = Env.GetString("JWT_AUDIENCE"),
-    DurationInMinutes = double.Parse(Env.GetString("JWT_EXP_MINUTES") ?? "120")
+    Key = Environment.GetEnvironmentVariable("JWT_KEY"),
+    Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+    Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+    DurationInMinutes = double.Parse(Environment.GetEnvironmentVariable("JWT_EXP_MINUTES") ?? "120")
 };
 
 builder.Services.Configure<JwtSettings>(opts =>
@@ -44,11 +44,11 @@ builder.Services.Configure<JwtSettings>(opts =>
 });
 
 var connectionString =
-    $"Host={Env.GetString("DB_HOST")};" +
-    $"Port={Env.GetString("DB_PORT")};" +
-    $"Database={Env.GetString("DB_NAME")};" +
-    $"Username={Env.GetString("DB_USER")};" +
-    $"Password={Env.GetString("DB_PASSWORD")}";
+    $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
+    $"Port={Environment.GetEnvironmentVariable("DB_PORT")};" +
+    $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
+    $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
+    $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));

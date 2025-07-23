@@ -1,12 +1,12 @@
-using AnalyzerWip.Analyzer.AstBuilder;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using ExecutorService.Analyzer.AstBuilder;
 
-namespace AnalyzerWip.Analyzer.AstAnalyzer;
+namespace ExecutorService.Analyzer.AstAnalyzer;
 
 public interface IAnalyzer
 {

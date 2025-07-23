@@ -1,7 +1,7 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 
-namespace AnalyzerWip.Analyzer.AstBuilder;
+namespace ExecutorService.Analyzer.AstBuilder;
 
 public interface ILexer
 {
