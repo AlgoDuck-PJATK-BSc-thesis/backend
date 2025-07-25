@@ -8,19 +8,12 @@ using ExecutorService.Analyzer.AstBuilder;
 
 namespace ExecutorService.Analyzer.AstAnalyzer;
 
-public interface IAnalyzer
-{
-    public CodeAnalysisResult AnalyzeUserCode();
-    
-}
-
-public class AnalyzerSimple : IAnalyzer
+public class AnalyzerSimple
 {
     private readonly ILexer _lexerSimple;
     private readonly IParser _parserSimple;
 
     private readonly AstNodeProgram _userProgramRoot;
-    // private readonly AstNodeProgram _userProgramRoot;
     private readonly AstNodeProgram? _templateProgramRoot;
     
     private readonly AstNodeClassMemberFunc _baselineMainSignature = new()
@@ -45,7 +38,6 @@ public class AnalyzerSimple : IAnalyzer
         _parserSimple = new ParserSimple();
         
         _userProgramRoot = _parserSimple.ParseProgram(_lexerSimple.Tokenize(fileContents));
-        
     }
 
     public AnalyzerSimple(string fileContents, string templateContents)
@@ -59,116 +51,68 @@ public class AnalyzerSimple : IAnalyzer
 
     public CodeAnalysisResult AnalyzeUserCode()
     {
-        AstNodeClassMemberFunc? main = FindMainFunction();
+        var main = FindMainFunction();
         
-        MainMethod? mainMethod = MainMethod.MakeFromAstNodeMain(main);
-        string className = GetClassName();
-        bool validatedTemplateFunctions = _templateProgramRoot == null ||  ValidateTemplateFunctions();
+        var mainMethod = MainMethod.MakeFromAstNodeMain(main);
+        var className = GetClassName();
+        var validatedTemplateFunctions = _templateProgramRoot == null ||  ValidateTemplateFunctions();
         
         return new CodeAnalysisResult(mainMethod, className, validatedTemplateFunctions);
     }
     
     private AstNodeClassMemberFunc? FindMainFunction()
     {
-        foreach (var topLevelStatement in _userProgramRoot.ProgramClasses)
+        foreach (var currClass in _userProgramRoot.ProgramClasses.Where(topLevelStatement => topLevelStatement.IsT0).Select(topLevelStatement => topLevelStatement.AsT0))
         {
-            AstNodeClass? currClass = topLevelStatement switch
-            {
-                { IsT0: true } => topLevelStatement.AsT0,
-                { IsT1: true } => null,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            if (currClass is not null)
-            {
-                foreach (AstNodeClassMember member in currClass.ClassScope.ClassMembers)
-                {
-                    if (member.ClassMember.IsT0 && ValidateFunctionSignature(_baselineMainSignature, member.ClassMember.AsT0))
-                    {
-                        return member.ClassMember.AsT0;
-                    }
-                }    
-            }
+            var functionsMatchedMain = currClass.ClassScope.ClassMembers.Select(t => t.ClassMember)
+                .Where(t => t.IsT0)
+                .Where(t => ValidateFunctionSignature(_baselineMainSignature, t.AsT0))
+                .ToList();
+            return functionsMatchedMain.Count == 1 ? functionsMatchedMain[0].AsT0 : null;
         }
         return null;
     }
 
     private bool ValidateTemplateFunctions()
     {
-        bool foundMatch = false;
-        foreach (var topLevelStatement in _templateProgramRoot.ProgramClasses)
+        foreach (var currClass in _templateProgramRoot.ProgramClasses.Where(t => t.IsT0).Select(t => t.AsT0))
         {
-            AstNodeClass? currClass = topLevelStatement switch
+            foreach (var classMember in currClass.ClassScope.ClassMembers.Where(t => t.ClassMember.IsT0).Select(t => t.ClassMember.AsT0))
             {
-                { IsT0: true } => topLevelStatement.AsT0,
-                { IsT1: true } => null,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            if (currClass is not null)
-            {
-                foreach (var classMember in currClass.ClassScope.ClassMembers)
-                {
-                    classMember.ClassMember.Switch(
-                        t0 => foundMatch = FindAndCompareFunc(t0, _userProgramRoot) != null,
-                        t1 => { },
-                        t2 => { }
-                    );
-                    if (foundMatch)
-                    {
-                        return true;
-                    }
-                }
+                return FindAndCompareFunc(classMember, _userProgramRoot) != null;
             }
         }
 
-        return foundMatch;
+        return false;
     }
 
-    private AstNodeClassMemberFunc? FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeProgram toBeSearched)
+    private static AstNodeClassMemberFunc? FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeProgram toBeSearched)
     {
-        foreach (var topLevelStatement in toBeSearched.ProgramClasses)
+        foreach (var currClass in toBeSearched.ProgramClasses.Where(t => t.IsT0).Select(t => t.AsT0))
         {
-            AstNodeClass? currClass = topLevelStatement switch
-            {
-                { IsT0: true } => topLevelStatement.AsT0,
-                { IsT1: true } => null,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            if (currClass is not null)
-            {
-                List<AstNodeClassMemberFunc> matchedFunctions = currClass.ClassScope.ClassMembers
-                    .Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier.Value.Equals(baselineFunc.Identifier.Value))
-                    .Select(func => func.ClassMember.AsT0)
-                    .ToList();
-
-                foreach (var matchedFunction in matchedFunctions)
-                {
-                    if (ValidateFunctionSignature(baselineFunc, matchedFunction))
-                    {
-                        return matchedFunction;
-                    }
-                }
-            }
+            var matchedFunctions = currClass.ClassScope.ClassMembers
+                .Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier.Value.Equals(baselineFunc.Identifier.Value))
+                .Select(func => func.ClassMember.AsT0)
+                .ToList()
+                .Where(func => ValidateFunctionSignature(baselineFunc, func))
+                .ToList();
+            return matchedFunctions.Count == 1 ? matchedFunctions[0] : null;
+            
         }
-
         return null;
     }
 
     private string GetClassName()
     {
-        foreach (var topLevelStatement in _userProgramRoot.ProgramClasses)
+        foreach (var topLevelStatement in _userProgramRoot.ProgramClasses.Where(topLevelStatement => topLevelStatement.IsT0))
         {
-            if (topLevelStatement.IsT0)
-            {
-                return topLevelStatement.AsT0.Identifier.Value; //currently presumes only one class per file, naive but this is a simple parser not without cause
-            }
+            return topLevelStatement.AsT0.Identifier.Value; //currently presumes only one class per file, naive but this is a simple parser not without cause
         }
 
         throw new JavaSyntaxException("no class found");
     }
     
-    private bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
+    private static bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
     {
         if (baseline.AccessModifier != compared.AccessModifier)
         {
@@ -180,23 +124,77 @@ public class AnalyzerSimple : IAnalyzer
             return false;
         }
 
-        bool isValid = true;
+        var isValid = true;
+
+        var baselineGenericDeclarationCount = baseline.GenericTypes.Count;
+        for (var i = 0; i < baselineGenericDeclarationCount; i++)
+        {
+            if (!baseline.GenericTypes[i].Equals(compared.GenericTypes[i]))
+            {
+                return false;
+            }
+        }
+        
         baseline.FuncReturnType?.Switch(
-            t0 => isValid =  compared.FuncReturnType!.Value.IsT0 && t0 == compared.FuncReturnType.Value.AsT0,
-            t1 => isValid = compared.FuncReturnType!.Value.IsT1 && t1 == compared.FuncReturnType.Value.AsT1,
+            t0 =>
+            {
+                if (!compared.FuncReturnType!.Value.IsT0)
+                {
+                    isValid = false;
+                    return;
+                }
+                
+                var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT0;
+                var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT0;
+                
+                isValid = baselinePrimitiveReturnType == comparedPrimitiveReturnType;
+            },
+            t1 =>
+            {
+                // this is just for void
+                if (!compared.FuncReturnType!.Value.IsT1)
+                {
+                    isValid = false;
+                    return;
+                }
+
+                
+                var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT1;
+                var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT1;
+                
+                isValid = baselinePrimitiveReturnType == comparedPrimitiveReturnType;
+            },
             t2 =>
             {
                 if (!compared.FuncReturnType!.Value.IsT2)
                 {
                     isValid = false;
+                    return;
                 }
-                var comparedArray = compared.FuncReturnType.Value.AsT2;
-                isValid = t2.BaseType.IsT0 &&
-                          comparedArray.BaseType.IsT0 &&
-                          t2.BaseType.AsT0 == comparedArray.BaseType.AsT0 &&
-                          t2.Dim == comparedArray.Dim;
+                
+                var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT2.BaseType.AsT0; // TODO this only presumes primitive arrays + String work on this
+                var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT2.BaseType.AsT0;
+                
+                var baselineArrayDim = baseline.FuncReturnType.Value.AsT2.Dim;
+                var comparedArrayDim = compared.FuncReturnType.Value.AsT2.Dim;
+                
+                isValid = 
+                    baselinePrimitiveReturnType == comparedPrimitiveReturnType 
+                    &&
+                    baselineArrayDim == comparedArrayDim;
             },
-            t3 => isValid = compared.FuncReturnType!.Value.IsT3 &&  compared.FuncReturnType!.Value.AsT3.Value!.Equals(t3.Value)
+            t3 =>
+            {
+                if (!compared.FuncReturnType!.Value.IsT3)
+                {
+                    isValid = false;
+                    return;
+                }
+
+                var baselineComplexReturnType = baseline.FuncReturnType!.Value.AsT3.Value!;
+                var comparedComplexReturnType = compared.FuncReturnType!.Value.AsT3.Value!;
+                isValid = baselineComplexReturnType.Equals(comparedComplexReturnType);
+            }
         );
         if (!isValid)
         {
@@ -214,29 +212,81 @@ public class AnalyzerSimple : IAnalyzer
         }
 
         
-        for (int i = 0; i < baseline.FuncArgs.Count; i++)
+        for (var i = 0; i < baseline.FuncArgs.Count; i++)
         {
             var capturedI = i;
             
             baseline.FuncArgs[i].Type.Switch(
-                t0 => isValid = compared.FuncArgs[capturedI].Type.IsT0 && compared.FuncArgs[capturedI].Type.AsT0 == t0,
+                _ =>
+                {
+                    if (!compared.FuncArgs[capturedI].Type.IsT0)
+                    {
+                        isValid = false;
+                        return;
+                    }
+                    var baselineArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
+                    var comparedArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
+
+                    var baselineArgType = compared.FuncArgs[capturedI].Type.AsT0;
+                    var comparedArgType = baseline.FuncArgs[capturedI].Type.AsT0;
+
+                    isValid = 
+                        baselineArgType == comparedArgType
+                        &&
+                        baselineArgName.Equals(comparedArgName);
+                },
                 t1 => {
                     if (!compared.FuncArgs[capturedI].Type.IsT1)
                     {
                         isValid = false;
+                        return;
                     }
+
+                    var baselineArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
+                    var comparedArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
+
                     var comparedArray = compared.FuncArgs[capturedI].Type.AsT1;
-                    isValid = t1.BaseType.IsT0 &&
-                              comparedArray.BaseType.IsT0 &&
-                              t1.BaseType.AsT0 == comparedArray.BaseType.AsT0 &&
-                              t1.Dim == comparedArray.Dim;
+
+                    var baselineArrayType = t1.BaseType.AsT0;
+                    var comparedArrayType = comparedArray.BaseType.AsT0;
+                    
+                    var baselineArrayDim = t1.Dim;
+                    var comparedArrayDim = comparedArray.Dim;
+
+                    var isValidArrayType = t1.BaseType.IsT0;
+                    
+                    isValid = 
+                        isValidArrayType 
+                        &&
+                        baselineArrayType == comparedArrayType
+                        &&
+                        baselineArrayDim == comparedArrayDim 
+                        &&
+                        baselineArgName.Equals(comparedArgName); 
                      },
-                t2 => isValid = compared.FuncArgs[capturedI].Type.IsT2 && compared.FuncArgs[capturedI].Type.AsT2.Value != null && compared.FuncArgs[capturedI].Type.AsT2.Value!.Equals(t2.Value) && compared.FuncArgs[capturedI].Identifier!.Value!.Equals(baseline.FuncArgs[capturedI].Identifier!.Value)
+                _ =>
+                {
+                    if (!compared.FuncArgs[capturedI].Type.IsT2)
+                    {
+                        isValid = false;
+                        return;
+                    }
+                    
+                    var baselineArgTypeComplex =  baseline.FuncArgs[capturedI].Type.AsT2!.Value!;
+                    var comparedArgTypeComplex =  compared.FuncArgs[capturedI].Type.AsT2!.Value!;
+                    
+                    var baselineArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
+                    var comparedArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
+                    
+                    isValid = 
+                        baselineArgTypeComplex.Equals(comparedArgTypeComplex)
+                        &&
+                        baselineArgName.Equals(comparedArgName);
+                }
                 );
             if (!isValid)
             {
-                
-                return isValid;
+                return false;
             }
         }
         return isValid;

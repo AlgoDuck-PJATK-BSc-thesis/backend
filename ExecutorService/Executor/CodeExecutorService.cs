@@ -20,9 +20,9 @@ public class CodeExecutorService(
     ICompilationHandler compilationHandler
     ) : ICodeExecutorService
 {
-    private const string JavaImport = "import com.google.gson.Gson;\n\n"; // TODO this is temporary, not the gson but the way it's imported
+    private const string JavaImport = "import com.google.gson.Gson;\n"; // TODO this is temporary, not the gson but the way it's imported
 
-    private IAnalyzer? _analyzer;
+    private AnalyzerSimple? _analyzer;
     private CodeAnalysisResult? _codeAnalysisResult;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
@@ -41,7 +41,7 @@ public class CodeExecutorService(
         
         if (_codeAnalysisResult.MainMethodIndices != null)
         {
-            await InsertTestCases(fileData, _codeAnalysisResult.MainMethodIndices.MethodFileEndIndex);
+            await InsertTestCases(fileData, _codeAnalysisResult.MainMethodIndices.MethodFileEndIndex, executeRequestDto.ExerciseId);
         }
         else
         {
@@ -63,9 +63,7 @@ public class CodeExecutorService(
 
         return await Exec(fileData);
     }
-
     
-    // TODO add better error handling here
     private async Task<ExecuteResultDto> Exec(UserSolutionData userSolutionData)
     {
         var compilationTask = CompileCode(userSolutionData);
@@ -88,29 +86,15 @@ public class CodeExecutorService(
 
     private async Task<ExecuteResultDto> DispatchExecutorVm(UserSolutionData userSolutionData)
     {
-        await JavaExecute(userSolutionData);
+        await ExecuteJava(userSolutionData);
 
-        ExecuteResultDto executeResult = new();
-        try
-        {
-            executeResult.StdOutput = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-OUT-LOG.log");
-        }
-        catch (FileNotFoundException ex)
-        {
-            executeResult.StdOutput = ex.Message;
-        }
-        try
-        {
-            var testResults = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-ANSW-LOG.log");
-            executeResult.TestResults = testResults.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", ""); // TODO could move this to the bash script ig
-        }
-        catch (FileNotFoundException e)
-        {
-            // TODO handle this
-        }
+        var testResults = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-ANSW-LOG.log");
 
-        return executeResult;
-
+        return new ExecuteResultDto
+        {
+            StdOutput = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-OUT-LOG.log"),
+            TestResults = testResults.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", "") // TODO could move this to the bash script ig
+        };
     }
 
     private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string exerciseId) // TODO Make the import not constant
@@ -126,16 +110,19 @@ public class CodeExecutorService(
         return fileData;
     }
 
-    private async Task InsertTestCases(UserSolutionData userSolutionData, int writeOffset)
+    private async Task InsertTestCases(UserSolutionData userSolutionData, int writeOffset, string exerciseId)
     {
-        //TODO hardcoded, change this
-        var testCases = await executorRepository.GetTestCasesAsync("0fd5d3a8-48c1-451b-bcdf-cf414cc6d477");
+        var testCases = await executorRepository.GetTestCasesAsync(exerciseId);
+
+        var gsonInstanceName = new StringBuilder("a"); // sometimes guids start with numbers, java variables names on the other hand cannot
+        gsonInstanceName.Append(exerciseId.Replace("-", "")); 
         
         var testCaseInsertBuilder = new StringBuilder();
-        testCaseInsertBuilder.Append("Gson gson = new Gson();\n");
+        testCaseInsertBuilder.Append($"Gson {gsonInstanceName} = new Gson();\n");
+        
         foreach (var testCase in testCases)
         {
-            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + gson.toJson({testCase.ExpectedOutput}).equals(gson.toJson(sortIntArr({testCase.TestInput}))));\n";
+            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson(sortIntArr({testCase.TestInput}))));\n";
             testCaseInsertBuilder.Append(comparingStatement);
         }
         
@@ -190,7 +177,7 @@ public class CodeExecutorService(
         await buildProcess.WaitForExitAsync();
     }
 
-    private async Task JavaExecute(UserSolutionData userSolutionData)
+    private async Task ExecuteJava(UserSolutionData userSolutionData)
     {
         var execProcess = new Process
         {
