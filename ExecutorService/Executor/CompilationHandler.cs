@@ -1,10 +1,13 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
+using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
 
 namespace ExecutorService.Executor;
@@ -79,9 +82,21 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
                         Encoding.UTF8, "application/json")
                 };
                 var response = await _client.SendAsync(request);
-
-                task.Tcs.SetResult(await response.Content.ReadAsByteArrayAsync());
-
+                if (response.IsSuccessStatusCode)
+                {
+                    task.Tcs.SetResult(await response.Content.ReadAsByteArrayAsync());
+                }
+                else if(response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    var rawResponse = await response.Content.ReadAsStringAsync();
+                    var exceptionContents = new CompilationException(rawResponse);
+                    task.Tcs.SetException(exceptionContents);
+                }
+                else
+                {
+                    var exceptionContents = new Exception(":(");
+                    task.Tcs.SetException(exceptionContents);
+                }
             }
             catch (Exception ex)
             {

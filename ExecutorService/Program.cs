@@ -31,8 +31,8 @@ builder.Services.AddSingleton<ICompilationHandler, CompilationHandler>();
 
 var app = builder.Build();
 
-
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseSwagger();
 app.UseSwaggerUI();
 

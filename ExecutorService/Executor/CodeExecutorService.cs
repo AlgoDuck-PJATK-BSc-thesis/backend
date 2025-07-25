@@ -3,6 +3,7 @@ using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer.AstAnalyzer;
 using ExecutorService.Errors;
+using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
 
@@ -69,9 +70,11 @@ public class CodeExecutorService(
         var compilationTask = CompileCode(userSolutionData);
         var fsCopyTask = CopyTemplateFs(userSolutionData);
         
-        Task.WaitAll(compilationTask, fsCopyTask);
+        await Task.WhenAll(compilationTask, fsCopyTask);
 
-        await PopulateCopyFs(userSolutionData, await compilationTask);
+        var compilationResult = await compilationTask;
+
+        await PopulateCopyFs(userSolutionData, compilationResult);
         
         return await DispatchExecutorVm(userSolutionData);
     }

@@ -1,4 +1,5 @@
 using System.Net;
+using ExecutorService.Errors.Exceptions;
 
 namespace ExecutorService.Errors;
 
@@ -18,7 +19,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        logger.LogError(exception, "An unexpected error occurred.");
+        // logger.LogError(exception, "An unexpected error occurred.");
         
         var response = exception switch
         {
@@ -26,6 +27,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             JavaSyntaxException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, $"java syntax error: {err.Message}"),
             LanguageException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             FileNotFoundException _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Something went wrong during code execution. Please try again later"),
+            CompilationException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Internal server error"),
         };
 
