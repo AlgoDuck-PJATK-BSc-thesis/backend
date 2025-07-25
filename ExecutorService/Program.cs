@@ -43,7 +43,7 @@ app.MapControllers();
 
 app.MapGet("/", async (IOptions<S3Settings> options) =>
 {
-    return Results.Ok($"{options.Value.BucketName}");
+    return Results.Ok($"{Environment.GetEnvironmentVariable("HOST_NAME")}");
 });
 
 app.Run("http://0.0.0.0:1337");

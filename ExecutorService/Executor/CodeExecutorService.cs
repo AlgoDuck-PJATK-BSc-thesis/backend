@@ -36,7 +36,7 @@ public class CodeExecutorService(
         
         if (!_codeAnalysisResult.PassedValidation)
         {
-            return new ExecuteResultDto("", "critical function signature modified. Exiting.");
+            return new ExecuteResultDto("", "Template modified. Cannot proceed with testing. Exiting.", "");
         }
         
         if (_codeAnalysisResult.MainMethodIndices != null)
@@ -46,7 +46,7 @@ public class CodeExecutorService(
         else
         {
             // TODO temporary solution I'd like to insert a main if it's not found to test either way
-            return new ExecuteResultDto("", "no main function found. Exiting");
+            return new ExecuteResultDto("", "no main function found. Exiting", "");
         }
 
         return await Exec(fileData);
@@ -68,58 +68,27 @@ public class CodeExecutorService(
     // TODO add better error handling here
     private async Task<ExecuteResultDto> Exec(UserSolutionData userSolutionData)
     {
-        var responseBytes = await CompileCode(userSolutionData);
-        await File.WriteAllBytesAsync($"/tmp/{userSolutionData.ExecutionId}.class", responseBytes);
+        var compilationTask = CompileCode(userSolutionData);
+        var fsCopyTask = CopyTemplateFs(userSolutionData);
+        
+        Task.WaitAll(compilationTask, fsCopyTask);
 
-        await BuildCopyFs(userSolutionData);
+        await PopulateCopyFs(userSolutionData, await compilationTask);
         
         return await DispatchExecutorVm(userSolutionData);
     }
 
-    private async Task<byte[]> CompileCode(UserSolutionData userSolutionData)
+    private Task<byte[]> CompileCode(UserSolutionData userSolutionData)
     {
         var codeBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
         var codeB64 = Convert.ToBase64String(codeBytes);
         
-        return await compilationHandler.CompileAsync(codeB64, _codeAnalysisResult!.MainClassName);
-    }
-    
-    private async Task BuildCopyFs(UserSolutionData userSolutionData)
-    {
-        var buildProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/fc-scripts/build-copy.sh \"{_codeAnalysisResult!.MainClassName}\" \"{userSolutionData.ExecutionId}\" \"{userSolutionData.SigningKey}\"", 
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true,
-                CreateNoWindow = true
-            }
-        };
-        
-        buildProcess.Start();
-        await buildProcess.WaitForExitAsync();
+        return compilationHandler.CompileAsync(codeB64, _codeAnalysisResult!.MainClassName);
     }
 
     private async Task<ExecuteResultDto> DispatchExecutorVm(UserSolutionData userSolutionData)
     {
-        var execProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/fc-scripts/java-exec.sh {userSolutionData.ExecutionId} {userSolutionData.SigningKey}",
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true,
-                CreateNoWindow = true
-            }
-        };
-
-        execProcess.Start();
-        await execProcess.WaitForExitAsync();
+        await JavaExecute(userSolutionData);
 
         ExecuteResultDto executeResult = new();
         try
@@ -128,7 +97,7 @@ public class CodeExecutorService(
         }
         catch (FileNotFoundException ex)
         {
-            // TODO handle this
+            executeResult.StdOutput = ex.Message;
         }
         try
         {
@@ -143,7 +112,7 @@ public class CodeExecutorService(
         return executeResult;
 
     }
-    
+
     private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string exerciseId) // TODO Make the import not constant
     {
         var codeBytes = Convert.FromBase64String(codeB64);
@@ -175,9 +144,69 @@ public class CodeExecutorService(
 
     private async Task<string> CheckLanguageSupported(string lang)
     {
-        var supportedLanguages = await executorRepository.GetSupportedLangsAsync();
+        var supportedLanguages = await executorRepository.GetSupportedLanguagesAsync();
         
         return supportedLanguages.FirstOrDefault(l => l.Name.ToLower().Equals(lang))?.Name ??
                throw new LanguageException($"Language: {lang} not supported");
     }
+
+    private Task CopyTemplateFs(UserSolutionData userSolutionData)
+    {
+        var buildProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"/app/fc-scripts/copy-template-fs.sh \"{_codeAnalysisResult!.MainClassName}\" \"{userSolutionData.ExecutionId}\" \"{userSolutionData.SigningKey}\"", 
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true
+            }
+        };
+        
+        buildProcess.Start();
+        return buildProcess.WaitForExitAsync();
+    }    
+    
+    private async Task PopulateCopyFs(UserSolutionData userSolutionData, byte[] userByteCode)
+    {
+        await File.WriteAllBytesAsync($"/tmp/{userSolutionData.ExecutionId}.class", userByteCode);
+        
+        var buildProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"/app/fc-scripts/populate-execution-fs.sh \"{_codeAnalysisResult!.MainClassName}\" \"{userSolutionData.ExecutionId}\"", 
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true
+            }
+        };
+        
+        buildProcess.Start();
+        await buildProcess.WaitForExitAsync();
+    }
+
+    private async Task JavaExecute(UserSolutionData userSolutionData)
+    {
+        var execProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"/app/fc-scripts/java-exec.sh {userSolutionData.ExecutionId} {userSolutionData.SigningKey}",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true
+            }
+        };
+
+        execProcess.Start();
+        await execProcess.WaitForExitAsync();
+    }
+    
 }

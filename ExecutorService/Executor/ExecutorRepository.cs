@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text;
-using Microsoft.Data.SqlClient;
 using Dapper;
 using ExecutorService.Executor._ExecutorUtils;
 
@@ -14,8 +13,7 @@ namespace ExecutorService.Executor;
 
 public interface IExecutorRepository
 {
-
-    public Task<List<Language>> GetSupportedLangsAsync();
+    public Task<List<Language>> GetSupportedLanguagesAsync();
     public Task<TestCase[]> GetTestCasesAsync(string exerciseId);
     public Task<string> GetTemplateAsync(string exerciseId);
     public Task<string> GetFuncName(); //TODO for now will be stored in db however I'd like to add some marking mechanism to templates that indicates this is the primary "call method" to be used in testing
@@ -43,7 +41,7 @@ public class ExecutorRepository : IExecutorRepository
     }
     
 
-    public async Task<List<Language>> GetSupportedLangsAsync()
+    public async Task<List<Language>> GetSupportedLanguagesAsync()
     {
         var connection = new NpgsqlConnection(_connectionString);
         
@@ -120,7 +118,7 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
     
     private readonly string _connectionString = configuration["ConnectionStrings:DefaultConnection"] ?? throw new NullReferenceException();
 
-    public async Task<List<Language>> GetSupportedLangsAsync()
+    public async Task<List<Language>> GetSupportedLanguagesAsync()
     {
         var executorYmlConfig = YmlConfigReader.ReadExecutorYmlConfig();
 
