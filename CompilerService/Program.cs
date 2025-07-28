@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using CompilerService.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using CompilationErrorDto = CompilerService.Dtos.CompilationErrorDto;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +36,7 @@ app.MapPost("/compile", ([FromBody] CompileRequestDto requestDto) =>
     
     compileProcess.Start();
     compileProcess.WaitForExit();
+
     try
     {
         return Results.File(File.ReadAllBytes($"/app/client-bytecode/{compileId}/{requestDto.ClassName}.class"),
@@ -50,6 +50,7 @@ app.MapPost("/compile", ([FromBody] CompileRequestDto requestDto) =>
             var cleanedErrorLog = errorLog.Replace($"/app/client-src/{compileId}/", "");
             return Results.BadRequest(new CompilationErrorDto(cleanedErrorLog));
         }
+
         return Results.Problem(
             title: "Something went wrong during code execution. Please try again later",
             detail: e.Message,

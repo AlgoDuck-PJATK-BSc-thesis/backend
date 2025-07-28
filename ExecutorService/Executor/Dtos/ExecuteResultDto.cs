@@ -1,4 +1,4 @@
-namespace ExecutorService.Executor._ExecutorUtils;
+namespace ExecutorService.Executor.Dtos;
 
 public record ExecuteResultDto(string? StdOutput, string? StdError, string? TestResults)
 {

@@ -8,4 +8,4 @@ mkdir -p "/app/client-src/$EXEC_ID"
 mkdir -p "/app/error-log/$EXEC_ID"
 echo "$CODE_B64" | base64 -d > "/app/client-src/$EXEC_ID/$CLASS_NAME.java"
 
-javac -cp "/app/app-lib/gson-2.13.1.jar" -d "/app/client-bytecode/$EXEC_ID" "/app/client-src/$EXEC_ID/$CLASS_NAME.java" 2>"/app/error-log/$EXEC_ID/err.log"
+javac -cp "/app/app-lib/gson-2.13.1.jar" -proc:none -d "/app/client-bytecode/$EXEC_ID" "/app/client-src/$EXEC_ID/$CLASS_NAME.java" 2>"/app/error-log/$EXEC_ID/err.log"

@@ -21,11 +21,13 @@ USER ROOT
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     bash \
     coreutils \
+    netcat-openbsd \
     openjdk-17-jdk-headless && \
     apt-get clean &&\
     mkdir -p app-lib && \

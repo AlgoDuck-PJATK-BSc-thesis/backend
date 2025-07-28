@@ -47,13 +47,13 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         _portWriter = _availableContainerPorts.Writer;
         _portReader = _availableContainerPorts.Reader;
 
-        for (var i = 0; i < config.COMPILERS.BASE_COUNT; i++)
+        for (var i = 0; i < config.COMPILATION_HANDLER.BASE_COUNT; i++)
         {
-            var containerPort = config.COMPILERS.BASE_PORT + i;
+            var containerPort = config.COMPILATION_HANDLER.BASE_PORT + i;
             _portWriter.TryWrite(containerPort);
         }
 
-        for (var i = 0; i < config.COMPILERS.THREAD_COUNT; i++)
+        for (var i = 0; i < config.COMPILATION_HANDLER.THREAD_COUNT; i++)
         {
             Task.Run(DispatchContainers);
         }
@@ -72,10 +72,12 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         {
             var task = await GetCompilationTask();
             var port = await GetAvailableContainerPort();
+
+            var url = $"http://compiler{port}:5137/compile";
             
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, $"http://{Environment.GetEnvironmentVariable("HOST_NAME")}:{port}/compile")
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
                     Content = new StringContent(
                         JsonSerializer.Serialize(new CompileRequestDto(task.Code, task.ClassName)),
@@ -158,17 +160,13 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
 
     public void Dispose()
     {
-        var cleanupProcess = new Process
+        Console.WriteLine("Shutting down compile cluster. Please wait...");
+        while (_portReader.TryRead(out var port))
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = "/app/app-scripts/cleanup-compilers.sh", 
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
-        cleanupProcess.Start();
-        cleanupProcess.WaitForExit();
+            var url = $"http://warden:7139/container/{port}";
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            _client.Send(request);
+        }
     }
 }

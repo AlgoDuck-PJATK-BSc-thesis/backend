@@ -6,6 +6,7 @@ using ExecutorService.Errors;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
+using ExecutorService.Executor.Dtos;
 
 namespace ExecutorService.Executor;
 
@@ -67,6 +68,7 @@ public class CodeExecutorService(
     
     private async Task<ExecuteResultDto> Exec(UserSolutionData userSolutionData)
     {
+        Console.WriteLine("executing");
         var compilationTask = CompileCode(userSolutionData);
         var fsCopyTask = CopyTemplateFs(userSolutionData);
         

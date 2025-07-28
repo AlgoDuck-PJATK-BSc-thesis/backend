@@ -31,7 +31,7 @@ public class ExecutorRepository : IExecutorRepository
         _s3Client = s3Client;
         _s3Settings = options;
         _configuration = configuration;
-        var host = Environment.GetEnvironmentVariable("HOST_NAME");
+        var host = Environment.GetEnvironmentVariable("DB_HOST");
         var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
         var database = Environment.GetEnvironmentVariable("POSTGRES_DB");
         var username = Environment.GetEnvironmentVariable("POSTGRES_USER");

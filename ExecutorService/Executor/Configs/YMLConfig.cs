@@ -1,7 +1,7 @@
 namespace ExecutorService.Executor.Configs;
 
-public class Config 
+public class YMLConfig 
 {
-    public Compilers COMPILERS { get; set; }
+    public CompilationHandler COMPILATION_HANDLER { get; set; }
     public string[] SUPPORTED_LANGUAGES { get; set; }
 }

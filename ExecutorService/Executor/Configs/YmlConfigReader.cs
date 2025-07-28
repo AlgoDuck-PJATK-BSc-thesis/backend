@@ -13,8 +13,8 @@ public static class YmlConfigReader
         return deserializer.Deserialize<T>(yamlConfig);
     }
 
-    public static Config ReadExecutorYmlConfig()
+    public static YMLConfig ReadExecutorYmlConfig()
     {
-        return ReadYmlConfig<Config>("/app/ExecutorConfig.yml");
+        return ReadYmlConfig<YMLConfig>("/app/ExecutorConfig.yml");
     }
 }

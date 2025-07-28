@@ -4,6 +4,7 @@ using ExecutorService.Errors;
 using ExecutorService.Executor;
 using ExecutorService.Executor.Configs;
 using Microsoft.Extensions.Options;
+using CompilationHandler = ExecutorService.Executor.CompilationHandler;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,9 +42,6 @@ app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader())
 
 app.MapControllers();
 
-app.MapGet("/", async (IOptions<S3Settings> options) =>
-{
-    return Results.Ok($"{Environment.GetEnvironmentVariable("HOST_NAME")}");
-});
+app.MapPost("/", () => Results.Ok("Sup"));
 
 app.Run("http://0.0.0.0:1337");
