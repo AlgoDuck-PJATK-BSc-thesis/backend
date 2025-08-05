@@ -33,10 +33,6 @@
       <Folder Include="Modules\CohortModule\DTOs\" />
       <Folder Include="Modules\CohortModule\Repositories\" />
       <Folder Include="Modules\CohortModule\Services\" />
-      <Folder Include="Modules\ContestModule\Controllers\" />
-      <Folder Include="Modules\ContestModule\DTOs\" />
-      <Folder Include="Modules\ContestModule\Repositories\" />
-      <Folder Include="Modules\ContestModule\Services\" />
       <Folder Include="Modules\DuelModule\Controllers\" />
       <Folder Include="Modules\DuelModule\DTOs\" />
       <Folder Include="Modules\DuelModule\Repositories\" />
