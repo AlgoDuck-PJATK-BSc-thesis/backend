@@ -19,11 +19,18 @@ builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Setti
 builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+
+    var credentials = new Amazon.Runtime.BasicAWSCredentials(
+        Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
+        Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
+    );
+
     var config = new AmazonS3Config
     {
         RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region)
     };
-    return new AmazonS3Client(config);
+
+    return new AmazonS3Client(credentials, config);
 });
 
 builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();

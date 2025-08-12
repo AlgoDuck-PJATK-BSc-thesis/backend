@@ -21,8 +21,6 @@ var portMappedToContainerIds = new Dictionary<int, string>();
 
 app.MapPost("/container", async ([FromBody] ContainerCreationRequestDto containerCreationRequestDto) =>
 {
-    Console.WriteLine("Container creation request");
-    
     if (portMappedToContainerIds.ContainsKey(containerCreationRequestDto.Port))
     {
         return Results.BadRequest($"Container mapped to port: {containerCreationRequestDto.Port} already exists");
@@ -30,10 +28,6 @@ app.MapPost("/container", async ([FromBody] ContainerCreationRequestDto containe
     var containerId = await DeployCompiler(containerCreationRequestDto.Port, containerCreationRequestDto.Mem, containerCreationRequestDto.Cpus);
     portMappedToContainerIds[containerCreationRequestDto.Port] = containerId;
 
-    Console.WriteLine(containerCreationRequestDto.Port);
-    Console.WriteLine(containerCreationRequestDto.Mem);
-    Console.WriteLine(containerCreationRequestDto.Cpus);
-    
     return Results.Ok(new ContainerCreationResponseDto(containerId));
 });
 

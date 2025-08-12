@@ -1,6 +1,6 @@
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 
-namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
+namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 
 public class AstNodeTopLevelStat
 {

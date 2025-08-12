@@ -1,114 +1,130 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using OneOf;
 
 namespace ExecutorService.Analyzer.AstBuilder;
 
 public interface IParser
 {
-    public AstNodeProgram ParseProgram(List<Token> tokens);
+    public AstNodeProgram ParseProgram(List<List<Token>> compilationUnits);
 }
 
 public class ParserSimple : IParser
 {
     private int _currPos;
-    private List<Token> _tokens = new();
+    private List<List<Token>> _compilationUnits = [];
+    private List<Token> _tokens = [];
     
     private static readonly HashSet<TokenType> SimpleTypes =
     [
         TokenType.Byte, TokenType.Short, TokenType.Int, TokenType.Long,
         TokenType.Float, TokenType.Double, TokenType.Char,
         TokenType.Boolean, TokenType.String
-    ];    
-    private static readonly HashSet<TokenType> Modifiers =
-    [
-        TokenType.Final, TokenType.Static
     ];
 
-    private static readonly HashSet<TokenType> TopLevelStatements =
-    [
-        TokenType.Class, TokenType.Import, TokenType.Package
-    ];
-
-    public AstNodeProgram ParseProgram(List<Token> tokens)
+    public AstNodeProgram ParseProgram(List<List<Token>> compilationUnits)
     {
-        _tokens = tokens;
-        _currPos = 0;
+        _compilationUnits = compilationUnits;
         AstNodeProgram program = new();
-        while (PeekToken() is not null)
+        foreach (var compilationUnit in compilationUnits)
         {
-            program.ProgramClasses.Add(ParseTopLevelStatement()); //TODO might have to change this name   
+            _currPos = 0;
+            _tokens = compilationUnit;
+            while (PeekToken() is not null)
+            {
+                program.ProgramCompilationUnits.Add(ParseCompilationUnit());
+            }    
         }
 
         return program;
     }
 
-    private OneOf<AstNodeClass,AstNodeTopLevelStat> ParseTopLevelStatement()
+    private AstNodeCompilationUnit ParseCompilationUnit()
     {
-        int lookahead = 0;
-        Token? peekedToken = PeekToken(); //I know double null check here on iter 0, might clean this up later, no clean idea for it now
-        while (peekedToken is not null && !TopLevelStatements.Contains(peekedToken.Type))
+        
+        var compilationUnit = new AstNodeCompilationUnit();
+        
+        if (CheckTokenType(TokenType.Package))
         {
-            peekedToken = PeekToken(++lookahead);
+            ConsumeIfOfType(TokenType.Package, "not gonna happen, put here for readability");
+            AstNodePackage package = new();
+            ParseImportsAndPackages(package);
+            compilationUnit.Package = package;
+        }
+    
+        while (CheckTokenType(TokenType.Import))
+        {
+            ConsumeIfOfType(TokenType.Import, "not gonna happen, put here for readability");
+            AstNodeImport import = new();
+            ParseImportsAndPackages(import);
+            compilationUnit.Imports.Add(import);
+        }
+        
+        while (PeekToken() != null)
+        {
+            compilationUnit.CompilationUnitTopLevelStatements.Add(ParseTopLevelStatement(compilationUnit));
+        }
+
+        return compilationUnit;
+    }
+
+    private OneOf<AstNodeClass> ParseTopLevelStatement(AstNodeCompilationUnit compilationUnit)
+    {
+        var lookahead = 0;
+        while (!(CheckTokenType(TokenType.Class, lookahead) /*|| CheckTokenType(TokenType.Import, lookahead)*/)) 
+        {
+            lookahead++;
         }
 
         return PeekToken(lookahead)!.Type switch
         {
-            TokenType.Import => ParseTopLevelStat(),
-            TokenType.Package => ParseTopLevelStat(),
             TokenType.Class => ParseClass([MemberModifier.Final]),
-            _ => throw new ArgumentOutOfRangeException()
+            _ => throw new JavaSyntaxException($"Unexpected token {PeekToken(lookahead)!.Type}")
         };
     }
 
-    private AstNodeClass ParseClass(MemberModifier[] legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low hanging fruit
+    private AstNodeClass ParseClass(List<MemberModifier> legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low-hanging fruit
     {
         AstNodeClass nodeClass = new();
-        AccessModifier? accessModifier = TokenIsAccessModifier(PeekToken());
+        var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier != null)
         {
             nodeClass.ClassAccessModifier = accessModifier.Value;
             ConsumeToken();
         }
-        nodeClass.ClassModifiers = ParseModifiers();
+        nodeClass.ClassModifiers = ParseModifiers(legalModifiers);
         
         ConsumeIfOfType(TokenType.Class, "class");
-        // Environment.Exit(0);
 
         nodeClass.Identifier = ConsumeIfOfType(TokenType.Ident, "class name");
+        
+        ParseGenericDeclaration(nodeClass);
+        
         nodeClass.ClassScope = ParseClassScope();
         return nodeClass;
     }
 
-    private AstNodeTopLevelStat ParseTopLevelStat() //TODO in Gods name I command thee change this naming
+    private void ParseImportsAndPackages(IUriSetter statement) //TODO in Gods name I command thee change this naming
     { 
-        //currently parses only imports
-        ConsumeIfOfType(TokenType.Import, "import");
-        StringBuilder uriBuilder = new StringBuilder();
-        while (true)
+        var uri = new StringBuilder();
+        
+        while (PeekToken(1) != null && PeekToken(1)!.Type != TokenType.Semi)
         {
-            uriBuilder.Append(ConsumeIfOfType(TokenType.Ident, "uri segment").Value);
-            if (CheckTokenType(TokenType.Dot))
-            {
-                ConsumeToken();
-                uriBuilder.Append(".");
-            }
-            else if (CheckTokenType(TokenType.Semi))
-            {
-                ConsumeToken();
-                break;
-            }
+            var uriComponent = ConsumeIfOfType(TokenType.Ident, "uri component").Value!;
+            uri.Append($"{uriComponent}.");
+            ConsumeToken(); // consume delim
         }
 
-        return new AstNodeTopLevelStat()
-        {
-            TopLevelStatement = TopLevelStatement.Import, Uri = uriBuilder.ToString()
-        };
+        var lastUriComponentToken = ConsumeIfOfType(TokenType.Ident, "identifier");
+        ConsumeIfOfType(TokenType.Semi, "semi colon");
+        uri.Append(lastUriComponentToken.Value!);
+
+        statement.SetUri(uri.ToString());
     }
 
     private AstNodeCLassScope ParseClassScope()
@@ -138,7 +154,7 @@ public class ParserSimple : IParser
             ConsumeToken();
         }
 
-        memberFunc.Modifiers = ParseModifiers();
+        memberFunc.Modifiers = ParseModifiers([MemberModifier.Static]);
 
         ParseGenericDeclaration(memberFunc);
 
@@ -193,22 +209,30 @@ public class ParserSimple : IParser
         }
     }
 
-    private List<MemberModifier> ParseModifiers()
+    private List<MemberModifier> ParseModifiers(List<MemberModifier> legalModifiers)
     {
         List<MemberModifier> modifiers = new();
         
         /*
-         * If token is Type it is a non generic method
+         * If token is Type it is a non-generic method
          * If token is Open chevron it is either generic class or method
-         * If token is ident it is a non generic class
+         * If token is ident it is a non-generic class
          */
-        while (PeekToken() != null && Modifiers.Contains(PeekToken().Type)) // checking this by type seems suboptimal
+        while (PeekToken() != null && TokenIsModifier(PeekToken()!) ) // checking this by type seems suboptimal
         {
-            MemberModifier? modifier;
-            if ((modifier = TokenIsModifier(PeekToken())) != null)
+            var modifier = ConsumeToken().Type switch
             {
-                modifiers.Add(modifier.Value);
-                ConsumeToken();
+                TokenType.Static => MemberModifier.Static,
+                TokenType.Final => MemberModifier.Final,
+                _ => throw new JavaSyntaxException("unexpected token")
+            };
+            if (legalModifiers.Contains(modifier))
+            {
+                modifiers.Add(modifier);
+            }
+            else
+            {
+                throw new JavaSyntaxException($"illegal modifier: {modifier}");
             }
 
         }
@@ -216,7 +240,7 @@ public class ParserSimple : IParser
         return modifiers;
     }
 
-    private void ParseGenericDeclaration(AstNodeClassMemberFunc memberFunc)
+    private void ParseGenericDeclaration(IGenericSettable funcOrClass)
     {
         if (!CheckTokenType(TokenType.OpenChevron))
         {
@@ -224,30 +248,23 @@ public class ParserSimple : IParser
         }
 
         ConsumeToken();
-        List<Token> genericTypes = new();
-        while (!CheckTokenType(TokenType.CloseChevron)) // redundant but I don't wanna do a while(true)
+        List<Token> genericTypes = [];
+        while (!CheckTokenType(TokenType.CloseChevron, 1)) // redundant but I don't wanna do a while(true)
         {
-            if (CheckTokenType(TokenType.Ident))
-            {
-                genericTypes.Add( ConsumeToken());
-                if (CheckTokenType(TokenType.Comma))
-                {
-                    ConsumeToken();
-                }else if (CheckTokenType(TokenType.CloseChevron))
-                {
-                    memberFunc.GenericTypes = genericTypes;
-                    ConsumeToken();
-                    return;
-                }
-            }
+            genericTypes.Add(ConsumeIfOfType(TokenType.Ident, "Type declaration"));
+            ConsumeIfOfType(TokenType.Comma, "comma");
         }
+        genericTypes.Add(ConsumeIfOfType(TokenType.Ident, "Type declaration"));
+        ConsumeIfOfType(TokenType.CloseChevron, "Closing chevron");
+        
+        funcOrClass.SetGenericTypes(genericTypes);
     }
 
     private AstNodeScopeMemberVar ParseScopeMemberVariableDeclaration(MemberModifier[] permittedModifiers)
     {
         AstNodeScopeMemberVar scopedVar = new();
 
-        List<MemberModifier> modifiers = ParseModifiers();
+        var modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]);
 
         foreach (MemberModifier modifier in modifiers)
         {
@@ -464,21 +481,13 @@ public class ParserSimple : IParser
     }
 
 
-    private MemberModifier? TokenIsModifier(Token? token)
+    private static bool TokenIsModifier(Token token)
     {
-        MemberModifier? modifier = null;
-        if (token is null)
-        {
-            return modifier;
-        }
-
         return token.Type switch
         {
-            TokenType.Final => MemberModifier.Final,
-            TokenType.Static => MemberModifier.Static,
-            _ => null,
+            TokenType.Static or TokenType.Final => true,
+            _ => false
         };
-
     }
 
     private void ParseMemberFuncReturnType(AstNodeClassMemberFunc memberFunc)

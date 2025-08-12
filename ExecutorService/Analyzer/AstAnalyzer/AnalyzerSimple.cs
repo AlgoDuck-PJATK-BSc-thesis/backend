@@ -1,9 +1,11 @@
+using System.Reflection.Metadata;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer.AstBuilder;
 
 namespace ExecutorService.Analyzer.AstAnalyzer;
@@ -37,7 +39,7 @@ public class AnalyzerSimple
         _lexerSimple = new LexerSimple();
         _parserSimple = new ParserSimple();
         
-        _userProgramRoot = _parserSimple.ParseProgram(_lexerSimple.Tokenize(fileContents));
+        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(fileContents)]);
     }
 
     public AnalyzerSimple(string fileContents, string templateContents)
@@ -45,8 +47,8 @@ public class AnalyzerSimple
         _lexerSimple = new LexerSimple();
         _parserSimple = new ParserSimple();
 
-        _templateProgramRoot = _parserSimple.ParseProgram(_lexerSimple.Tokenize(templateContents));
-        _userProgramRoot = _parserSimple.ParseProgram(_lexerSimple.Tokenize(fileContents));
+        _templateProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(templateContents)]);
+        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(fileContents)]);
     }
 
     public CodeAnalysisResult AnalyzeUserCode()
@@ -62,25 +64,33 @@ public class AnalyzerSimple
     
     private AstNodeClassMemberFunc? FindMainFunction()
     {
-        foreach (var currClass in _userProgramRoot.ProgramClasses.Where(topLevelStatement => topLevelStatement.IsT0).Select(topLevelStatement => topLevelStatement.AsT0))
+        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
         {
-            var functionsMatchedMain = currClass.ClassScope.ClassMembers.Select(t => t.ClassMember)
-                .Where(t => t.IsT0)
-                .Where(t => ValidateFunctionSignature(_baselineMainSignature, t.AsT0))
-                .ToList();
-            return functionsMatchedMain.Count == 1 ? functionsMatchedMain[0].AsT0 : null;
+            foreach (var currClass in compilationUnit.CompilationUnitTopLevelStatements.Where(topLevelStatement => topLevelStatement.IsT0).Select(topLevelStatement => topLevelStatement.AsT0))
+            {
+                var functionsMatchedMain = currClass.ClassScope!.ClassMembers.Select(t => t.ClassMember)
+                    .Where(t => t.IsT0)
+                    .Where(t => ValidateFunctionSignature(_baselineMainSignature, t.AsT0))
+                    .ToList();
+                return functionsMatchedMain.Count == 1 ? functionsMatchedMain[0].AsT0 : null;
+            }   
         }
+
         return null;
     }
 
     private bool ValidateTemplateFunctions()
     {
-        foreach (var currClass in _templateProgramRoot.ProgramClasses.Where(t => t.IsT0).Select(t => t.AsT0))
+        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
         {
-            foreach (var classMember in currClass.ClassScope.ClassMembers.Where(t => t.ClassMember.IsT0).Select(t => t.ClassMember.AsT0))
+            foreach (var currClass in compilationUnit.CompilationUnitTopLevelStatements.Where(t => t.IsT0).Select(t => t.AsT0))
             {
-                return FindAndCompareFunc(classMember, _userProgramRoot) != null;
+                foreach (var classMember in currClass.ClassScope!.ClassMembers.Where(t => t.ClassMember.IsT0).Select(t => t.ClassMember.AsT0))
+                {
+                    return FindAndCompareFunc(classMember, _userProgramRoot) != null;
+                }
             }
+
         }
 
         return false;
@@ -88,27 +98,33 @@ public class AnalyzerSimple
 
     private static AstNodeClassMemberFunc? FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeProgram toBeSearched)
     {
-        foreach (var currClass in toBeSearched.ProgramClasses.Where(t => t.IsT0).Select(t => t.AsT0))
+        foreach (var programCompilationUnit in toBeSearched.ProgramCompilationUnits)
         {
-            var matchedFunctions = currClass.ClassScope.ClassMembers
-                .Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier.Value.Equals(baselineFunc.Identifier.Value))
-                .Select(func => func.ClassMember.AsT0)
-                .ToList()
-                .Where(func => ValidateFunctionSignature(baselineFunc, func))
-                .ToList();
-            return matchedFunctions.Count == 1 ? matchedFunctions[0] : null;
+            foreach (var currClass in programCompilationUnit.CompilationUnitTopLevelStatements.Where(t => t.IsT0).Select(t => t.AsT0))
+            {
+                var matchedFunctions = currClass.ClassScope!.ClassMembers
+                    .Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier.Value.Equals(baselineFunc.Identifier.Value))
+                    .Select(func => func.ClassMember.AsT0)
+                    .ToList()
+                    .Where(func => ValidateFunctionSignature(baselineFunc, func))
+                    .ToList();
+                return matchedFunctions.Count == 1 ? matchedFunctions[0] : null;
             
+            }            
         }
+
         return null;
     }
 
     private string GetClassName()
     {
-        foreach (var topLevelStatement in _userProgramRoot.ProgramClasses.Where(topLevelStatement => topLevelStatement.IsT0))
+        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
         {
-            return topLevelStatement.AsT0.Identifier.Value; //currently presumes only one class per file, naive but this is a simple parser not without cause
+            foreach (var topLevelStatement in compilationUnit.CompilationUnitTopLevelStatements.Where(topLevelStatement => topLevelStatement.IsT0))
+            {
+                return topLevelStatement.AsT0.Identifier.Value!; //currently presumes only one class per file, naive but this is a simple parser not without cause
+            }   
         }
-
         throw new JavaSyntaxException("no class found");
     }
     

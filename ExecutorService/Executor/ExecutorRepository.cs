@@ -6,6 +6,7 @@ using ExecutorService.Executor._ExecutorUtils;
 using Amazon.S3;
 using Amazon.S3.Model;
 using ExecutorService.Executor.Configs;
+using ExecutorService.Executor.Models;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -14,7 +15,7 @@ namespace ExecutorService.Executor;
 public interface IExecutorRepository
 {
     public Task<List<Language>> GetSupportedLanguagesAsync();
-    public Task<TestCase[]> GetTestCasesAsync(string exerciseId);
+    public Task<List<TestCase>> GetTestCasesAsync(string exerciseId);
     public Task<string> GetTemplateAsync(string exerciseId);
     public Task<string> GetFuncName(); //TODO for now will be stored in db however I'd like to add some marking mechanism to templates that indicates this is the primary "call method" to be used in testing
 }
@@ -50,7 +51,7 @@ public class ExecutorRepository : IExecutorRepository
         return (await connection.QueryAsync<Language>(selectLanguagesQuery)).ToList();
     }
 
-    public async Task<TestCase[]> GetTestCasesAsync(string exerciseId)
+    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId)
     {
         var getRequest = new GetObjectRequest
         {
@@ -61,7 +62,7 @@ public class ExecutorRepository : IExecutorRepository
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new Exception($"Could not get test cases for {exerciseId}");
+            throw new AmazonS3Exception($"Could not get test cases for {exerciseId}");
         }
         
         var buffer = new byte[response.ContentLength];
@@ -90,7 +91,7 @@ public class ExecutorRepository : IExecutorRepository
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new Exception($"Could not get template for {exerciseId}");
+            throw new AmazonS3Exception($"Could not get template for {exerciseId}");
         }
         
         var buffer = new byte[response.ContentLength];
@@ -125,7 +126,7 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
         return executorYmlConfig.SUPPORTED_LANGUAGES.ToList().Select(l => new Language(l, null)).ToList();
     }
 
-    public async Task<TestCase[]> GetTestCasesAsync(string exerciseId)
+    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId)
     {
         const string testCases = "new int[] {1,5,2,4,3}<\n" +
                                  "new int[] {1,2,3,4,5}<<\n" +
@@ -152,7 +153,7 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
      expected output<<
      ...
      Could also have them all in one line beats me, less space but less readable.
-     Furthermore enumerateTestCases would offset by 1 and 2 respectively instead of 2 and 3
+     Furthermore, enumerateTestCases would offset by 1 and 2 respectively instead of 2 and 3
      */
     
 }

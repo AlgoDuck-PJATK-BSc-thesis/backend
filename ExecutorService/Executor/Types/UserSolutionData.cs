@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace ExecutorService.Executor._ExecutorUtils;
+namespace ExecutorService.Executor.Types;
 
 public class UserSolutionData(Guid executionId, string signingKey, string lang, string funcName, StringBuilder fileContents, string exerciseId)
 {
@@ -13,5 +13,5 @@ public class UserSolutionData(Guid executionId, string signingKey, string lang, 
 
     public StringBuilder FileContents => fileContents;
 
-    public string ExerciseId => exerciseId;
+    public string? ExerciseId => exerciseId;
 }

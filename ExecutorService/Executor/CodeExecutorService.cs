@@ -2,18 +2,17 @@ using System.Diagnostics;
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer.AstAnalyzer;
-using ExecutorService.Errors;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor._ExecutorUtils;
-using ExecutorService.Executor.Configs;
 using ExecutorService.Executor.Dtos;
+using ExecutorService.Executor.Types;
 
 namespace ExecutorService.Executor;
 
 public interface ICodeExecutorService
 {
     public Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto);
-    public Task<ExecuteResultDto> DryExecute(ExecuteRequestDto executeRequestDto);
+    public Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto);
 }
 
 
@@ -38,7 +37,10 @@ public class CodeExecutorService(
         
         if (!_codeAnalysisResult.PassedValidation)
         {
-            return new ExecuteResultDto("", "Template modified. Cannot proceed with testing. Exiting.", "");
+            return new ExecuteResultDto
+            {
+                StdError = "Critical template part modified. Cannot proceed with testing. Exiting",
+            };
         }
         
         if (_codeAnalysisResult.MainMethodIndices != null)
@@ -48,17 +50,20 @@ public class CodeExecutorService(
         else
         {
             // TODO temporary solution I'd like to insert a main if it's not found to test either way
-            return new ExecuteResultDto("", "no main function found. Exiting", "");
+            return new ExecuteResultDto
+            {
+                StdError = "no main function found. Exiting",
+            };
         }
 
         return await Exec(fileData);
     }
 
-    public async Task<ExecuteResultDto> DryExecute(ExecuteRequestDto executeRequestDto)
+    public async Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto)
     {
         var lang = await CheckLanguageSupported(executeRequestDto.Lang);
         
-        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
+        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang);
         
         _analyzer = new AnalyzerSimple(fileData.FileContents.ToString());
         _codeAnalysisResult = _analyzer.AnalyzeUserCode();
@@ -68,7 +73,6 @@ public class CodeExecutorService(
     
     private async Task<ExecuteResultDto> Exec(UserSolutionData userSolutionData)
     {
-        Console.WriteLine("executing");
         var compilationTask = CompileCode(userSolutionData);
         var fsCopyTask = CopyTemplateFs(userSolutionData);
         
@@ -102,7 +106,7 @@ public class CodeExecutorService(
         };
     }
 
-    private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string exerciseId) // TODO Make the import not constant
+    private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string? exerciseId = null) // TODO Make the import not constant
     {
         var codeBytes = Convert.FromBase64String(codeB64);
         var codeString = Encoding.UTF8.GetString(codeBytes);
@@ -127,7 +131,8 @@ public class CodeExecutorService(
         
         foreach (var testCase in testCases)
         {
-            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson(sortIntArr({testCase.TestInput}))));\n";
+            testCaseInsertBuilder.Append(testCase.TestInput);
+            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
             testCaseInsertBuilder.Append(comparingStatement);
         }
         

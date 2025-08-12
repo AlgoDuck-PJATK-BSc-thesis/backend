@@ -27,6 +27,7 @@ services:
       - HOST_NAME=${HOST_NAME}
     extra_hosts:
       - "postgres-host:host-gateway"
+      - "host.docker.internal:host-gateway"
     volumes:
       - /dev/kvm:/dev/kvm
 #dude... work ts out
@@ -38,6 +39,27 @@ services:
     networks:
       - app_network
     stop_grace_period: 5s
-
-volumes:
-  postgres_data:
+    
+  webapplication1:
+    image: webapplication1
+    build:
+      context: .
+      dockerfile: WebApplication1/Dockerfile
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+      - "${WEB_PORT2:-8081}:8081"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_KEY: ${JWT_KEY}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      JWT_EXP_MINUTES: ${JWT_EXP_MINUTES}
+    networks:
+      - app_network 

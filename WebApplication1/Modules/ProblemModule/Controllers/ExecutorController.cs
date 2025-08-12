@@ -1,5 +1,6 @@
 using ExecutorService.Executor._ExecutorUtils;
 using Microsoft.AspNetCore.Mvc;
+using WebApplication1.Modules.ProblemModule.DTOs;
 using WebApplication1.Modules.ProblemModule.Interfaces;
 
 namespace WebApplication1.Modules.ProblemModule.Controllers;
@@ -14,7 +15,7 @@ public class ExecutorController(IExecutorService executorService) : ControllerBa
         return Ok(await executorService.FullExecuteCode(executeRequest));
     }
     [HttpPost("dry")]
-    public async Task<IActionResult> DryExecuteCode([FromBody] ExecuteRequestDto executeRequest)
+    public async Task<IActionResult> DryExecuteCode([FromBody] DryExecuteRequestDto executeRequest)
     {
         return Ok(await executorService.DryExecuteCode(executeRequest));
     } 
