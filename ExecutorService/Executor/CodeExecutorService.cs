@@ -32,7 +32,7 @@ public class CodeExecutorService(
         
         var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
 
-        _analyzer = new AnalyzerSimple(fileData.FileContents.ToString(), await executorRepository.GetTemplateAsync("0fd5d3a8-48c1-451b-bcdf-cf414cc6d477"));
+        _analyzer = new AnalyzerSimple(fileData.FileContents.ToString(), await executorRepository.GetTemplateAsync(executeRequestDto.ExerciseId));
         _codeAnalysisResult = _analyzer.AnalyzeUserCode();
         
         if (!_codeAnalysisResult.PassedValidation)
@@ -132,7 +132,7 @@ public class CodeExecutorService(
         foreach (var testCase in testCases)
         {
             testCaseInsertBuilder.Append(testCase.TestInput);
-            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
+            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.Call}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.ExpectedOutput}))));\n";
             testCaseInsertBuilder.Append(comparingStatement);
         }
         

@@ -53,6 +53,7 @@ public class ExecutorRepository : IExecutorRepository
 
     public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId)
     {
+        Console.WriteLine($"{exerciseId}/test-cases.txt");
         var getRequest = new GetObjectRequest
         {
             BucketName = _s3Settings.Value.BucketName,
@@ -87,6 +88,8 @@ public class ExecutorRepository : IExecutorRepository
             BucketName = _s3Settings.Value.BucketName,
             Key = $"{exerciseId}/template/work.txt"
         };
+
+        Console.WriteLine($"{exerciseId}/template/work.txt");
         var response = await _s3Client.GetObjectAsync(getRequest);
 
         if (response.HttpStatusCode != HttpStatusCode.OK)

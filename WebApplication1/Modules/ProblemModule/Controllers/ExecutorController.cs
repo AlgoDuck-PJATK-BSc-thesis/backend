@@ -18,5 +18,6 @@ public class ExecutorController(IExecutorService executorService) : ControllerBa
     public async Task<IActionResult> DryExecuteCode([FromBody] DryExecuteRequestDto executeRequest)
     {
         return Ok(await executorService.DryExecuteCode(executeRequest));
-    } 
+    }
+
 }

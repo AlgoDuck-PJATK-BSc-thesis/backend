@@ -15,7 +15,6 @@ services:
     privileged: true
     networks:
       - app_network
-    stop_grace_period: 10s
     
   executor:
     build:
@@ -38,7 +37,8 @@ services:
       - .env
     networks:
       - app_network
-    stop_grace_period: 5s
+    depends_on:
+      - warden
     
   webapplication1:
     image: webapplication1
@@ -61,5 +61,10 @@ services:
       JWT_ISSUER: ${JWT_ISSUER}
       JWT_AUDIENCE: ${JWT_AUDIENCE}
       JWT_EXP_MINUTES: ${JWT_EXP_MINUTES}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     networks:
       - app_network 
+    depends_on:
+      - executor

@@ -2,12 +2,23 @@ using System.Text;
 
 namespace ExecutorService.Executor.Models;
 
-public class TestCase(string testInput, string expectedOutput, string call, string funcName)
+public class TestCase(
+    string testInput,
+    string expectedOutput,
+    string call,
+    string funcName,
+    string display,
+    string displayRes,
+    string isPublic
+    )
 {
     public string TestInput => testInput;
     public string ExpectedOutput => expectedOutput;
     public string Call => call;
     public string FuncName => funcName;
+    public string Display => display;
+    public string DisplayRes => displayRes;
+    public string IsPublic => isPublic;
 
     private static string ConsumeTagContents(string contents, string tag, ref int offset)
     {
@@ -38,22 +49,29 @@ public class TestCase(string testInput, string expectedOutput, string call, stri
     public static List<TestCase> ParseTestCases(string testCasesString)
     {
         List<TestCase> testCases = [];
-        int offset = 0;
+        var offset = 0;
         
         while (true)
         {
             string testCasesContents;
             try
             {
-                testCasesContents = ConsumeTagContents(testCasesString, "setup", ref offset);
+                testCasesContents = ConsumeTagContents(testCasesString, "tc", ref offset);
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 return testCases;    
             }
-            var call = ConsumeTagContents(testCasesString, "call", ref offset);
-            var expected = ConsumeTagContents(testCasesString, "expected", ref offset);
-            testCases.Add(new TestCase(testCasesContents, expected, call, "sortIntArr"));
+
+            var huh = 0;
+            var setup = ConsumeTagContents(testCasesContents, "setup", ref huh);
+            var call = ConsumeTagContents(testCasesContents, "call", ref huh);
+            var expected = ConsumeTagContents(testCasesContents, "expected", ref huh);
+            var funcName = ConsumeTagContents(testCasesContents, "funcName", ref huh);
+            var display = ConsumeTagContents(testCasesContents, "display", ref huh);
+            var displayRes = ConsumeTagContents(testCasesContents, "displayRes", ref huh);
+            var isPublic = ConsumeTagContents(testCasesContents, "public", ref huh);
+            testCases.Add(new TestCase(setup, call, expected, funcName, display, displayRes, isPublic));
         }
         
     }

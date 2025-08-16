@@ -49,6 +49,4 @@ app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader())
 
 app.MapControllers();
 
-app.MapPost("/", () => Results.Ok("Sup"));
-
 app.Run("http://0.0.0.0:1337");

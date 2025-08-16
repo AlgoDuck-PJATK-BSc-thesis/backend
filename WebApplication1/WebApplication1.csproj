@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AWSSDK.S3" Version="4.0.6.6" />
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
@@ -39,11 +40,6 @@
       <Folder Include="Modules\DuelModule\DTOs\" />
       <Folder Include="Modules\DuelModule\Repositories\" />
       <Folder Include="Modules\DuelModule\Services\" />
-      <Folder Include="Modules\ProblemModule\Repositories\" />
-      <Folder Include="Modules\ItemModule\Controllers\" />
-      <Folder Include="Modules\ItemModule\DTOs\" />
-      <Folder Include="Modules\ItemModule\Repositories\" />
-      <Folder Include="Modules\ItemModule\Services\" />
       <Folder Include="Modules\UserModule\Controllers\" />
       <Folder Include="Modules\UserModule\DTOs\" />
       <Folder Include="Modules\UserModule\Services\" />
