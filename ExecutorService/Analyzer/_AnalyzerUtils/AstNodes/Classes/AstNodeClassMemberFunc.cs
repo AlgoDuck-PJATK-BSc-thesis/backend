@@ -7,6 +7,7 @@ namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 
 public class AstNodeClassMemberFunc : IGenericSettable
 {
+    public AstNodeClassMember? OwnerClassMember { get; set; }
     public AccessModifier AccessModifier { get; set; } = AccessModifier.Public;
     public List<MemberModifier> Modifiers { get; set; } = [];
     public List<Token> GenericTypes { get; set; } = []; // TODO Idk if tokens here are super optimal, probably should wrap them in some customType node

@@ -1,15 +1,19 @@
-using System.Reflection.Metadata;
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer.AstBuilder;
+using OneOf;
+// ReSharper disable ConvertIfStatementToReturnStatement
 
 namespace ExecutorService.Analyzer.AstAnalyzer;
 
+internal enum ComparisonStyle
+{
+    Strict, Lax
+}
 public class AnalyzerSimple
 {
     private readonly ILexer _lexerSimple;
@@ -53,81 +57,162 @@ public class AnalyzerSimple
 
     public CodeAnalysisResult AnalyzeUserCode()
     {
-        var main = FindMainFunction();
-        
-        var mainMethod = MainMethod.MakeFromAstNodeMain(main);
-        var className = GetClassName();
+        var mainClass = GetMainClass();
+        var main = FindAndGetFunc(_baselineMainSignature, mainClass);
         var validatedTemplateFunctions = _templateProgramRoot == null ||  ValidateTemplateFunctions();
         
-        return new CodeAnalysisResult(mainMethod, className, validatedTemplateFunctions);
-    }
-    
-    private AstNodeClassMemberFunc? FindMainFunction()
-    {
-        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
-        {
-            foreach (var currClass in compilationUnit.CompilationUnitTopLevelStatements.Where(topLevelStatement => topLevelStatement.IsT0).Select(topLevelStatement => topLevelStatement.AsT0))
-            {
-                var functionsMatchedMain = currClass.ClassScope!.ClassMembers.Select(t => t.ClassMember)
-                    .Where(t => t.IsT0)
-                    .Where(t => ValidateFunctionSignature(_baselineMainSignature, t.AsT0))
-                    .ToList();
-                return functionsMatchedMain.Count == 1 ? functionsMatchedMain[0].AsT0 : null;
-            }   
-        }
-
-        return null;
+        return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClass.Identifier.Value!, validatedTemplateFunctions);
     }
 
     private bool ValidateTemplateFunctions()
     {
-        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
+        return _templateProgramRoot!.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0).Select(tls => tls.AsT0).All(clazz => FindAndCompareClass(clazz, ComparisonStyle.Lax));
+    }
+    
+    private bool FindAndCompareClass(AstNodeClass baselineClass, ComparisonStyle comparisonStyle, AstNodeClass? toBeSearched = null)
+    {
+        if (toBeSearched == null && _templateProgramRoot != null)
         {
-            foreach (var currClass in compilationUnit.CompilationUnitTopLevelStatements.Where(t => t.IsT0).Select(t => t.AsT0))
-            {
-                foreach (var classMember in currClass.ClassScope!.ClassMembers.Where(t => t.ClassMember.IsT0).Select(t => t.ClassMember.AsT0))
-                {
-                    return FindAndCompareFunc(classMember, _userProgramRoot) != null;
-                }
-            }
+            // no target class and requested validation by constructing object with template code, meaning we're searching for a top level (probably Main) class to be found in one of the compilation units
+            var isValidMainClass = _userProgramRoot.ProgramCompilationUnits
+                .SelectMany(cu => cu.CompilationUnitTopLevelStatements)
+                .Where(tls => tls.IsT0)
+                .Select(tls=> tls.AsT0)
+                .Any(clazz => clazz.ClassAccessModifier == AccessModifier.Public && FindAndCompareFunc(_baselineMainSignature, clazz) && DoClassSignaturesMatch(baselineClass, ComparisonStyle.Lax, clazz) && DoClassScopesMatch(baselineClass, clazz));
 
+            if (isValidMainClass) return true;
+
+            var isValidOtherClass = _userProgramRoot.ProgramCompilationUnits
+                .SelectMany(cu => cu.CompilationUnitTopLevelStatements)
+                .Where(tls => tls.IsT0)
+                .Select(tls => tls.AsT0)
+                .Any(clazz => DoClassSignaturesMatch(baselineClass, ComparisonStyle.Strict, clazz) &&
+                              DoClassScopesMatch(baselineClass, clazz));
+            return isValidOtherClass;
         }
 
+        var matchedClass = toBeSearched!.ClassScope!.ClassMembers.Where(cm=>cm.ClassMember.IsT2).Select(cm=>cm.ClassMember.AsT2).FirstOrDefault(cm=>DoClassSignaturesMatch(baselineClass, comparisonStyle, cm));
+        if (matchedClass != null)
+        {
+            return DoClassScopesMatch(baselineClass, matchedClass);
+        }
         return false;
     }
 
-    private static AstNodeClassMemberFunc? FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeProgram toBeSearched)
+    private static bool DoClassSignaturesMatch(AstNodeClass baseline, ComparisonStyle comparisonStyle, AstNodeClass compared)
     {
-        foreach (var programCompilationUnit in toBeSearched.ProgramCompilationUnits)
-        {
-            foreach (var currClass in programCompilationUnit.CompilationUnitTopLevelStatements.Where(t => t.IsT0).Select(t => t.AsT0))
-            {
-                var matchedFunctions = currClass.ClassScope!.ClassMembers
-                    .Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier.Value.Equals(baselineFunc.Identifier.Value))
-                    .Select(func => func.ClassMember.AsT0)
-                    .ToList()
-                    .Where(func => ValidateFunctionSignature(baselineFunc, func))
-                    .ToList();
-                return matchedFunctions.Count == 1 ? matchedFunctions[0] : null;
-            
-            }            
-        }
-
-        return null;
+        var doAccessModifiersMatch = baseline.ClassAccessModifier == compared.ClassAccessModifier;
+        if (!doAccessModifiersMatch) return false;
+        var doClassNamesMatch = baseline.Identifier.Value!.Equals(compared.Identifier.Value!);
+        if (!doClassNamesMatch && comparisonStyle != ComparisonStyle.Lax) return false;
+        var doGenericDeclarationCountsMatch = baseline.GenericTypes.Count == compared.GenericTypes.Count;
+        if (!doGenericDeclarationCountsMatch) return false;
+        var doGenericDeclarationsMatch = baseline.GenericTypes.Select(gd => gd.Value).SequenceEqual(compared.GenericTypes.Select(gd => gd.Value));
+        if (!doGenericDeclarationsMatch) return false;
+        var doModifiersMatch = baseline.ClassModifiers.SequenceEqual(compared.ClassModifiers);
+        return doModifiersMatch;
     }
 
-    private string GetClassName()
+    private bool DoClassScopesMatch(AstNodeClass baselineClass, AstNodeClass comparedClass)
     {
-        foreach (var compilationUnit in _userProgramRoot.ProgramCompilationUnits)
-        {
-            foreach (var topLevelStatement in compilationUnit.CompilationUnitTopLevelStatements.Where(topLevelStatement => topLevelStatement.IsT0))
-            {
-                return topLevelStatement.AsT0.Identifier.Value!; //currently presumes only one class per file, naive but this is a simple parser not without cause
-            }   
-        }
-        throw new JavaSyntaxException("no class found");
+        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT0).Select(cm => cm.ClassMember.AsT0).Any(classMemberFunc => !FindAndCompareFunc(classMemberFunc, comparedClass))) return false;
+        
+        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT1).Select(cm => cm.ClassMember.AsT1).Any(cm => !FindAndCompareVariable(cm, comparedClass))) return false;
+        
+        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT2).Select(cm => cm.ClassMember.AsT2).Any(cm => !FindAndCompareClass(cm, ComparisonStyle.Strict, comparedClass))) return false;
+
+        return true;
+    }
+
+    private static bool FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
+    {
+        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier!.Value!.Equals(baselineFunc.Identifier!.Value))
+            .Select(func => func.ClassMember.AsT0)
+            .Any(func => ValidateFunctionSignature(baselineFunc, func));
     }
     
+    private static AstNodeClassMemberFunc FindAndGetFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
+    {
+        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier!.Value!.Equals(baselineFunc.Identifier!.Value))
+            .Select(func => func.ClassMember.AsT0)
+            .First(func => ValidateFunctionSignature(baselineFunc, func));
+    }
+
+    private static bool FindAndCompareVariable(AstNodeClassMemberVar baselineVar, AstNodeClass toBeSearched)
+    {
+        return toBeSearched.ClassScope!.ClassMembers.Where(var => var.ClassMember.IsT1)
+            .Select(var => var.ClassMember.AsT1).Any(var => ValidateClassVariable(baselineVar, var));
+    }
+
+    private static bool ValidateClassVariable(AstNodeClassMemberVar baselineVar, AstNodeClassMemberVar comparedVar)
+    {
+        var doAccessModifiersMatch = baselineVar.AccessModifier == comparedVar.AccessModifier;
+        if (!doAccessModifiersMatch) return false;
+        
+        var doIdentifiersMatch = baselineVar.ScopeMemberVar.Identifier!.Value!.Equals(comparedVar.ScopeMemberVar.Identifier!.Value);
+        if (!doIdentifiersMatch) return false;
+        
+        var doModifiersMatch = baselineVar.ScopeMemberVar.VarModifiers.SequenceEqual(comparedVar.ScopeMemberVar.VarModifiers);
+        if (!doModifiersMatch) return false;
+        
+        var doesTypeMatch = DoesTypeMatch(baselineVar.ScopeMemberVar.Type, comparedVar.ScopeMemberVar.Type);
+        if (!doesTypeMatch) return false;
+        
+        return true;
+    }
+
+    private AstNodeClass GetMainClass()
+    {
+        return _userProgramRoot.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0)
+            .Select(tls => tls.AsT0)
+            .First(clazz => clazz.ClassAccessModifier == AccessModifier.Public &&
+                            FindAndCompareFunc(_baselineMainSignature, clazz));
+    }
+
+    
+    
+    private static bool DoesTypeMatch(OneOf<MemberType, ArrayType, Token> baselineType, OneOf<MemberType, ArrayType, Token> comparedType)
+    {
+        return baselineType.Match(
+            primitiveType =>
+            {
+                if (!comparedType.IsT0)
+                {
+                    return false;
+                }
+            
+                var comparedPrimitiveType = comparedType.AsT0;
+                return primitiveType == comparedPrimitiveType;
+            },
+            arrayType =>
+            {
+                if (!comparedType.IsT1)
+                {
+                    return false;
+                }
+            
+                var comparedArrayType = comparedType.AsT1;
+            
+                var baselinePrimitiveType = arrayType.BaseType.AsT0;
+                var comparedPrimitiveType = comparedArrayType.BaseType.AsT0;
+            
+                return baselinePrimitiveType == comparedPrimitiveType 
+                       && arrayType.Dim == comparedArrayType.Dim;
+            },
+            tokenType =>
+            {
+                if (!comparedType.IsT2)
+                {
+                    return false;
+                }
+            
+                var comparedTokenType = comparedType.AsT2;
+                return tokenType.Value?.Equals(comparedTokenType.Value) == true;
+            }
+        );
+    }
+    
+    // TODO clean this up
     private static bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
     {
         if (baseline.AccessModifier != compared.AccessModifier)
@@ -143,6 +228,10 @@ public class AnalyzerSimple
         var isValid = true;
 
         var baselineGenericDeclarationCount = baseline.GenericTypes.Count;
+        var comparedGenericDeclarationCount = compared.GenericTypes.Count;
+        
+        if (baselineGenericDeclarationCount != comparedGenericDeclarationCount) return false;
+        
         for (var i = 0; i < baselineGenericDeclarationCount; i++)
         {
             if (!baseline.GenericTypes[i].Equals(compared.GenericTypes[i]))
@@ -173,7 +262,6 @@ public class AnalyzerSimple
                     isValid = false;
                     return;
                 }
-
                 
                 var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT1;
                 var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT1;
@@ -230,80 +318,12 @@ public class AnalyzerSimple
         
         for (var i = 0; i < baseline.FuncArgs.Count; i++)
         {
-            var capturedI = i;
-            
-            baseline.FuncArgs[i].Type.Switch(
-                _ =>
-                {
-                    if (!compared.FuncArgs[capturedI].Type.IsT0)
-                    {
-                        isValid = false;
-                        return;
-                    }
-                    var baselineArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
-                    var comparedArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
-
-                    var baselineArgType = compared.FuncArgs[capturedI].Type.AsT0;
-                    var comparedArgType = baseline.FuncArgs[capturedI].Type.AsT0;
-
-                    isValid = 
-                        baselineArgType == comparedArgType
-                        &&
-                        baselineArgName.Equals(comparedArgName);
-                },
-                t1 => {
-                    if (!compared.FuncArgs[capturedI].Type.IsT1)
-                    {
-                        isValid = false;
-                        return;
-                    }
-
-                    var baselineArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
-                    var comparedArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
-
-                    var comparedArray = compared.FuncArgs[capturedI].Type.AsT1;
-
-                    var baselineArrayType = t1.BaseType.AsT0;
-                    var comparedArrayType = comparedArray.BaseType.AsT0;
-                    
-                    var baselineArrayDim = t1.Dim;
-                    var comparedArrayDim = comparedArray.Dim;
-
-                    var isValidArrayType = t1.BaseType.IsT0;
-                    
-                    isValid = 
-                        isValidArrayType 
-                        &&
-                        baselineArrayType == comparedArrayType
-                        &&
-                        baselineArrayDim == comparedArrayDim 
-                        &&
-                        baselineArgName.Equals(comparedArgName); 
-                     },
-                _ =>
-                {
-                    if (!compared.FuncArgs[capturedI].Type.IsT2)
-                    {
-                        isValid = false;
-                        return;
-                    }
-                    
-                    var baselineArgTypeComplex =  baseline.FuncArgs[capturedI].Type.AsT2!.Value!;
-                    var comparedArgTypeComplex =  compared.FuncArgs[capturedI].Type.AsT2!.Value!;
-                    
-                    var baselineArgName = baseline.FuncArgs[capturedI].Identifier!.Value!;
-                    var comparedArgName = compared.FuncArgs[capturedI].Identifier!.Value!;
-                    
-                    isValid = 
-                        baselineArgTypeComplex.Equals(comparedArgTypeComplex)
-                        &&
-                        baselineArgName.Equals(comparedArgName);
-                }
-                );
-            if (!isValid)
-            {
-                return false;
-            }
+            var doesTypeMatch = DoesTypeMatch(baseline.FuncArgs[i].Type, compared.FuncArgs[i].Type);
+            if (!doesTypeMatch) return false;
+            var doIdentifiersMatch = baseline.FuncArgs[i].Identifier!.Value!.Equals(compared.FuncArgs[i].Identifier!.Value);
+            if (!doIdentifiersMatch) return false;
+            var doModifiersMatch = baseline.FuncArgs[i].VarModifiers.SequenceEqual(compared.FuncArgs[i].VarModifiers);
+            if (!doModifiersMatch) return false;
         }
         return isValid;
     }

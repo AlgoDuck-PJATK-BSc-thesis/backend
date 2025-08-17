@@ -67,13 +67,13 @@ public class ParserSimple : IParser
         
         while (PeekToken() != null)
         {
-            compilationUnit.CompilationUnitTopLevelStatements.Add(ParseTopLevelStatement(compilationUnit));
+            compilationUnit.CompilationUnitTopLevelStatements.Add(ParseTopLevelStatement());
         }
 
         return compilationUnit;
     }
 
-    private OneOf<AstNodeClass> ParseTopLevelStatement(AstNodeCompilationUnit compilationUnit)
+    private OneOf<AstNodeClass> ParseTopLevelStatement()
     {
         var lookahead = 0;
         while (!(CheckTokenType(TokenType.Class, lookahead) /*|| CheckTokenType(TokenType.Import, lookahead)*/)) 
@@ -105,7 +105,7 @@ public class ParserSimple : IParser
         
         ParseGenericDeclaration(nodeClass);
         
-        nodeClass.ClassScope = ParseClassScope();
+        nodeClass.ClassScope = ParseClassScope(nodeClass);
         return nodeClass;
     }
 
@@ -127,27 +127,32 @@ public class ParserSimple : IParser
         statement.SetUri(uri.ToString());
     }
 
-    private AstNodeCLassScope ParseClassScope()
+    private AstNodeCLassScope ParseClassScope(AstNodeClass clazz)
     {
 
         AstNodeCLassScope classScope = new()
         {
+            OwnerClass = clazz,
             ScopeBeginOffset = ConsumeIfOfType(TokenType.OpenCurly, "'{'").FilePos
         };
         
         while (!CheckTokenType(TokenType.CloseCurly))
         {
-            classScope.ClassMembers.Add(ParseClassMember());
+            classScope.ClassMembers.Add(ParseClassMember(classScope));
         }
         
         classScope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos;
         return classScope;
     }
 
-    private AstNodeClassMemberFunc ParseMemberFunctionDeclaration()
+    private AstNodeClassMemberFunc ParseMemberFunctionDeclaration(AstNodeClassMember classMember)
     {
-        AstNodeClassMemberFunc memberFunc = new();
-        AccessModifier? accessModifier = TokenIsAccessModifier(PeekToken());
+        AstNodeClassMemberFunc memberFunc = new()
+        {
+            OwnerClassMember = classMember
+        };
+        
+        var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier is not null)
         {
             memberFunc.AccessModifier = accessModifier.Value;
@@ -196,17 +201,14 @@ public class ParserSimple : IParser
             if (CheckTokenType(TokenType.Comma))
             {
                 ConsumeToken();
-            }else if (CheckTokenType(TokenType.CloseParen))
-            {
-                ConsumeToken();
-                memberFunc.FuncArgs = funcArguments;
-                return;
             }
-            else
+            else if (!CheckTokenType(TokenType.CloseParen))
             {
                 throw new JavaSyntaxException("unexpected token");
             }
         }
+        memberFunc.FuncArgs = funcArguments;
+        ConsumeIfOfType(TokenType.CloseParen, ")");
     }
 
     private List<MemberModifier> ParseModifiers(List<MemberModifier> legalModifiers)
@@ -308,9 +310,9 @@ public class ParserSimple : IParser
         return scopedVar;
     }
 
-    private AstNodeClassMember ParseClassMember()
+    private AstNodeClassMember ParseClassMember(AstNodeCLassScope classScope)
     {
-        int forwardOffset = 0;
+        var forwardOffset = 0;
         // Console.WriteLine("parsing member");
         /*
          * workaround to generic idents being caught as function names. Probably a better way to do it
@@ -323,27 +325,33 @@ public class ParserSimple : IParser
         {
             forwardOffset++;
         }
-        AstNodeClassMember classMember = new();
+        AstNodeClassMember classMember = new()
+        {
+            OwnerClassScope = classScope
+        };
         if (CheckTokenType(TokenType.Assign, forwardOffset+1) || CheckTokenType(TokenType.Semi, forwardOffset+1)) //variable declaration
         {
-            classMember.ClassMember = ParseMemberVariableDeclaration();
+            classMember.ClassMember = ParseMemberVariableDeclaration(classMember);
         }
         else if (CheckTokenType(TokenType.OpenParen, forwardOffset+1)) //function declaration
         {
-            classMember.ClassMember = ParseMemberFunctionDeclaration();
+            classMember.ClassMember = ParseMemberFunctionDeclaration(classMember);
         }
         else if (CheckTokenType(TokenType.OpenCurly, forwardOffset+1))
         {
             classMember.ClassMember = ParseClass([MemberModifier.Final, MemberModifier.Static]);
         }
-
+        
         return classMember;
     }
 
-    private AstNodeClassMemberVar ParseMemberVariableDeclaration()
+    private AstNodeClassMemberVar ParseMemberVariableDeclaration(AstNodeClassMember classMember)
     {
-        AstNodeClassMemberVar memberVar = new();
-        AccessModifier? accessModifier = TokenIsAccessModifier(PeekToken());
+        AstNodeClassMemberVar memberVar = new()
+        {
+            ClassMember  = classMember
+        };
+        var accessModifier = TokenIsAccessModifier(PeekToken());
         memberVar.AccessModifier = accessModifier ?? AccessModifier.Public;
         if (accessModifier is not null)
         {
@@ -494,7 +502,8 @@ public class ParserSimple : IParser
     {
         if (CheckTokenType(TokenType.Ident))
         {
-            if (memberFunc.GenericTypes.Find(t => t.Value == PeekToken()!.Value) != null)
+            var genericIdent = PeekToken()!.Value!;
+            if (memberFunc.GenericTypes.Any(t => t.Value == genericIdent) || memberFunc.OwnerClassMember.OwnerClassScope!.OwnerClass.GenericTypes.Any(t=> t.Value == genericIdent))
             {
                 memberFunc.FuncReturnType = ConsumeToken();
             }
