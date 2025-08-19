@@ -9,5 +9,6 @@ for i in $(seq 0 $(($CONTAINER_COUNT-1)));
 do
   PORT=$(($BASE_PORT+$i))
 #  TODO include auth here?
+  echo "huh"
   curl -X POST http://warden:7139/container -H "Content-Type: application/json" -d "{\"Port\": \"$PORT\", \"Mem\": \"$MEM\", \"Cpus\": \"$CPUS\"}"
 done

@@ -15,7 +15,7 @@ namespace ExecutorService.Executor;
 public interface IExecutorRepository
 {
     public Task<List<Language>> GetSupportedLanguagesAsync();
-    public Task<List<TestCase>> GetTestCasesAsync(string exerciseId);
+    public Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName);
     public Task<string> GetTemplateAsync(string exerciseId);
     public Task<string> GetFuncName(); //TODO for now will be stored in db however I'd like to add some marking mechanism to templates that indicates this is the primary "call method" to be used in testing
 }
@@ -51,9 +51,8 @@ public class ExecutorRepository : IExecutorRepository
         return (await connection.QueryAsync<Language>(selectLanguagesQuery)).ToList();
     }
 
-    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId)
+    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName)
     {
-        Console.WriteLine($"{exerciseId}/test-cases.txt");
         var getRequest = new GetObjectRequest
         {
             BucketName = _s3Settings.Value.BucketName,
@@ -78,7 +77,7 @@ public class ExecutorRepository : IExecutorRepository
 
         var testCasesString = Encoding.UTF8.GetString(buffer);
         
-        return TestCase.ParseTestCases(testCasesString);
+        return TestCase.ParseTestCases(testCasesString, entrypointClassName);
     }
 
     public async Task<string> GetTemplateAsync(string exerciseId)
@@ -89,7 +88,6 @@ public class ExecutorRepository : IExecutorRepository
             Key = $"{exerciseId}/template/work.txt"
         };
 
-        Console.WriteLine($"{exerciseId}/template/work.txt");
         var response = await _s3Client.GetObjectAsync(getRequest);
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
@@ -129,13 +127,13 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
         return executorYmlConfig.SUPPORTED_LANGUAGES.ToList().Select(l => new Language(l, null)).ToList();
     }
 
-    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId)
+    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName)
     {
         const string testCases = "new int[] {1,5,2,4,3}<\n" +
                                  "new int[] {1,2,3,4,5}<<\n" +
                                  "new int[] {94,37,9,52,17}<\n" +
                                  "new int[] {9,17,37,52,94}<<\n";
-        return TestCase.ParseTestCases(testCases);
+        return TestCase.ParseTestCases(testCases, "huh");
     }
 
     public async Task<string> GetTemplateAsync(string exerciseId)

@@ -77,15 +77,13 @@ public class CodeExecutorService(
         var fsCopyTask = CopyTemplateFs(userSolutionData);
         
         await Task.WhenAll(compilationTask, fsCopyTask);
-
-        var compilationResult = await compilationTask;
-
-        await PopulateCopyFs(userSolutionData, compilationResult);
+        
+        await PopulateCopyFs(userSolutionData, await compilationTask);
         
         return await DispatchExecutorVm(userSolutionData);
     }
 
-    private Task<byte[]> CompileCode(UserSolutionData userSolutionData)
+    private Task<CompileResultDto> CompileCode(UserSolutionData userSolutionData)
     {
         var codeBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
         var codeB64 = Convert.ToBase64String(codeBytes);
@@ -98,11 +96,13 @@ public class CodeExecutorService(
         await ExecuteJava(userSolutionData);
 
         var testResults = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-ANSW-LOG.log");
+        var stdOut = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-OUT-LOG.log");
 
+        var testResultsSanitized = testResults.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", ""); // TODO could move this to the bash script ig
         return new ExecuteResultDto
         {
-            StdOutput = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-OUT-LOG.log"),
-            TestResults = testResults.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", "") // TODO could move this to the bash script ig
+            StdOutput = stdOut,
+            TestResults =  testResultsSanitized
         };
     }
 
@@ -121,7 +121,7 @@ public class CodeExecutorService(
 
     private async Task InsertTestCases(UserSolutionData userSolutionData, int writeOffset, string exerciseId)
     {
-        var testCases = await executorRepository.GetTestCasesAsync(exerciseId);
+        var testCases = await executorRepository.GetTestCasesAsync(exerciseId, _codeAnalysisResult!.MainClassName);
 
         var gsonInstanceName = new StringBuilder("a"); // sometimes guids start with numbers, java variables names on the other hand cannot
         gsonInstanceName.Append(exerciseId.Replace("-", "")); 
@@ -132,11 +132,13 @@ public class CodeExecutorService(
         foreach (var testCase in testCases)
         {
             testCaseInsertBuilder.Append(testCase.TestInput);
-            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.Call}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.ExpectedOutput}))));\n";
+            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
             testCaseInsertBuilder.Append(comparingStatement);
         }
         
         userSolutionData.FileContents.Insert(writeOffset, testCaseInsertBuilder);
+
+        Console.WriteLine(userSolutionData.FileContents);
     }
 
     private async Task<string> CheckLanguageSupported(string lang)
@@ -166,10 +168,16 @@ public class CodeExecutorService(
         return buildProcess.WaitForExitAsync();
     }    
     
-    private async Task PopulateCopyFs(UserSolutionData userSolutionData, byte[] userByteCode)
+    private async Task PopulateCopyFs(UserSolutionData userSolutionData, CompileResultDto userByteCode)
     {
-        await File.WriteAllBytesAsync($"/tmp/{userSolutionData.ExecutionId}.class", userByteCode);
-        
+        var bytecodeDirPath = $"/tmp/{userSolutionData.ExecutionId}/bytecode";
+        Directory.CreateDirectory(bytecodeDirPath);
+        foreach (var generatedClassFile in userByteCode.GeneratedClassFiles)
+        {
+            var fileBytes = Convert.FromBase64String(generatedClassFile.Value);
+            await File.WriteAllBytesAsync($"{bytecodeDirPath}/{generatedClassFile.Key}", fileBytes);
+        }
+
         var buildProcess = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -182,9 +190,10 @@ public class CodeExecutorService(
                 CreateNoWindow = true
             }
         };
-        
+    
         buildProcess.Start();
         await buildProcess.WaitForExitAsync();
+        Directory.Delete(bytecodeDirPath);
     }
 
     private async Task ExecuteJava(UserSolutionData userSolutionData)

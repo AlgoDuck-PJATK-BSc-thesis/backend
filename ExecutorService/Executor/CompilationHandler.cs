@@ -14,11 +14,13 @@ namespace ExecutorService.Executor;
 
 public interface ICompilationHandler
 {
-    public Task<byte[]> CompileAsync(string codeB64, string classname);
+    public Task<CompileResultDto> CompileAsync(string codeB64, string classname);
 }
 
 public sealed class CompilationHandler : ICompilationHandler, IDisposable
 {
+    private static readonly JsonSerializerOptions JsonSerializerConfiguration = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    
     private readonly Channel<CompileTask> _tasksToDispatch;
     private readonly ChannelWriter<CompileTask> _taskWriter;
     private readonly ChannelReader<CompileTask> _taskReader;
@@ -59,9 +61,9 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         }
     }
 
-    public async Task<byte[]> CompileAsync(string codeB64, string classname)
+    public async Task<CompileResultDto> CompileAsync(string codeB64, string classname)
     {
-        TaskCompletionSource<byte[]> compileTask = new();
+        TaskCompletionSource<CompileResultDto> compileTask = new();
         await _taskWriter.WriteAsync(new CompileTask(codeB64, classname, compileTask));
         return await compileTask.Task;
     }
@@ -86,7 +88,14 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
                 var response = await _client.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
-                    task.Tcs.SetResult(await response.Content.ReadAsByteArrayAsync());
+
+                    var raw = await response.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<CompileResultDto>(raw, JsonSerializerConfiguration);
+                    if (result == null)
+                    {
+                        throw new CompilationException("Something went wrong during compilation");
+                    }
+                    task.Tcs.SetResult(result);
                 }
                 else if(response.StatusCode == HttpStatusCode.BadRequest)
                 {

@@ -37,25 +37,29 @@ app.MapPost("/compile", ([FromBody] CompileRequestDto requestDto) =>
     compileProcess.Start();
     compileProcess.WaitForExit();
 
+    var dirPath = $"/app/client-bytecode/{compileId}";
+    
     try
     {
-        return Results.File(File.ReadAllBytes($"/app/client-bytecode/{compileId}/{requestDto.ClassName}.class"),
-            "application/octet-stream");
-    }
-    catch (Exception e)
-    {
-        if (e is FileNotFoundException or DirectoryNotFoundException)
+        var generatedClassFiles = new Dictionary<string, string>();
+        
+        foreach (var filePath in Directory.EnumerateFiles(dirPath))
         {
-            var errorLog = File.ReadAllText($"/app/error-log/{compileId}/err.log");
-            var cleanedErrorLog = errorLog.Replace($"/app/client-src/{compileId}/", "");
-            return Results.BadRequest(new CompilationErrorDto(cleanedErrorLog));
+            var fileName = Path.GetFileName(filePath);
+            var fileBytes = File.ReadAllBytes(filePath);
+            generatedClassFiles[fileName] = Convert.ToBase64String(fileBytes);
         }
-
-        return Results.Problem(
-            title: "Something went wrong during code execution. Please try again later",
-            detail: e.Message,
-            statusCode: StatusCodes.Status500InternalServerError
-        );
+        
+        return Results.Ok(new CompileResultDto
+        {
+            GeneratedClassFiles = generatedClassFiles
+        });
+    }
+    catch (DirectoryNotFoundException e)
+    {
+        var errorLog = File.ReadAllText($"/app/error-log/{compileId}/err.log");
+        var cleanedErrorLog = errorLog.Replace($"/app/client-src/{compileId}/", "");
+        return Results.BadRequest(new CompilationErrorDto(cleanedErrorLog));
     }
 });
 

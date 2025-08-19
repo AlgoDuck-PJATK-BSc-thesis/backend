@@ -22,6 +22,7 @@ WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    openjdk-17-jre \
     curl \
     wget \
     unzip \

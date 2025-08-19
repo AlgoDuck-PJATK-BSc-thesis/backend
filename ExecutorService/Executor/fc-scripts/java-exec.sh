@@ -4,16 +4,18 @@ EXEC_ID=$1
 SIGNING_KEY=$2
 
 ROOTFS="/tmp/$EXEC_ID-rootfs.ext4"
+ROOTFS_DIR="/tmp/$EXEC_ID-rootfs"
+CLASS_PATH="/tmp/$EXEC_ID.class"
 KERNEL_PATH="/app/fc-scripts/vmlinux.bin"
 CONFIG_FILE="/tmp/vm_config-$EXEC_ID.json"
 SOCK_PATH="/tmp/firecracker-${EXEC_ID}.socket"
 
 STDOUT_PATH="/tmp/$EXEC_ID-OUT-LOG.log"
 ANSW_PATH="/tmp/$EXEC_ID-ANSW-LOG.log"
+TIME_PATH="/tmp/$EXEC_ID-TIME-LOG.log"
 TMP_PATH="/tmp/$EXEC_ID-tmp.txt"
 
-touch "$ANSW_PATH"
-touch "$STDOUT_PATH"
+touch "$ANSW_PATH" "$STDOUT_PATH" "$TIME_PATH"
 
 cat > "$CONFIG_FILE" << EOF
 {
@@ -61,6 +63,7 @@ if [ $? -eq 137 ]; then
     echo "timed out" >> "$STDOUT_PATH"
 fi
 
+#   ================| start |================ 
 #OpenRC 0.55.1 is starting up Linux 4.14.174 (x86_64)
 #
 #        Hello firecracker
@@ -69,8 +72,12 @@ fi
 #        sys     0m 0.19s
 #        [    1.058893] sysrq: Trigger a crash
 #
+#   ================| end |================
 # With this being the example output for a simple "Hello firecracker" print we need to strip it from the additional info
+
+cp "$STDOUT_PATH" "$TIME_PATH"
 
 tail -n +4 "$STDOUT_PATH" | head -n -4 > "$TMP_PATH" && mv "$TMP_PATH" "$STDOUT_PATH"
 
-rm -f "$SOCK_PATH" "$CONFIG_FILE" "$ROOTFS" & disown
+
+rm -rf "$SOCK_PATH" "$CONFIG_FILE" "$ROOTFS" "$CLASS_PATH" "$ROOTFS_DIR" & disown

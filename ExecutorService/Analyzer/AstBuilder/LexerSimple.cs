@@ -97,7 +97,7 @@ public class LexerSimple : ILexer
                     break;
             }
         }
-
+        //
         // foreach (var tok in _tokens)
         // {
         //     Console.Write(tok.Type);

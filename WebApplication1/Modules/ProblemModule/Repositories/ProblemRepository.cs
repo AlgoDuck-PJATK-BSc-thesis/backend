@@ -41,7 +41,8 @@ public class ProblemRepository(
             .FirstAsync();
         
         problemDto.TemplateContents = await problemTemplate;
-        problemDto.TestCases = (await testCases).Where(tc => tc.IsPublic).ToList();
+        var tec = await testCases;
+        problemDto.TestCases = tec.Where(tc => tc.IsPublic).ToList();
         
         return problemDto;
     }
@@ -97,7 +98,7 @@ public class ProblemRepository(
         }
 
         var testCasesString = Encoding.UTF8.GetString(buffer);
-        
-        return TestCaseDto.ParseTestCases(testCasesString);
+
+        return TestCaseDto.ParseTestCases(testCasesString, "Main");
     }
 }

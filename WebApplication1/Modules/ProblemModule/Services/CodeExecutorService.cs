@@ -9,7 +9,7 @@ namespace WebApplication1.Modules.ProblemModule.Services;
 
 public class CodeExecutorService : IExecutorService
 {
-    private const string Hostname = "backend-executor-1";
+    private const string Hostname = "executor";
     
     private static readonly string ExecutorPort = Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"; 
     private static readonly string BaseUrl = $"http://{Hostname}:{ExecutorPort}";
@@ -57,7 +57,7 @@ public class CodeExecutorService : IExecutorService
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         
         var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<ExecuteResultDto>(content);
+        var result = JsonSerializer.Deserialize<ExecuteResultDto>(content, JsonSerializerOptions);
         
         if (result == null) throw new HttpRequestException($"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         

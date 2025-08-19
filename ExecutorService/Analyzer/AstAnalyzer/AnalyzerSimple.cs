@@ -116,7 +116,7 @@ public class AnalyzerSimple
     private bool DoClassScopesMatch(AstNodeClass baselineClass, AstNodeClass comparedClass)
     {
         if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT0).Select(cm => cm.ClassMember.AsT0).Any(classMemberFunc => !FindAndCompareFunc(classMemberFunc, comparedClass))) return false;
-        
+
         if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT1).Select(cm => cm.ClassMember.AsT1).Any(cm => !FindAndCompareVariable(cm, comparedClass))) return false;
         
         if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT2).Select(cm => cm.ClassMember.AsT2).Any(cm => !FindAndCompareClass(cm, ComparisonStyle.Strict, comparedClass))) return false;
@@ -126,14 +126,14 @@ public class AnalyzerSimple
 
     private static bool FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
     {
-        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier!.Value!.Equals(baselineFunc.Identifier!.Value))
+        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
-            .Any(func => ValidateFunctionSignature(baselineFunc, func));
+            .Any(func => ValidateFunctionSignature(baselineFunc, func));;
     }
     
     private static AstNodeClassMemberFunc FindAndGetFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
     {
-        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0 && func.ClassMember.AsT0.Identifier!.Value!.Equals(baselineFunc.Identifier!.Value))
+        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
             .First(func => ValidateFunctionSignature(baselineFunc, func));
     }
@@ -176,20 +176,14 @@ public class AnalyzerSimple
         return baselineType.Match(
             primitiveType =>
             {
-                if (!comparedType.IsT0)
-                {
-                    return false;
-                }
-            
+                if (!comparedType.IsT0) return false;
+                
                 var comparedPrimitiveType = comparedType.AsT0;
                 return primitiveType == comparedPrimitiveType;
             },
             arrayType =>
             {
-                if (!comparedType.IsT1)
-                {
-                    return false;
-                }
+                if (!comparedType.IsT1) return false;
             
                 var comparedArrayType = comparedType.AsT1;
             
@@ -201,11 +195,8 @@ public class AnalyzerSimple
             },
             tokenType =>
             {
-                if (!comparedType.IsT2)
-                {
-                    return false;
-                }
-            
+                if (!comparedType.IsT2) return false;
+                
                 var comparedTokenType = comparedType.AsT2;
                 return tokenType.Value?.Equals(comparedTokenType.Value) == true;
             }
@@ -215,23 +206,19 @@ public class AnalyzerSimple
     // TODO clean this up
     private static bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
     {
-        if (baseline.AccessModifier != compared.AccessModifier)
-        {
-            return false;
-        }
+        var w1 = baseline.Identifier == null ? "constructor" : baseline.Identifier!.Value!;
+        var w2 = compared.Identifier == null ? "constructor" : compared.Identifier!.Value!;
 
-        if (!baseline.Modifiers.OrderBy(m => m).SequenceEqual(compared.Modifiers.OrderBy(m => m)))
-        {
-            return false;
-        }
+        if (baseline.AccessModifier != compared.AccessModifier) return false;
+        if (!baseline.Modifiers.OrderBy(m => m).SequenceEqual(compared.Modifiers.OrderBy(m => m))) return false;
 
         var isValid = true;
 
         var baselineGenericDeclarationCount = baseline.GenericTypes.Count;
         var comparedGenericDeclarationCount = compared.GenericTypes.Count;
-        
+
         if (baselineGenericDeclarationCount != comparedGenericDeclarationCount) return false;
-        
+
         for (var i = 0; i < baselineGenericDeclarationCount; i++)
         {
             if (!baseline.GenericTypes[i].Equals(compared.GenericTypes[i]))
@@ -239,7 +226,9 @@ public class AnalyzerSimple
                 return false;
             }
         }
+
         
+
         baseline.FuncReturnType?.Switch(
             t0 =>
             {
@@ -300,31 +289,27 @@ public class AnalyzerSimple
                 isValid = baselineComplexReturnType.Equals(comparedComplexReturnType);
             }
         );
-        if (!isValid)
-        {
-            return false;
-        }
+        if (!isValid) return false;
+        var isBaselineConstructor = baseline.IsConstructor;
+        var isComparedConstructor = compared.IsConstructor;
+        if (isBaselineConstructor != isComparedConstructor) return false;
 
-        if (baseline.Identifier?.Value != compared.Identifier?.Value)
-        {
-            return false;
-        }
+        if (isBaselineConstructor && baseline.Identifier?.Value != compared.Identifier?.Value) return false;
 
-        if (baseline.FuncArgs.Count != compared.FuncArgs.Count)
-        {
-            return false;
-        }
+        if (baseline.FuncArgs.Count != compared.FuncArgs.Count) return false;
 
-        
+
         for (var i = 0; i < baseline.FuncArgs.Count; i++)
         {
             var doesTypeMatch = DoesTypeMatch(baseline.FuncArgs[i].Type, compared.FuncArgs[i].Type);
             if (!doesTypeMatch) return false;
+
             var doIdentifiersMatch = baseline.FuncArgs[i].Identifier!.Value!.Equals(compared.FuncArgs[i].Identifier!.Value);
             if (!doIdentifiersMatch) return false;
             var doModifiersMatch = baseline.FuncArgs[i].VarModifiers.SequenceEqual(compared.FuncArgs[i].VarModifiers);
             if (!doModifiersMatch) return false;
         }
+
         return isValid;
     }
 }

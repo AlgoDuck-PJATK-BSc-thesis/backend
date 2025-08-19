@@ -9,11 +9,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
@@ -25,6 +22,7 @@ app.MapPost("/container", async ([FromBody] ContainerCreationRequestDto containe
     {
         return Results.BadRequest($"Container mapped to port: {containerCreationRequestDto.Port} already exists");
     }
+
     var containerId = await DeployCompiler(containerCreationRequestDto.Port, containerCreationRequestDto.Mem, containerCreationRequestDto.Cpus);
     portMappedToContainerIds[containerCreationRequestDto.Port] = containerId;
 

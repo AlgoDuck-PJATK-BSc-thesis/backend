@@ -23,7 +23,7 @@ public class TestCase(
     private static string ConsumeTagContents(string contents, string tag, ref int offset)
     {
         var openingTag = $"<{tag}>";
-        var closingTag = $"<{tag}/>";
+        var closingTag = $"</{tag}>";
         
         var openingTagIndex = contents.IndexOf(openingTag, offset, StringComparison.Ordinal);
         if (openingTagIndex == -1)
@@ -45,8 +45,13 @@ public class TestCase(
         
         return content.Trim();
     }
+
+    private static string SanitizeTestCaseFragment(string toSanitize, string entrypointClassName)
+    {
+        return toSanitize.Replace("${ENTRYPOINT_CLASS_NAME}", entrypointClassName);
+    }
     
-    public static List<TestCase> ParseTestCases(string testCasesString)
+    public static List<TestCase> ParseTestCases(string testCasesString, string entrypointClassName)
     {
         List<TestCase> testCases = [];
         var offset = 0;
@@ -64,14 +69,14 @@ public class TestCase(
             }
 
             var huh = 0;
-            var setup = ConsumeTagContents(testCasesContents, "setup", ref huh);
-            var call = ConsumeTagContents(testCasesContents, "call", ref huh);
-            var expected = ConsumeTagContents(testCasesContents, "expected", ref huh);
-            var funcName = ConsumeTagContents(testCasesContents, "funcName", ref huh);
-            var display = ConsumeTagContents(testCasesContents, "display", ref huh);
-            var displayRes = ConsumeTagContents(testCasesContents, "displayRes", ref huh);
-            var isPublic = ConsumeTagContents(testCasesContents, "public", ref huh);
-            testCases.Add(new TestCase(setup, call, expected, funcName, display, displayRes, isPublic));
+            var setup = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "setup", ref huh), entrypointClassName);
+            var call = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "call", ref huh), entrypointClassName);
+            var expected = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "expected", ref huh), entrypointClassName);
+            var funcName = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "funcName", ref huh), entrypointClassName);
+            var display = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "display", ref huh), entrypointClassName);
+            var displayRes = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "displayRes", ref huh), entrypointClassName);
+            var isPublic = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "public", ref huh), entrypointClassName);
+            testCases.Add(new TestCase(setup, expected, call, funcName, display, displayRes, isPublic));
         }
         
     }
