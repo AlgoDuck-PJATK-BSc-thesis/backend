@@ -15,9 +15,8 @@ namespace ExecutorService.Executor;
 public interface IExecutorRepository
 {
     public Task<List<Language>> GetSupportedLanguagesAsync();
-    public Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName);
+    public Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName);
     public Task<string> GetTemplateAsync(string exerciseId);
-    public Task<string> GetFuncName(); //TODO for now will be stored in db however I'd like to add some marking mechanism to templates that indicates this is the primary "call method" to be used in testing
 }
 
 public class ExecutorRepository : IExecutorRepository
@@ -51,7 +50,7 @@ public class ExecutorRepository : IExecutorRepository
         return (await connection.QueryAsync<Language>(selectLanguagesQuery)).ToList();
     }
 
-    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName)
+    public async Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName)
     {
         var getRequest = new GetObjectRequest
         {
@@ -106,11 +105,6 @@ public class ExecutorRepository : IExecutorRepository
         }
         return Encoding.UTF8.GetString(buffer);
     }
-
-    public async Task<string> GetFuncName()
-    {
-        return "sortIntArr";
-    }
     
 }
 
@@ -127,7 +121,7 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
         return executorYmlConfig.SUPPORTED_LANGUAGES.ToList().Select(l => new Language(l, null)).ToList();
     }
 
-    public async Task<List<TestCase>> GetTestCasesAsync(string exerciseId, string entrypointClassName)
+    public async Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName)
     {
         const string testCases = "new int[] {1,5,2,4,3}<\n" +
                                  "new int[] {1,2,3,4,5}<<\n" +
@@ -140,11 +134,7 @@ public class ExecutorRepositoryMock(IConfiguration configuration) : IExecutorRep
     {
         return "public class Main {\n    public static int[] sortIntArr(int[] toBeSorted){\n        return null;\n    }\n}";
     }
-
-    public async Task<string> GetFuncName()
-    {
-        return "sortIntArr";
-    }
+    
 
     /*
      proposed test case format

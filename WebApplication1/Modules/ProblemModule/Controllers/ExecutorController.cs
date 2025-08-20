@@ -1,6 +1,6 @@
-using ExecutorService.Executor._ExecutorUtils;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.Modules.ProblemModule.DTOs;
+using WebApplication1.Modules.ProblemModule.DTOs.ExecutorDtos;
 using WebApplication1.Modules.ProblemModule.Interfaces;
 
 namespace WebApplication1.Modules.ProblemModule.Controllers;

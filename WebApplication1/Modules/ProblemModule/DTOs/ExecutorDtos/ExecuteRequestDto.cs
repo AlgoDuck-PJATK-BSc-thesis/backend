@@ -1,4 +1,4 @@
-namespace ExecutorService.Executor._ExecutorUtils;
+namespace WebApplication1.Modules.ProblemModule.DTOs.ExecutorDtos;
 
 public class ExecuteRequestDto(string codeB64, string lang, string exerciseId)
 {

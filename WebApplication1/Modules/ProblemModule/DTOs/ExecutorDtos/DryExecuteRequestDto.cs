@@ -1,4 +1,4 @@
-namespace WebApplication1.Modules.ProblemModule.DTOs;
+namespace WebApplication1.Modules.ProblemModule.DTOs.ExecutorDtos;
 
 public class DryExecuteRequestDto
 {

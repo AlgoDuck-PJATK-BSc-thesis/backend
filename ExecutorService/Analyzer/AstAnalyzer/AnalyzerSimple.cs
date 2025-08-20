@@ -35,24 +35,18 @@ public class AnalyzerSimple
     private const string BaselineMainCode = "public static void main(String[] args){}";
     private readonly AstNodeClassMemberFunc _baselineMainSignature;
     
-    public AnalyzerSimple(string fileContents)
-    {
-        _lexerSimple = new LexerSimple();
-        _parserSimple = new ParserSimple();
-        _baselineMainSignature = CreateNewMainNode();
-        
-        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(fileContents)]);
-    }
 
-    public AnalyzerSimple(StringBuilder fileContents, string templateContents)
+    public AnalyzerSimple(StringBuilder fileContents, string? templateContents = null)
     {
         _userCode = fileContents;
 
         _lexerSimple = new LexerSimple();
         _parserSimple = new ParserSimple();
         _baselineMainSignature = CreateNewMainNode();
-
-        _templateProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(templateContents)]);
+        if (templateContents != null)
+        {
+            _templateProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(templateContents)]);
+        }
         _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(_userCode.ToString())]);
     }
 

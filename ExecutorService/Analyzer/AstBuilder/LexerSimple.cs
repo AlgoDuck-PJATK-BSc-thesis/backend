@@ -17,6 +17,7 @@ public class LexerSimple : ILexer
     
     public List<Token> Tokenize(string fileContents)
     {
+        fileContents = fileContents.ReplaceLineEndings();
          _tokens = new List<Token>();
         _fileChars = fileContents.ToCharArray();
         _buf = new StringBuilder();
@@ -97,27 +98,12 @@ public class LexerSimple : ILexer
                     break;
             }
         }
-        //
-        // foreach (var tok in _tokens)
-        // {
-        //     Console.Write(tok.Type);
-        //     if (tok.Value is not null)
-        //     {
-        //         Console.WriteLine($": {tok.Value}");
-        //     }
-        //     else
-        //     {
-        //         Console.WriteLine();
-        //     }
-        //     
-        // }
         return _tokens;
     }
     
     private Token ConsumeKeyword(StringBuilder buf)
     {
-        // buf.Append(ConsumeChar());
-        while (PeekChar() != null && Char.IsLetterOrDigit(PeekChar().Value)) //no it can't be a null but thank you Rider
+        while (PeekChar() != null && Char.IsLetterOrDigit(PeekChar()!.Value))
         {
             buf.Append(ConsumeChar());
         }
@@ -245,13 +231,13 @@ private Token ConsumeNumericLit(char prevChar) // TODO needs cleaning up, bit of
             return CreateToken(TokenType.IntLit, numLit.ToString());
         }
 
-        if (Char.IsNumber(prevChar))
+        if (char.IsNumber(prevChar))
         {
             numLit.Append(prevChar);
         }
         
         numLit.Append(ConsumeDec());
-        char? delim = PeekChar();
+        var delim = PeekChar();
         if (delim is not null && delim.Value == '.')
         {
             numLit.Append(ConsumeChar());
@@ -337,7 +323,7 @@ private Token ConsumeNumericLit(char prevChar) // TODO needs cleaning up, bit of
 
     private Token ConsumeStringLit()
     {
-        StringBuilder stringLit = new StringBuilder();
+        var stringLit = new StringBuilder();
         // check if this doesn't break if a file begins with '"' illegal statement so shouldn't pass either way but not because of a ArrayIndexOutOfBoundsException
         // which might get thrown. PeekChar should handle it but best to check
         //!CheckForChar('"') && !CheckForChar('\\', -1)
@@ -371,7 +357,7 @@ private Token ConsumeNumericLit(char prevChar) // TODO needs cleaning up, bit of
     }
     private char? PeekChar(int offset = 0)
     {
-        int accessIndex = offset + _currPos;
+        var accessIndex = offset + _currPos;
         if (accessIndex < _fileChars.Length && accessIndex >= 0)
         {
             return _fileChars[accessIndex];
