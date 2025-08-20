@@ -14,7 +14,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public int AmountSolved { get; set; } = 0;
     public string? ProfilePicture { get; set; }
     public Guid? CohortId { get; set; }
-    public CohortModule.Models.Cohort? Cohort { get; set; } 
+    public Cohort? Cohort { get; set; } 
     public Guid? UserRoleId { get; set; }
     public UserRole? UserRole { get; set; }
     public ICollection<Session>? Sessions { get; set; }

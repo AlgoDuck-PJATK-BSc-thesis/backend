@@ -11,6 +11,8 @@
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.Json" Version="10.0.0-preview.4.25258.110" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
           <PrivateAssets>all</PrivateAssets>
@@ -29,10 +31,6 @@
     <ItemGroup>
       <Folder Include="Modules\AuthModule\Controllers\" />
       <Folder Include="Modules\AuthModule\Services\" />
-      <Folder Include="Modules\CohortModule\Controllers\" />
-      <Folder Include="Modules\CohortModule\DTOs\" />
-      <Folder Include="Modules\CohortModule\Repositories\" />
-      <Folder Include="Modules\CohortModule\Services\" />
       <Folder Include="Modules\ContestModule\Controllers\" />
       <Folder Include="Modules\ContestModule\DTOs\" />
       <Folder Include="Modules\ContestModule\Repositories\" />

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebApplication1.DAL;
@@ -11,9 +12,11 @@ using WebApplication1.DAL;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250525194950_AddCohortChat")]
+    partial class AddCohortChat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -189,9 +192,6 @@ namespace WebApplication1.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -203,8 +203,6 @@ namespace WebApplication1.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("CohortId");
-
-                    b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Cohorts");
                 });
@@ -257,8 +255,7 @@ namespace WebApplication1.Migrations
 
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
+                        .HasColumnType("text");
 
                     b.HasKey("NotificationId");
 
@@ -843,17 +840,6 @@ namespace WebApplication1.Migrations
                         .HasConstraintName("fk_session_user");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("WebApplication1.Modules.CohortModule.Models.Cohort", b =>
-                {
-                    b.HasOne("WebApplication1.Modules.UserModule.Models.ApplicationUser", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("WebApplication1.Modules.CohortModule.Models.Message", b =>
