@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ExecutorService.Executor._ExecutorUtils;
 using WebApplication1.Modules.ProblemModule.DTOs;
+using WebApplication1.Modules.ProblemModule.DTOs.ExecutorDtos;
 using WebApplication1.Modules.ProblemModule.Interfaces;
 
 namespace WebApplication1.Modules.ProblemModule.Services;
@@ -40,7 +41,9 @@ public class CodeExecutorService : IExecutorService
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ExecuteResultDto>(content, JsonSerializerOptions);
 
+
         if (result == null) throw new Exception(""); // TODO make this a custom exception
+        Console.WriteLine(result.ExecutionTime);
         return result;
     }
 

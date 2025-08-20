@@ -105,7 +105,7 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
                 }
                 else
                 {
-                    var exceptionContents = new Exception(":(");
+                    var exceptionContents = new UnknownCompilationException(":(");
                     task.Tcs.SetException(exceptionContents);
                 }
             }
@@ -130,7 +130,7 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
             }
         }
 
-        throw new Exception("Could not fetch task"); // TODO make this custom too
+        throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
 
     private async Task<int> GetAvailableContainerPort()
@@ -143,7 +143,7 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
             } 
             await Task.Delay(10);
         }
-        throw new Exception("No available container port"); // TODO make this a custom exception
+        throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
     
     private static async Task DeployCompilerContainerAsync(int port) // made to allow dynamic runtime scaling

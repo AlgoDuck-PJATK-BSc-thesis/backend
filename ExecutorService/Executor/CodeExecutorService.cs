@@ -3,7 +3,6 @@ using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer.AstAnalyzer;
 using ExecutorService.Errors.Exceptions;
-using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
 
@@ -30,32 +29,15 @@ public class CodeExecutorService(
     {
         var lang = await CheckLanguageSupported(executeRequestDto.Lang);
         
-        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, executeRequestDto.ExerciseId);
+        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, ExecutionStyle.Submission, executeRequestDto.ExerciseId);
 
-        _analyzer = new AnalyzerSimple(fileData.FileContents.ToString(), await executorRepository.GetTemplateAsync(executeRequestDto.ExerciseId));
-        _codeAnalysisResult = _analyzer.AnalyzeUserCode();
-        
-        if (!_codeAnalysisResult.PassedValidation)
-        {
-            return new ExecuteResultDto
-            {
-                StdError = "Critical template part modified. Cannot proceed with testing. Exiting",
-            };
-        }
-        
-        if (_codeAnalysisResult.MainMethodIndices != null)
-        {
-            await InsertTestCases(fileData, _codeAnalysisResult.MainMethodIndices.MethodFileEndIndex, executeRequestDto.ExerciseId);
-        }
-        else
-        {
-            // TODO temporary solution I'd like to insert a main if it's not found to test either way
-            return new ExecuteResultDto
-            {
-                StdError = "no main function found. Exiting",
-            };
-        }
+        _analyzer = new AnalyzerSimple(fileData.FileContents, await executorRepository.GetTemplateAsync(executeRequestDto.ExerciseId));
+        _codeAnalysisResult = _analyzer.AnalyzeUserCode(ExecutionStyle.Submission);
 
+        if (!_codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
+        
+        await InsertTestCases(fileData, _codeAnalysisResult!.MainMethodIndices!.MethodFileEndIndex, executeRequestDto.ExerciseId);
+        
         return await Exec(fileData);
     }
 
@@ -63,10 +45,10 @@ public class CodeExecutorService(
     {
         var lang = await CheckLanguageSupported(executeRequestDto.Lang);
         
-        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang);
+        var fileData = await PrepareFile(executeRequestDto.CodeB64, lang, ExecutionStyle.Execution);
         
         _analyzer = new AnalyzerSimple(fileData.FileContents.ToString());
-        _codeAnalysisResult = _analyzer.AnalyzeUserCode();
+        _codeAnalysisResult = _analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
 
         return await Exec(fileData);
     }
@@ -95,18 +77,51 @@ public class CodeExecutorService(
     {
         await ExecuteJava(userSolutionData);
 
-        var testResults = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-ANSW-LOG.log");
         var stdOut = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-OUT-LOG.log");
 
-        var testResultsSanitized = testResults.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", ""); // TODO could move this to the bash script ig
         return new ExecuteResultDto
         {
             StdOutput = stdOut,
-            TestResults =  testResultsSanitized
+            TestResults = await ReadTestingResults(userSolutionData),
+            ExecutionTime = await ReadExecutionTime(userSolutionData)
         };
     }
 
-    private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, string? exerciseId = null) // TODO Make the import not constant
+    private async Task<List<TestResultDto>> ReadTestingResults(UserSolutionData userSolutionData)
+    {
+        const string idStartFlag = "tc_id:";
+        const int uuidLength = 36;
+        List<TestResultDto> parsedTestCases = [];
+        var testResultsRaw = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-ANSW-LOG.log");
+        if (string.IsNullOrEmpty(testResultsRaw)) return parsedTestCases;
+        var testResLines = testResultsRaw.ReplaceLineEndings().Trim().Split("\n");
+        foreach (var testResLine in testResLines)
+        {
+            var testResLineSanitized = testResLine.Replace($"ctr-{userSolutionData.SigningKey}-ans: ", "");
+            var idStartIndex = testResLineSanitized.IndexOf(idStartFlag, StringComparison.Ordinal) + idStartFlag.Length;
+            var idEndIndex = idStartIndex + uuidLength;
+            var testCaseId = testResLineSanitized.Substring(idStartIndex, uuidLength);
+            var testCaseRes = testResLineSanitized[idEndIndex..].Trim() == "true";
+            parsedTestCases.Add(new TestResultDto
+            {
+                TestId = testCaseId,
+                IsTestPassed = testCaseRes
+            });
+        }
+
+        return parsedTestCases;
+    }
+
+    // TODO first of all use something other than "time" for more precise measurements, secondly create and move this to some FileOperationsHandle class. Also generally make this not bad
+
+    private async Task<int> ReadExecutionTime(UserSolutionData userSolutionData)
+    {
+        var executionTimeRaw = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-TIME-LOG.log");
+        var executionTimeParsed = double.Parse(executionTimeRaw.Split(" ").ElementAt(2).Replace("s", ""));
+        return (int)(executionTimeParsed * 1000);
+    }
+
+    private async Task<UserSolutionData> PrepareFile(string codeB64, string lang, ExecutionStyle executionStyle, string? exerciseId = null) // TODO Make the import not constant
     {
         var codeBytes = Convert.FromBase64String(codeB64);
         var codeString = Encoding.UTF8.GetString(codeBytes);
@@ -114,8 +129,11 @@ public class CodeExecutorService(
         var code = new StringBuilder(codeString);
         
         var fileData = new UserSolutionData(Guid.NewGuid(), Guid.NewGuid().ToString(), lang, await executorRepository.GetFuncName(), code, exerciseId);
-        code.Insert(0, JavaImport);
-        
+        if (executionStyle == ExecutionStyle.Submission)
+        {
+            code.Insert(0, JavaImport);
+        }
+
         return fileData;
     }
 
@@ -132,13 +150,13 @@ public class CodeExecutorService(
         foreach (var testCase in testCases)
         {
             testCaseInsertBuilder.Append(testCase.TestInput);
-            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
+            var comparingStatement = $"System.out.println(\"ctr-{userSolutionData.SigningKey}-ans: \" + \" tc_id:{testCase.Id} \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
             testCaseInsertBuilder.Append(comparingStatement);
         }
         
         userSolutionData.FileContents.Insert(writeOffset, testCaseInsertBuilder);
 
-        Console.WriteLine(userSolutionData.FileContents);
+        // Console.WriteLine(userSolutionData.FileContents);
     }
 
     private async Task<string> CheckLanguageSupported(string lang)

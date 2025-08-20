@@ -1,3 +1,4 @@
+using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
@@ -5,7 +6,13 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer.AstBuilder;
+using ExecutorService.Errors.Exceptions;
+using ExecutorService.Executor.Types;
 using OneOf;
+
+// disabled these because in my opinion the ReSharper suggestions, if implemented, make the code more difficult to read
+
+// ReSharper disable SimplifyConditionalTernaryExpression
 // ReSharper disable ConvertIfStatementToReturnStatement
 
 namespace ExecutorService.Analyzer.AstAnalyzer;
@@ -14,6 +21,7 @@ internal enum ComparisonStyle
 {
     Strict, Lax
 }
+
 public class AnalyzerSimple
 {
     private readonly ILexer _lexerSimple;
@@ -21,47 +29,64 @@ public class AnalyzerSimple
 
     private readonly AstNodeProgram _userProgramRoot;
     private readonly AstNodeProgram? _templateProgramRoot;
+
+    private StringBuilder? _userCode;
     
-    private readonly AstNodeClassMemberFunc _baselineMainSignature = new()
-    {
-        AccessModifier = AccessModifier.Public,
-        Modifiers = [MemberModifier.Static],
-        FuncReturnType = SpecialMemberType.Void,
-        Identifier = new Token(TokenType.Ident, 0, "main"),
-        FuncArgs =
-        [
-            new AstNodeScopeMemberVar
-            {
-                Type = new ArrayType { BaseType = MemberType.String, Dim = 1 },
-                Identifier = new Token(TokenType.Ident, 0, "args")
-            }
-        ],
-    };
+    private const string BaselineMainCode = "public static void main(String[] args){}";
+    private readonly AstNodeClassMemberFunc _baselineMainSignature;
     
     public AnalyzerSimple(string fileContents)
     {
         _lexerSimple = new LexerSimple();
         _parserSimple = new ParserSimple();
+        _baselineMainSignature = CreateNewMainNode();
         
         _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(fileContents)]);
     }
 
-    public AnalyzerSimple(string fileContents, string templateContents)
+    public AnalyzerSimple(StringBuilder fileContents, string templateContents)
     {
+        _userCode = fileContents;
+
         _lexerSimple = new LexerSimple();
         _parserSimple = new ParserSimple();
+        _baselineMainSignature = CreateNewMainNode();
 
         _templateProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(templateContents)]);
-        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(fileContents)]);
+        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(_userCode.ToString())]);
     }
 
-    public CodeAnalysisResult AnalyzeUserCode()
+    public CodeAnalysisResult AnalyzeUserCode(ExecutionStyle executionStyle)
     {
         var mainClass = GetMainClass();
-        var main = FindAndGetFunc(_baselineMainSignature, mainClass);
-        var validatedTemplateFunctions = _templateProgramRoot == null ||  ValidateTemplateFunctions();
+        if (executionStyle == ExecutionStyle.Execution && mainClass == null) throw new EmptyProgramException();
+        var main = mainClass == null ? InsertEntrypointMethod() : FindAndGetFunc(_baselineMainSignature, mainClass);
+
+        var mainClassName = main.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier.Value!;
+        var validatedTemplateFunctions = executionStyle == ExecutionStyle.Submission ? ValidateTemplateFunctions() : true;
         
-        return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClass.Identifier.Value!, validatedTemplateFunctions);
+        return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClassName, validatedTemplateFunctions);
+    }
+
+    private AstNodeClassMemberFunc InsertEntrypointMethod()
+    {
+        var astNodeClass = _userProgramRoot.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).First(tls => tls.IsT0 && tls.AsT0.ClassAccessModifier == AccessModifier.Public).AsT0;
+        var endOfEntrypointClassOffset = astNodeClass.ClassScope!.ScopeEndOffset;
+        _userCode!.Insert(endOfEntrypointClassOffset, BaselineMainCode);
+        astNodeClass.ClassScope!.ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length;
+        var insertedMainFuncNode = CreateNewMainNode(astNodeClass);
+        insertedMainFuncNode.FuncScope = new AstNodeStatementScope
+        {
+            ScopeBeginOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 2,
+            ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 1,
+        };
+        
+        astNodeClass.ClassScope.ClassMembers.Add(new AstNodeClassMember
+        {
+            OwnerClassScope = astNodeClass.ClassScope,
+            ClassMember = insertedMainFuncNode,
+        });
+        return insertedMainFuncNode;
     }
 
     private bool ValidateTemplateFunctions()
@@ -128,7 +153,7 @@ public class AnalyzerSimple
     {
         return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
-            .Any(func => ValidateFunctionSignature(baselineFunc, func));;
+            .Any(func => ValidateFunctionSignature(baselineFunc, func));
     }
     
     private static AstNodeClassMemberFunc FindAndGetFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
@@ -161,12 +186,12 @@ public class AnalyzerSimple
         return true;
     }
 
-    private AstNodeClass GetMainClass()
+    private AstNodeClass? GetMainClass()
     {
-        return _userProgramRoot.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0)
-            .Select(tls => tls.AsT0)
-            .First(clazz => clazz.ClassAccessModifier == AccessModifier.Public &&
-                            FindAndCompareFunc(_baselineMainSignature, clazz));
+        var foundClasses = _userProgramRoot.ProgramCompilationUnits .SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0).Select(tls => tls.AsT0);
+        var foundPublicClasses = foundClasses.Where(clazz => clazz.ClassAccessModifier == AccessModifier.Public).ToList();
+        if (foundPublicClasses.Count == 0) throw new EntrypointNotFoundException("No public class found. Exiting.");
+        return foundPublicClasses.FirstOrDefault(clazz => FindAndCompareFunc(_baselineMainSignature, clazz));
     }
 
     
@@ -206,9 +231,6 @@ public class AnalyzerSimple
     // TODO clean this up
     private static bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
     {
-        var w1 = baseline.Identifier == null ? "constructor" : baseline.Identifier!.Value!;
-        var w2 = compared.Identifier == null ? "constructor" : compared.Identifier!.Value!;
-
         if (baseline.AccessModifier != compared.AccessModifier) return false;
         if (!baseline.Modifiers.OrderBy(m => m).SequenceEqual(compared.Modifiers.OrderBy(m => m))) return false;
 
@@ -230,7 +252,7 @@ public class AnalyzerSimple
         
 
         baseline.FuncReturnType?.Switch(
-            t0 =>
+            _ => // primitive type
             {
                 if (!compared.FuncReturnType!.Value.IsT0)
                 {
@@ -243,9 +265,8 @@ public class AnalyzerSimple
                 
                 isValid = baselinePrimitiveReturnType == comparedPrimitiveReturnType;
             },
-            t1 =>
+            _ => // special type for now just void, further down the line might add varargs
             {
-                // this is just for void
                 if (!compared.FuncReturnType!.Value.IsT1)
                 {
                     isValid = false;
@@ -257,7 +278,7 @@ public class AnalyzerSimple
                 
                 isValid = baselinePrimitiveReturnType == comparedPrimitiveReturnType;
             },
-            t2 =>
+            _ => // array type
             {
                 if (!compared.FuncReturnType!.Value.IsT2)
                 {
@@ -276,7 +297,7 @@ public class AnalyzerSimple
                     &&
                     baselineArrayDim == comparedArrayDim;
             },
-            t3 =>
+            _ => // complex type
             {
                 if (!compared.FuncReturnType!.Value.IsT3)
                 {
@@ -311,5 +332,30 @@ public class AnalyzerSimple
         }
 
         return isValid;
+    }
+
+    private static AstNodeClassMemberFunc CreateNewMainNode(AstNodeClass? ownerClass = null)
+    {
+        var ownerClassMember = new AstNodeClassMember
+        {
+            OwnerClassScope = ownerClass?.ClassScope
+        };
+        
+        return new AstNodeClassMemberFunc
+        {
+            OwnerClassMember = ownerClassMember,
+            AccessModifier = AccessModifier.Public,
+            Modifiers = [MemberModifier.Static],
+            FuncReturnType = SpecialMemberType.Void,
+            Identifier = new Token(TokenType.Ident, 0, "main"),
+            FuncArgs =
+            [
+                new AstNodeScopeMemberVar
+                {
+                    Type = new ArrayType { BaseType = MemberType.String, Dim = 1 },
+                    Identifier = new Token(TokenType.Ident, 0, "args")
+                }
+            ],
+        };
     }
 }

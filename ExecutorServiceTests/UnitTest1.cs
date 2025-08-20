@@ -1,4 +1,6 @@
+using System.Text;
 using ExecutorService.Analyzer.AstAnalyzer;
+using ExecutorService.Executor.Types;
 
 namespace ExecutorServiceTests;
 
@@ -35,8 +37,8 @@ public class Main {
     }
 }";
         
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.True(codeAnalysisResult.PassedValidation);
     }
@@ -68,8 +70,8 @@ public class Main {
     }
 }";
         
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.False(codeAnalysisResult.PassedValidation);
     }
@@ -101,8 +103,8 @@ public class Main {
     }
 }";
         
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.True(codeAnalysisResult.PassedValidation);
     }
@@ -126,8 +128,8 @@ public class Main<T, U, V> {
     }
 }";
         
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.True(codeAnalysisResult.PassedValidation);
     }
@@ -151,8 +153,8 @@ public class Main<T, U, V> {
     }
 }";
         
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.False(codeAnalysisResult.PassedValidation);
     }
@@ -183,8 +185,9 @@ public class Main {
         return null;
     }
 }";     
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.True(codeAnalysisResult.PassedValidation);
     }
@@ -207,8 +210,9 @@ public class Main {
         return null;
     }
 }";     
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.False(codeAnalysisResult.PassedValidation);
     }
@@ -227,8 +231,9 @@ public class Main {
 public class Main {
     public static void requiredMethod() {}
 }";   
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.False(codeAnalysisResult.PassedValidation);
     }
@@ -256,8 +261,9 @@ class HelperClass {
     
     public void helperMethod() {}
 }"; 
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.True(codeAnalysisResult.PassedValidation);
     }
@@ -280,8 +286,9 @@ class HelperClass {
     
     public void helperMethod() {}
 }"; 
-        var analyzerSimple = new AnalyzerSimple(code, template);
-        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode();
+        
+        var analyzerSimple = new AnalyzerSimple(new StringBuilder(code), template);
+        var codeAnalysisResult = analyzerSimple.AnalyzeUserCode(ExecutionStyle.Submission);
         
         Assert.False(codeAnalysisResult.PassedValidation);
     }

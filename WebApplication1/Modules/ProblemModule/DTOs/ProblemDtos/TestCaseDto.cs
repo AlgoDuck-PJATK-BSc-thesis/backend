@@ -1,22 +1,11 @@
 namespace WebApplication1.Modules.ProblemModule.DTOs.ProblemDtos;
 
-public class TestCaseDto(
-    string testInput,
-    string expectedOutput,
-    string call,
-    string funcName,
-    string display,
-    string displayRes,
-    bool isPublic
-    )
+public class TestCaseDto
 {
-    public string TestInput => testInput;
-    public string ExpectedOutput => expectedOutput;
-    public string Call => call;
-    public string FuncName => funcName;
-    public string Display => display;
-    public string DisplayRes => displayRes;
-    public bool IsPublic => isPublic;
+    public string TestCaseId { get; set; } = string.Empty;
+    public string Display { get; set; } = string.Empty;
+    public string DisplayRes { get; set; } = string.Empty;
+    public bool IsPublic { get; set; } = false;
 
     private static string ConsumeTagContents(string contents, string tag, ref int offset)
     {
@@ -67,14 +56,22 @@ public class TestCaseDto(
             }
 
             var huh = 0;
-            var setup = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "setup", ref huh), entrypointClassName);
-            var call = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "call", ref huh), entrypointClassName);
-            var expected = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "expected", ref huh), entrypointClassName);
-            var funcName = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "funcName", ref huh), entrypointClassName);
+            var testCaseId = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "id", ref huh), entrypointClassName);
+            SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "setup", ref huh), entrypointClassName);
+            SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "call", ref huh), entrypointClassName);
+            SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "expected", ref huh), entrypointClassName);
+            SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "funcName", ref huh), entrypointClassName);
             var display = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "display", ref huh), entrypointClassName);
             var displayRes = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "displayRes", ref huh), entrypointClassName);
             var isPublic = SanitizeTestCaseFragment(ConsumeTagContents(testCasesContents, "public", ref huh), entrypointClassName) == "true";
-            testCases.Add(new TestCaseDto(setup, expected, call, funcName, display, displayRes, isPublic));
+            
+            testCases.Add(new TestCaseDto
+            {
+                TestCaseId = testCaseId,
+                Display = isPublic ? display : "",
+                DisplayRes = isPublic ? displayRes : "",
+                IsPublic = isPublic
+            });
         }
         
     }

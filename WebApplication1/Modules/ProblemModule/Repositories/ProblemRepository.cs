@@ -41,8 +41,7 @@ public class ProblemRepository(
             .FirstAsync();
         
         problemDto.TemplateContents = await problemTemplate;
-        var tec = await testCases;
-        problemDto.TestCases = tec.Where(tc => tc.IsPublic).ToList();
+        problemDto.TestCases = await testCases;
         
         return problemDto;
     }

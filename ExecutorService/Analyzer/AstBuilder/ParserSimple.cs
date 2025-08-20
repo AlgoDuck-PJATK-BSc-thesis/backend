@@ -194,7 +194,7 @@ public class ParserSimple : IParser
 
                 ParseType()!.Value.Switch(
                         t1 => functionArgument.Type = t1,
-                        t2 => throw new Exception("Fuck you"),
+                        t2 => throw new JavaSyntaxException("can't declare variable of type void"),
                         t3 => functionArgument.Type = t3,
                         t4 => functionArgument.Type = t4
                     );

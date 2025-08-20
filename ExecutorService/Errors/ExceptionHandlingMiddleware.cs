@@ -26,6 +26,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             FunctionSignatureException _ => new ExceptionReponseDto(HttpStatusCode.BadRequest, "critical function signature modified. Exiting"),
             JavaSyntaxException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, $"java syntax error: {err.Message}"),
+            EntrypointNotFoundException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
+            TemplateModifiedException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
+            EmptyProgramException ex => new ExceptionReponseDto(HttpStatusCode.OK, ex.Message),
+            TemplateParsingException err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "The service you tried to use is temporarily unavailable, please try again later"),
+            UnknownCompilationException err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "The service you tried to use is temporarily unavailable, please try again later"),
+            CompilationHandlerChannelReadException err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "The service you tried to use is temporarily unavailable, please try again later"),
             LanguageException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             FileNotFoundException _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Something went wrong during code execution. Please try again later"),
             CompilationException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),

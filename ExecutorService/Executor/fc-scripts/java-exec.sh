@@ -75,7 +75,7 @@ fi
 #   ================| end |================
 # With this being the example output for a simple "Hello firecracker" print we need to strip it from the additional info
 
-cp "$STDOUT_PATH" "$TIME_PATH"
+echo $(tail -4 "$STDOUT_PATH" | head -3) > "$TIME_PATH"
 
 tail -n +4 "$STDOUT_PATH" | head -n -4 > "$TMP_PATH" && mv "$TMP_PATH" "$STDOUT_PATH"
 
