@@ -5,6 +5,10 @@ BASE_PORT=$(yq eval '.COMPILATION_HANDLER.BASE_PORT' /app/ExecutorConfig.yml)
 CPUS=$(yq eval '.COMPILATION_HANDLER.COMPILER_CONFIG.CPUS' /app/ExecutorConfig.yml)
 MEM=$(yq eval '.COMPILATION_HANDLER.COMPILER_CONFIG.MEM' /app/ExecutorConfig.yml)
 
+while ! nc -z warden 7139; do
+  sleep 1
+done
+
 for i in $(seq 0 $(($CONTAINER_COUNT-1)));
 do
   PORT=$(($BASE_PORT+$i))

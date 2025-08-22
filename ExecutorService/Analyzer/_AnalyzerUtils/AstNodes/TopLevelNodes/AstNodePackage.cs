@@ -1,6 +1,6 @@
 ﻿namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 
-public class AstNodePackage : IUriSetter
+public class AstNodePackage : IHasUriSetter
 {
     public string Uri { get; set; } = string.Empty;
     

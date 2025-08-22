@@ -3,26 +3,24 @@
 CLASSNAME="$1"
 EXEC_ID="$2"
 
-ROOTFS_DIR="/tmp/$EXEC_ID-rootfs"
 BYTECODE_DIR="/tmp/$EXEC_ID/bytecode"
+ROOTFS_DIR_STAGING="/app/data/$EXEC_ID-rootfs"
 
 if [ ! -d "$BYTECODE_DIR" ] || [ -z "$(ls -A "$BYTECODE_DIR" 2>/dev/null)" ]; then
-  echo "Bytecode directory not found or empty. Exiting"
-  umount "$ROOTFS_DIR" 2>/dev/null || true
+  curl -X 'DELETE' \
+    "http://warden:7139/umount?executionId=$EXEC_ID" \
+    -H 'accept: */*' \
+    -d ''
   exit 1
 fi
 
-mkdir -p "$ROOTFS_DIR/sandbox"
+mkdir -p "$ROOTFS_DIR_STAGING/sandbox/"
+find "$BYTECODE_DIR" -maxdepth 1 -type f -exec mv {} "$ROOTFS_DIR_STAGING/sandbox/" \;
 
+sync  
+wait 1
 
-find "$BYTECODE_DIR" -name "*.class" -type f -exec mv {} "$ROOTFS_DIR/sandbox/" \;
-
-if [ -z "$(ls -A "$ROOTFS_DIR/sandbox" 2>/dev/null)" ]; then
-  echo "No .class files found to move. Exiting"
-  umount "$ROOTFS_DIR" 2>/dev/null || true
-  exit 1
-fi
-
-echo "Successfully moved $(ls -1 "$ROOTFS_DIR/sandbox"/*.class 2>/dev/null | wc -l) .class files to sandbox"
-
-umount "$ROOTFS_DIR"
+curl -X 'DELETE' \
+    "http://warden:7139/umount?executionId=$EXEC_ID" \
+    -H 'accept: */*' \
+    -d ''

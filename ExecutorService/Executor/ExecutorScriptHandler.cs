@@ -6,7 +6,7 @@ namespace ExecutorService.Executor;
 
 public static class ExecutorScriptHandler
 {
-    public static Task CopyTemplateFs(UserSolutionData userSolutionData)
+    public static async Task CopyTemplateFs(UserSolutionData userSolutionData)
     {
         var buildProcess = new Process
         {
@@ -22,7 +22,7 @@ public static class ExecutorScriptHandler
         };
         
         buildProcess.Start();
-        return buildProcess.WaitForExitAsync();
+        await buildProcess.WaitForExitAsync();
     }    
     
     public static async Task PopulateCopyFs(UserSolutionData userSolutionData, CompileResultDto userByteCode)

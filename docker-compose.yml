@@ -6,13 +6,15 @@ services:
   warden:
     build:
       context: .
-      dockerfile: DockerWarden/Dockerfile
+      dockerfile: SystemWarden/Dockerfile
     ports:
       - "${WARDEN_PORT:-7139}:7139"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
+      - /tmp/app/data:/app/data:shared
     privileged: true
+    pid: host
     networks:
       - app_network
     
@@ -22,23 +24,21 @@ services:
       dockerfile: ExecutorService/Dockerfile
     ports:
       - "${EXECUTOR_PORT:-1337}:1337"
-    environment:
-      - HOST_NAME=${HOST_NAME}
     extra_hosts:
       - "postgres-host:host-gateway"
       - "host.docker.internal:host-gateway"
     volumes:
+      - /tmp/app/data:/app/data:slave
+    devices:
       - /dev/kvm:/dev/kvm
-#dude... work ts out
-    cap_add:
-      - SYS_ADMIN
-    privileged: true
     env_file:
       - .env
     networks:
       - app_network
     depends_on:
       - warden
+    group_add:
+      - ${KVM_GID}
     
   webapplication1:
     image: webapplication1
@@ -68,3 +68,8 @@ services:
       - app_network 
     depends_on:
       - executor
+
+volumes:
+  warden-staging:
+    driver: local
+  

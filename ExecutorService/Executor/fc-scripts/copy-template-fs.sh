@@ -4,16 +4,18 @@ CLASSNAME="$1"
 EXEC_ID="$2"
 SIGNING_KEY="$3"
 
-ROOTFS_DIR="/tmp/$EXEC_ID-rootfs"
-ROOTFS="/tmp/$EXEC_ID-rootfs.ext4"
+ROOTFS_DIR_STAGING="/app/data/$EXEC_ID-rootfs"
+ROOTFS_STAGING="/app/data/$EXEC_ID-rootfs.ext4"
 
-mkdir -p "$ROOTFS_DIR"
+if ! curl -X 'POST' \
+  "http://warden:7139/execution-fs?executionId=$EXEC_ID" \
+  -H 'accept: */*' \
+  -d '' \
+  --fail; then
+  exit 1
+fi
 
-cp --reflink=auto --sparse=always "/app/fc-scripts/alpine-rootfs.ext4" "$ROOTFS"
-
-mount "$ROOTFS" "$ROOTFS_DIR"
-
-cat > "$ROOTFS_DIR/sandbox/run.sh" << EOF
+cat > "$ROOTFS_DIR_STAGING/sandbox/run.sh" << EOF
 #!/bin/sh
 cd /sandbox
 
@@ -27,5 +29,5 @@ echo c > /proc/sysrq-trigger
 
 EOF
 
-chmod a-w "$ROOTFS_DIR/sandbox/run.sh"
-chmod a+x "$ROOTFS_DIR/sandbox/run.sh"
+chmod a-w "$ROOTFS_DIR_STAGING/sandbox/run.sh"
+chmod a+x "$ROOTFS_DIR_STAGING/sandbox/run.sh"

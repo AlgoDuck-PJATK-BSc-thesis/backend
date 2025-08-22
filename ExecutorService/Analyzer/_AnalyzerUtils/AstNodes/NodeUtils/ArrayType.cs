@@ -1,4 +1,4 @@
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using OneOf;
 
 namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;

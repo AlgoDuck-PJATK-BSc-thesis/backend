@@ -12,7 +12,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecutorService", "Executor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompilerService", "CompilerService\CompilerService.csproj", "{3E3D7156-5BC5-461D-8CC5-E62621CC8DA1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DockerWarden", "DockerWarden\DockerWarden.csproj", "{586B24AC-3120-417F-848A-5544925449A8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SystemWarden", "SystemWarden\SystemWarden.csproj", "{586B24AC-3120-417F-848A-5544925449A8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecutorServiceTests", "ExecutorServiceTests\ExecutorServiceTests.csproj", "{E8603A9E-AD74-4AB4-B168-84873D717CAC}"
 EndProject

@@ -3,9 +3,9 @@
 EXEC_ID=$1
 SIGNING_KEY=$2
 
-ROOTFS="/tmp/$EXEC_ID-rootfs.ext4"
-ROOTFS_DIR="/tmp/$EXEC_ID-rootfs"
-CLASS_PATH="/tmp/$EXEC_ID.class"
+ROOTFS_STAGING="/app/data/$EXEC_ID-rootfs.ext4"
+ROOTFS_STAGING_DIR="/app/data/$EXEC_ID-rootfs"
+
 KERNEL_PATH="/app/fc-scripts/vmlinux.bin"
 CONFIG_FILE="/tmp/vm_config-$EXEC_ID.json"
 SOCK_PATH="/tmp/firecracker-${EXEC_ID}.socket"
@@ -26,7 +26,7 @@ cat > "$CONFIG_FILE" << EOF
   "drives": [
     {
       "drive_id": "rootfs",
-      "path_on_host": "$ROOTFS",
+      "path_on_host": "$ROOTFS_STAGING",
       "is_root_device": true,
       "is_read_only": false
     }
@@ -79,5 +79,4 @@ echo $(tail -4 "$STDOUT_PATH" | head -3) > "$TIME_PATH"
 
 tail -n +4 "$STDOUT_PATH" | head -n -4 > "$TMP_PATH" && mv "$TMP_PATH" "$STDOUT_PATH"
 
-
-rm -rf "$SOCK_PATH" "$CONFIG_FILE" "$ROOTFS" "$CLASS_PATH" "$ROOTFS_DIR" & disown
+rm -rf "$SOCK_PATH" "$CONFIG_FILE" "$ROOTFS" "$CLASS_PATH" "$ROOTFS_DIR" "$ROOTFS_STAGING" "$ROOTFS_STAGING_DIR" & disown

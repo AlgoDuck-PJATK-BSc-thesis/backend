@@ -22,7 +22,6 @@ WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    openjdk-17-jre \
     curl \
     wget \
     unzip \
@@ -60,9 +59,8 @@ COPY ExecutorService/ExecutorConfig.yml .
 
 RUN    echo '/usr/local/bin/firecracker-v1.2.0-x86_64' >> ~/.bashrc && \
     chmod +x fc-scripts/java-exec.sh  && \
-    chmod +x fc-scripts/build-alp.sh && \
     chmod +x fc-scripts/copy-template-fs.sh && \
     chmod +x fc-scripts/populate-execution-fs.sh && \
     chmod +x /app/entrypoint.sh
-       
+
 ENTRYPOINT ["/app/entrypoint.sh"]

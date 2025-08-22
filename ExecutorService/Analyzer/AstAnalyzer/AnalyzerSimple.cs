@@ -1,11 +1,13 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer.AstBuilder;
+using ExecutorService.Analyzer.AstBuilder.Lexer;
+using ExecutorService.Analyzer.AstBuilder.Parser;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Types;
 using OneOf;

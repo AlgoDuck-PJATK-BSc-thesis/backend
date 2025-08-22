@@ -13,8 +13,10 @@ public static class ExecutorFileOperationHandler
 
     public static async Task<List<TestResultDto>> ReadTestingResults(UserSolutionData userSolutionData)
     {
+        Console.WriteLine(GetTestResultLogFilePath(userSolutionData.ExecutionId));
         List<TestResultDto> parsedTestCases = [];
         var testResultsRaw = await File.ReadAllTextAsync(GetTestResultLogFilePath(userSolutionData.ExecutionId));
+        Console.WriteLine($"time: {testResultsRaw}");
         if (string.IsNullOrEmpty(testResultsRaw)) return parsedTestCases;
         var testResLines = testResultsRaw.ReplaceLineEndings().Trim().Split("\n");
         foreach (var testResLine in testResLines)
@@ -37,14 +39,19 @@ public static class ExecutorFileOperationHandler
     // TODO first of all use something other than "time" for more precise measurements, secondly create and move this to some FileOperationsHandle class. Also generally make this not bad
     public static async Task<int> ReadExecutionTime(UserSolutionData userSolutionData)
     {
+        Console.WriteLine(GetTimingLogFilePath(userSolutionData.ExecutionId));
         var executionTimeRaw = await File.ReadAllTextAsync(GetTimingLogFilePath(userSolutionData.ExecutionId));
+        Console.WriteLine($"time: {executionTimeRaw}");
         var executionTimeParsed = double.Parse(executionTimeRaw.Split(" ").ElementAt(2).Replace("s", ""));
         return (int)(executionTimeParsed * 1000);
     }
 
     public static async Task<string> ReadExecutionStandardOut(UserSolutionData userSolutionData)
     {
-        return await File.ReadAllTextAsync(GetStdOutLogFilePath(userSolutionData.ExecutionId));
+        Console.WriteLine(GetStdOutLogFilePath(userSolutionData.ExecutionId));
+        var readAllTextAsync = await File.ReadAllTextAsync(GetStdOutLogFilePath(userSolutionData.ExecutionId));
+        Console.WriteLine($"out: {readAllTextAsync}");
+        return readAllTextAsync;
     }
     
     public static void InsertTestCases(UserSolutionData userSolutionData, List<TestCase> testCases)
