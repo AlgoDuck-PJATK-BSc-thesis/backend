@@ -24,12 +24,18 @@ public class CodeExecutorService(
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
         var fileData = await ExecutePreCompileTasks(ExecutionStyle.Submission, executeRequestDto, executeRequestDto.ExerciseId);
-
+        
         var testCases = await executorRepository.GetTestCasesAsync(fileData.ExerciseId, fileData.MainClassName);
 
         ExecutorFileOperationHandler.InsertTestCases(fileData, testCases);
         
-        return await Exec(fileData);
+        return await InsertTimingAndProceedToExecution(fileData);
+    }
+
+    public async Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto)
+    {
+        var fileData = await ExecutePreCompileTasks(ExecutionStyle.Execution, executeRequestDto);
+        return await InsertTimingAndProceedToExecution(fileData);
     }
 
     private async Task<UserSolutionData> ExecutePreCompileTasks(ExecutionStyle executionStyle, IExecutionRequestBase executeRequest, string? exerciseId = null)
@@ -50,13 +56,21 @@ public class CodeExecutorService(
         return fileData;
     }
 
-    public async Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto)
+    private async Task<ExecuteResultDto> InsertTimingAndProceedToExecution(UserSolutionData userSolutionData)
     {
-        var fileData = await ExecutePreCompileTasks(ExecutionStyle.Execution, executeRequestDto);
-        return await Exec(fileData);
+        ExecutorFileOperationHandler.InsertTiming(userSolutionData);
+        return await Execute(userSolutionData);
     }
-    
-    private async Task<ExecuteResultDto> Exec(UserSolutionData userSolutionData)
+
+    private Task<CompileResultDto> CompileCode(UserSolutionData userSolutionData)
+    {
+        var codeBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
+        var codeB64 = Convert.ToBase64String(codeBytes);
+        
+        return compilationHandler.CompileAsync(codeB64, userSolutionData.MainClassName);
+    }
+
+    private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
         var compilationTask = CompileCode(userSolutionData);
         var fsCopyTask = ExecutorScriptHandler.CopyTemplateFs(userSolutionData);
@@ -66,14 +80,6 @@ public class CodeExecutorService(
         await ExecutorScriptHandler.PopulateCopyFs(userSolutionData, await compilationTask);
         
         return await DispatchExecutorVm(userSolutionData);
-    }
-
-    private Task<CompileResultDto> CompileCode(UserSolutionData userSolutionData)
-    {
-        var codeBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
-        var codeB64 = Convert.ToBase64String(codeBytes);
-        
-        return compilationHandler.CompileAsync(codeB64, userSolutionData.MainClassName);
     }
 
     private async Task<ExecuteResultDto> DispatchExecutorVm(UserSolutionData userSolutionData)

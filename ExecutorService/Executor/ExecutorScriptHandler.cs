@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
 
@@ -8,18 +9,8 @@ public static class ExecutorScriptHandler
 {
     public static async Task CopyTemplateFs(UserSolutionData userSolutionData)
     {
-        var buildProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/fc-scripts/copy-template-fs.sh \"{userSolutionData.MainClassName}\" \"{userSolutionData.ExecutionId}\" \"{userSolutionData.SigningKey}\"", 
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true,
-                CreateNoWindow = true
-            }
-        };
+        var buildProcess = CreateBashExecutionProcess( "/app/fc-scripts/copy-template-fs.sh",
+            userSolutionData.MainClassName, userSolutionData.ExecutionId.ToString(), userSolutionData.SigningKey.ToString());
         
         buildProcess.Start();
         await buildProcess.WaitForExitAsync();
@@ -35,19 +26,9 @@ public static class ExecutorScriptHandler
             await File.WriteAllBytesAsync($"{bytecodeDirPath}/{generatedClassFile.Key}", fileBytes);
         }
 
-        var buildProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/fc-scripts/populate-execution-fs.sh \"{userSolutionData.MainClassName}\" \"{userSolutionData.ExecutionId}\"", 
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true,
-                CreateNoWindow = true
-            }
-        };
-    
+        var buildProcess = CreateBashExecutionProcess("/app/fc-scripts/populate-execution-fs.sh",
+            userSolutionData.MainClassName, userSolutionData.ExecutionId.ToString());
+        
         buildProcess.Start();
         await buildProcess.WaitForExitAsync();
         Directory.Delete(bytecodeDirPath);
@@ -55,20 +36,33 @@ public static class ExecutorScriptHandler
 
     public static async Task ExecuteJava(UserSolutionData userSolutionData)
     {
-        var execProcess = new Process
+        var execProcess = CreateBashExecutionProcess("/app/fc-scripts/java-exec.sh",
+            userSolutionData.ExecutionId.ToString(), userSolutionData.SigningKey.ToString());
+        execProcess.Start();
+        await execProcess.WaitForExitAsync();
+    }
+    
+    private static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)
+    {
+        var scriptArguments = new StringBuilder();
+    
+        for (var i = 0; i < arguments.Length - 1; i++)
+        {
+            scriptArguments.Append($"{arguments[i]} ");
+        }
+
+        scriptArguments.Append(arguments[^1]);
+    
+        return new Process
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
-                Arguments = $"/app/fc-scripts/java-exec.sh {userSolutionData.ExecutionId} {userSolutionData.SigningKey}",
-                RedirectStandardError = true,
+                Arguments = $"{scriptPath} {scriptArguments}", 
                 RedirectStandardOutput = true,
-                RedirectStandardInput = true,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             }
         };
-
-        execProcess.Start();
-        await execProcess.WaitForExitAsync();
     }
 }

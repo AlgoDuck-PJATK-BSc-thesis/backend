@@ -11,8 +11,8 @@ public class CodeAnalysisResult(MainMethod? mainMethod, string mainClassname, bo
 
 public class MainMethod(int begin, int end)
 {
-    public int MethodFileBeginIndex => begin;
-    public int MethodFileEndIndex => end;
+    public int MethodFileBeginIndex { get; set; } = begin;
+    public int MethodFileEndIndex { get; set; } = end;
 
     public static MainMethod? MakeFromAstNodeMain(AstNodeClassMemberFunc? main)
     {

@@ -15,18 +15,14 @@ if ! curl -X 'POST' \
   exit 1
 fi
 
+# TODO compile the script to binary. We don't want signing keys leaking, even if they're single use
 cat > "$ROOTFS_DIR_STAGING/sandbox/run.sh" << EOF
 #!/bin/sh
-cd /sandbox
 
-time java -cp ".:gson-2.13.1.jar" $CLASSNAME > /dev/ttyS0 2>&1
+java -cp "/sandbox:.:/sandbox/gson-2.13.1.jar" $CLASSNAME > /dev/ttyS0 2>&1
 sync
 
 echo "ctr-${SIGNING_KEY}-pof" > /dev/ttyS0 2>&1
-
-echo 1 > /proc/sys/kernel/sysrq
-echo c > /proc/sysrq-trigger
-
 EOF
 
 chmod a-w "$ROOTFS_DIR_STAGING/sandbox/run.sh"

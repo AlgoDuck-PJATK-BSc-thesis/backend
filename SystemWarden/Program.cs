@@ -38,25 +38,19 @@ app.MapDelete("/container/{port:int}", async (int port) =>
     return Results.NoContent();
 });
 
-app.MapPost("/execution-fs", async ([FromQuery] string executionId) =>
+app.MapPost("/execution-fs", async ([FromQuery] Guid executionId) =>
 {
-    var filesystemCreationProcess = CreateBashExecutionProcess("/app/Scripts/create-and-mount-fs.sh", executionId);
+    var filesystemCreationProcess = CreateBashExecutionProcess("/app/Scripts/create-and-mount-fs.sh", executionId.ToString());
     filesystemCreationProcess.Start();
     await filesystemCreationProcess.WaitForExitAsync();
-    Console.WriteLine("create");
-    Console.WriteLine(await filesystemCreationProcess.StandardOutput.ReadToEndAsync());
-    Console.WriteLine(await filesystemCreationProcess.StandardError.ReadToEndAsync());
     return Results.NoContent();
 });
 
-app.MapDelete("/umount", async ([FromQuery] string executionId) =>
+app.MapDelete("/umount", async ([FromQuery] Guid executionId) =>
 {
-    var filesystemUnmountingProcess = CreateBashExecutionProcess("/app/Scripts/umount.sh", executionId);
+    var filesystemUnmountingProcess = CreateBashExecutionProcess("/app/Scripts/umount.sh", executionId.ToString());
     filesystemUnmountingProcess.Start();
     await filesystemUnmountingProcess.WaitForExitAsync();
-    Console.WriteLine("unmount");
-    Console.WriteLine(await filesystemUnmountingProcess.StandardOutput.ReadToEndAsync());
-    Console.WriteLine(await filesystemUnmountingProcess.StandardError.ReadToEndAsync());
     return Results.NoContent();
 });
 

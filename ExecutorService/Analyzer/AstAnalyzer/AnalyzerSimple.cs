@@ -311,7 +311,7 @@ public class AnalyzerSimple
         var isComparedConstructor = compared.IsConstructor;
         if (isBaselineConstructor != isComparedConstructor) return false;
 
-        if (isBaselineConstructor && baseline.Identifier?.Value != compared.Identifier?.Value) return false;
+        if (!isBaselineConstructor && baseline.Identifier?.Value != compared.Identifier?.Value) return false;
 
         if (baseline.FuncArgs.Count != compared.FuncArgs.Count) return false;
 

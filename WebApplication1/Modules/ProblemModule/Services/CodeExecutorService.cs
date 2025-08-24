@@ -4,6 +4,7 @@ using System.Text.Json;
 using WebApplication1.Modules.ProblemModule.DTOs;
 using WebApplication1.Modules.ProblemModule.DTOs.ExecutorDtos;
 using WebApplication1.Modules.ProblemModule.Interfaces;
+using WebApplication1.Shared.Exceptions;
 
 namespace WebApplication1.Modules.ProblemModule.Services;
 
@@ -33,16 +34,24 @@ public class CodeExecutorService : IExecutorService
         };
         
         var response = await _client.SendAsync(request);
-    
+
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        {
+            var errorResultRaw = await response.Content.ReadAsStringAsync();
+            var errorResult = JsonSerializer.Deserialize<ExecutorExceptionResponseDto>(errorResultRaw, JsonSerializerOptions);
+
+            if (errorResult == null) throw new InternalServerErrorException("something went wrong");
+            return new ExecuteResultDto
+            {
+                StdError = errorResult.ErrMsg
+            };
+        }
     
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ExecuteResultDto>(content, JsonSerializerOptions);
 
 
         if (result == null) throw new Exception(""); // TODO make this a custom exception
-        Console.WriteLine(result.ExecutionTime);
         return result;
     }
 
@@ -56,7 +65,17 @@ public class CodeExecutorService : IExecutorService
         
         var response = await _client.SendAsync(request);
         
-        if (!response.IsSuccessStatusCode) throw new HttpRequestException($"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorResultRaw = await response.Content.ReadAsStringAsync();
+            var errorResult = JsonSerializer.Deserialize<ExecutorExceptionResponseDto>(errorResultRaw, JsonSerializerOptions);
+
+            if (errorResult == null) throw new InternalServerErrorException("something went wrong");
+            return new ExecuteResultDto
+            {
+                StdError = errorResult.ErrMsg
+            };
+        }
         
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ExecuteResultDto>(content, JsonSerializerOptions);

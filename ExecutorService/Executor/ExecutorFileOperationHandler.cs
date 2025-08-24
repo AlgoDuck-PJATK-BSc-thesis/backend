@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Models;
@@ -5,6 +6,10 @@ using ExecutorService.Executor.Types;
 
 namespace ExecutorService.Executor;
 
+internal enum SigningType
+{
+    Time, PowerOff, Answer
+}
 public static class ExecutorFileOperationHandler
 {
     public static readonly string JavaGsonImport = "import com.google.gson.Gson;\n";
@@ -13,15 +18,13 @@ public static class ExecutorFileOperationHandler
 
     public static async Task<List<TestResultDto>> ReadTestingResults(UserSolutionData userSolutionData)
     {
-        Console.WriteLine(GetTestResultLogFilePath(userSolutionData.ExecutionId));
         List<TestResultDto> parsedTestCases = [];
         var testResultsRaw = await File.ReadAllTextAsync(GetTestResultLogFilePath(userSolutionData.ExecutionId));
-        Console.WriteLine($"time: {testResultsRaw}");
         if (string.IsNullOrEmpty(testResultsRaw)) return parsedTestCases;
         var testResLines = testResultsRaw.ReplaceLineEndings().Trim().Split("\n");
         foreach (var testResLine in testResLines)
         {
-            var testResLineSanitized = testResLine.Replace(GetExecutionSigningString(userSolutionData.SigningKey), "");
+            var testResLineSanitized = testResLine.Replace(GetExecutionSigningString(userSolutionData.SigningKey, SigningType.Answer), "");
             var idStartIndex = testResLineSanitized.IndexOf(TestCaseIdStartFlag, StringComparison.Ordinal) + TestCaseIdStartFlag.Length;
             var idEndIndex = idStartIndex + UuidLength;
             var testCaseId = testResLineSanitized.Substring(idStartIndex, UuidLength);
@@ -39,47 +42,72 @@ public static class ExecutorFileOperationHandler
     // TODO first of all use something other than "time" for more precise measurements, secondly create and move this to some FileOperationsHandle class. Also generally make this not bad
     public static async Task<int> ReadExecutionTime(UserSolutionData userSolutionData)
     {
-        Console.WriteLine(GetTimingLogFilePath(userSolutionData.ExecutionId));
         var executionTimeRaw = await File.ReadAllTextAsync(GetTimingLogFilePath(userSolutionData.ExecutionId));
-        Console.WriteLine($"time: {executionTimeRaw}");
-        var executionTimeParsed = double.Parse(executionTimeRaw.Split(" ").ElementAt(2).Replace("s", ""));
-        return (int)(executionTimeParsed * 1000);
+        var executionTimeSanitized = executionTimeRaw.Replace(GetExecutionSigningString(userSolutionData.SigningKey, SigningType.Time), "");
+        return int.Parse(executionTimeSanitized.Trim());
     }
 
     public static async Task<string> ReadExecutionStandardOut(UserSolutionData userSolutionData)
     {
-        Console.WriteLine(GetStdOutLogFilePath(userSolutionData.ExecutionId));
         var readAllTextAsync = await File.ReadAllTextAsync(GetStdOutLogFilePath(userSolutionData.ExecutionId));
-        Console.WriteLine($"out: {readAllTextAsync}");
         return readAllTextAsync;
     }
     
     public static void InsertTestCases(UserSolutionData userSolutionData, List<TestCase> testCases)
     {
-        var gsonInstanceName = GetGsonInstanceName(userSolutionData);
-        
-        var testCaseInsertBuilder = new StringBuilder();
-        testCaseInsertBuilder.Append($"Gson {gsonInstanceName} = new Gson();\n");
+        var gsonInstanceName = $"{GetHelperVariableNamePrefix(userSolutionData)}_gson";
+        var gsonVariableInitialization = $"Gson {gsonInstanceName} = new Gson();\n";
+        InsertAtEndOfMainMethod(userSolutionData, gsonVariableInitialization);
         
         foreach (var testCase in testCases)
         {
-            testCaseInsertBuilder.Append(testCase.TestInput);
-            testCaseInsertBuilder.Append(CreateComparingStatement(userSolutionData, testCase, gsonInstanceName));
+            InsertAtEndOfMainMethod(userSolutionData, testCase.TestInput);
+            InsertAtEndOfMainMethod(userSolutionData, CreateComparingStatement(userSolutionData, testCase, gsonInstanceName));
         }
+    }
+
+    public static void InsertTiming(UserSolutionData userSolutionData)
+    {
+        var timingStartVariableName = $"{GetHelperVariableNamePrefix(userSolutionData)}_start";
+        var timingEndVariableName = $"{GetHelperVariableNamePrefix(userSolutionData)}_end";
         
-        userSolutionData.FileContents.Insert(userSolutionData.MainMethod!.MethodFileEndIndex, testCaseInsertBuilder);
+        InsertAtStartOfMainMethod(userSolutionData, GetTimingVariable(timingStartVariableName));
+        InsertAtEndOfMainMethod(userSolutionData, GetTimingVariable(timingEndVariableName));
+        InsertAtEndOfMainMethod(userSolutionData, CreateSignedPrintStatement(userSolutionData, $"({timingEndVariableName} - {timingStartVariableName})", SigningType.Time));
     }
     
-    private static string GetGsonInstanceName(UserSolutionData userSolutionData)
+    private static string GetHelperVariableNamePrefix(UserSolutionData userSolutionData)
     {
         var gsonInstanceName = new StringBuilder("a"); // sometimes guids start with numbers, java variables names on the other hand cannot
         gsonInstanceName.Append(userSolutionData.ExerciseId.ToString().Replace("-", ""));
         return gsonInstanceName.ToString();
     }
 
+    private static void InsertAtEndOfMainMethod(UserSolutionData userSolutionData, string codeToBeInserted)
+    {
+        userSolutionData.FileContents.Insert(userSolutionData.MainMethod!.MethodFileEndIndex, codeToBeInserted);
+        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+    }
+    
+    private static void InsertAtStartOfMainMethod(UserSolutionData userSolutionData, string codeToBeInserted)
+    {
+        userSolutionData.FileContents.Insert(userSolutionData.MainMethod!.MethodFileBeginIndex + 1, codeToBeInserted);
+        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+    }
+    
+    private static string CreateSignedPrintStatement(UserSolutionData userSolutionData, string printContents, SigningType signingType)
+    {
+        return $"System.out.println(\"{GetExecutionSigningString(userSolutionData.SigningKey, signingType)}\" + {printContents});\n";
+    }
+    
     private static string CreateComparingStatement(UserSolutionData userSolutionData, TestCase testCase, string gsonInstanceName)
     {
-        return $"System.out.println(\"{GetExecutionSigningString(userSolutionData.SigningKey)}\" + \" tc_id:{testCase.Id} \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call}))));\n";
+        return CreateSignedPrintStatement(userSolutionData,$"\" tc_id:{testCase.Id} \" + {gsonInstanceName}.toJson({testCase.ExpectedOutput}).equals({gsonInstanceName}.toJson({testCase.FuncName}({testCase.Call})))",  SigningType.Answer);
+    }
+
+    private static string GetTimingVariable(string variableName)
+    {
+        return $"long {variableName} = System.currentTimeMillis();\n";
     }
 
     private static string GetStdOutLogFilePath(Guid executionId)
@@ -102,8 +130,16 @@ public static class ExecutorFileOperationHandler
         return $"/tmp/{executionId}-ANSW-LOG.log";
     }
 
-    private static string GetExecutionSigningString(Guid signingKey)
+    private static string GetExecutionSigningString(Guid signingKey, SigningType signingType)
     {
-        return $"ctr-{signingKey}-ans: ";
+        var signingTypeFlag = signingType switch
+        {
+            SigningType.Answer => "ans",
+            SigningType.Time => "time",
+            SigningType.PowerOff => "pof",
+            _ => throw new ArgumentOutOfRangeException(nameof(signingType), signingType, null)
+        };
+        
+        return $"ctr-{signingKey}-{signingTypeFlag}: ";
     }
 }
