@@ -18,25 +18,7 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition) 
 
         if (scopedVar.VarModifiers.Any(modifier => !permittedModifiers.Contains(modifier))) throw new JavaSyntaxException("Illegal modifier");
 
-        // Console.WriteLine("============| start |============");
-        // Console.WriteLine(PeekToken(-3).Type);
-        // Console.WriteLine(PeekToken(-2).Type);
-        // Console.WriteLine(PeekToken(-1).Type);
-        // Console.WriteLine($"curr: {PeekToken().Type}");
-        // Console.WriteLine(PeekToken(1).Type);
-        // Console.WriteLine(PeekToken(2).Type);
-        // Console.WriteLine(PeekToken(3).Type);
-        // Console.WriteLine("============| end |============");
         var varType = ParseType();
-        // Console.WriteLine("============| start |============");
-        // Console.WriteLine(PeekToken(-3).Type);
-        // Console.WriteLine(PeekToken(-2).Type);
-        // Console.WriteLine(PeekToken(-1).Type);
-        // Console.WriteLine($"curr: {PeekToken().Type}");
-        // Console.WriteLine(PeekToken(1).Type);
-        // Console.WriteLine(PeekToken(2).Type);
-        // Console.WriteLine(PeekToken(3).Type);
-        // Console.WriteLine("============| end |============");
         
         scopedVar.Type = varType switch
         {

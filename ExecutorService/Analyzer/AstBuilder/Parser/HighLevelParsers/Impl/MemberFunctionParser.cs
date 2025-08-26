@@ -89,7 +89,6 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
             }
             else
             {
-                Console.WriteLine("here 3");
                 funcArguments.Add(ParseScopeMemberVariableDeclaration([MemberModifier.Final]));
             }
             
