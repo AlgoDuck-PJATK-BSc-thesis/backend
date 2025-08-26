@@ -2,13 +2,19 @@ namespace ExecutorService.Analyzer._AnalyzerUtils;
 
 public enum TokenType
 {
-    Ident, OpenCurly, CloseCurly, OpenParen, CloseParen, OpenBrace, CloseBrace, OpenChevron, CloseChevron,
+    Ident, 
+    
+    OpenCurly, CloseCurly, OpenParen, CloseParen, OpenBrace, CloseBrace, OpenChevron, CloseChevron,
 
     Assign, 
 
     Semi,
     
-    Class,
+    Import, Package,
+    
+    Class, Interface, Enum,
+    
+    Extends, Implements, Super,
 
     Public, Private, Protected,
 
@@ -16,12 +22,16 @@ public enum TokenType
 
     FloatLit, DoubleLit, CharLit, BooleanLit, IntLit, LongLit, StringLit,
     
-    Static, Final,
-    
-    Import, Package,
+    Static, Final, Abstract,
     
     Dot, Comma,
     
-    Plus, Minus, Mul, Div, Mod
+    Plus, Minus, Mul, Div, Mod,
+    
+    And, Or, Xor,
+    
+    Throws,
+    
+    Wildcard,
     
 }

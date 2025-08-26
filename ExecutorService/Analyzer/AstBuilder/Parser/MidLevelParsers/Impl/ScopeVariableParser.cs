@@ -10,30 +10,43 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition) 
 {
     public AstNodeScopeMemberVar ParseScopeMemberVariableDeclaration(MemberModifier[] permittedModifiers)
     {
-        AstNodeScopeMemberVar scopedVar = new();
-
-        var modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]);
-
-        if (modifiers.Any(modifier => !permittedModifiers.Contains(modifier))) throw new JavaSyntaxException("Illegal modifier");
-        
-        var varType = ParseType();
-        
-        if (varType == null)
+        AstNodeScopeMemberVar scopedVar = new()
         {
-            throw new JavaSyntaxException("Type required");
-        }
+            VarModifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final])
+        };
+
+
+        if (scopedVar.VarModifiers.Any(modifier => !permittedModifiers.Contains(modifier))) throw new JavaSyntaxException("Illegal modifier");
+
+        // Console.WriteLine("============| start |============");
+        // Console.WriteLine(PeekToken(-3).Type);
+        // Console.WriteLine(PeekToken(-2).Type);
+        // Console.WriteLine(PeekToken(-1).Type);
+        // Console.WriteLine($"curr: {PeekToken().Type}");
+        // Console.WriteLine(PeekToken(1).Type);
+        // Console.WriteLine(PeekToken(2).Type);
+        // Console.WriteLine(PeekToken(3).Type);
+        // Console.WriteLine("============| end |============");
+        var varType = ParseType();
+        // Console.WriteLine("============| start |============");
+        // Console.WriteLine(PeekToken(-3).Type);
+        // Console.WriteLine(PeekToken(-2).Type);
+        // Console.WriteLine(PeekToken(-1).Type);
+        // Console.WriteLine($"curr: {PeekToken().Type}");
+        // Console.WriteLine(PeekToken(1).Type);
+        // Console.WriteLine(PeekToken(2).Type);
+        // Console.WriteLine(PeekToken(3).Type);
+        // Console.WriteLine("============| end |============");
         
         scopedVar.Type = varType switch
         {
-            { IsT0: true } => varType.Value.AsT0,
+            { IsT0: true } => varType.AsT0,
             { IsT1: true } => throw new JavaSyntaxException("cannot declare variable of type void"), 
-            { IsT2: true } => varType.Value.AsT2,
-            { IsT3: true } => varType.Value.AsT3,
+            { IsT2: true } => varType.AsT2,
+            { IsT3: true } => varType.AsT3,
             _ => throw new ArgumentOutOfRangeException()
         };
         
-        
-        scopedVar.VarModifiers = modifiers;
         scopedVar.Identifier = ConsumeIfOfType(TokenType.Ident, "ident");
         if (CheckTokenType(TokenType.Assign))//TODO suboptimal
         {

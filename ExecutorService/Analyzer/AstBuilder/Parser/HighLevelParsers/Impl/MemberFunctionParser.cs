@@ -1,5 +1,6 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
@@ -28,9 +29,9 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         memberFunc.Modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]);
 
         ParseGenericDeclaration(memberFunc);
-
+        
         ParseMemberFuncReturnType(memberFunc);
-
+        
         if (!memberFunc.IsConstructor)
         {
             memberFunc.Identifier = ConsumeIfOfType(TokenType.Ident, "identifier");
@@ -38,36 +39,26 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
 
         ParseMemberFunctionArguments(memberFunc);
         
+        ParseThrowsDirective(memberFunc);
+        
         memberFunc.FuncScope = ParseStatementScope();
         return memberFunc;
     }
 
     public void ParseMemberFuncReturnType(AstNodeClassMemberFunc memberFunc)
     {
-        if (CheckTokenType(TokenType.Ident))
+        if (CheckTokenType(TokenType.Ident) && PeekToken()!.Value! ==
+            memberFunc.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier!.Value)
         {
-            var genericIdent = PeekToken()!.Value!;
-            if (memberFunc.GenericTypes.Any(t => t.Value == genericIdent) || memberFunc.OwnerClassMember!.OwnerClassScope!.OwnerClass!.GenericTypes.Any(t=> t.Value == genericIdent))
+            memberFunc.IsConstructor = true;
+            memberFunc.FuncReturnType = new ComplexTypeDeclaration
             {
-                memberFunc.FuncReturnType = ConsumeToken();
-            }
-            else if (memberFunc.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier.Value == genericIdent)
-            { 
-                memberFunc.FuncReturnType = ConsumeToken();
-                memberFunc.IsConstructor = true;
-            }
+                Identifier = ConsumeToken().Value!
+            };
+            return;
         }
-        else
-        {
-            var type = ParseType();
 
-            if (type == null)
-            {
-                throw new JavaSyntaxException("return type required");
-            }
-
-            memberFunc.FuncReturnType = type;
-        }
+        memberFunc.FuncReturnType = ParseType();
     }
 
     public void ParseMemberFunctionArguments(AstNodeClassMemberFunc memberFunc)
@@ -86,7 +77,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
                     ConsumeToken();
                 }
 
-                ParseType()!.Value.Switch(
+                ParseType().Switch(
                     t1 => functionArgument.Type = t1,
                     t2 => throw new JavaSyntaxException("can't declare variable of type void"),
                     t3 => functionArgument.Type = t3,
@@ -98,6 +89,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
             }
             else
             {
+                Console.WriteLine("here 3");
                 funcArguments.Add(ParseScopeMemberVariableDeclaration([MemberModifier.Final]));
             }
             
@@ -112,5 +104,18 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         }
         memberFunc.FuncArgs = funcArguments;
         ConsumeIfOfType(TokenType.CloseParen, ")");
+    }
+
+    private void ParseThrowsDirective(AstNodeClassMemberFunc memberFunc)
+    {
+        if (!CheckTokenType(TokenType.Throws)) return;
+        ConsumeToken(); // consume throws directive
+        while (CheckTokenType(TokenType.Comma, 1))
+        {
+            memberFunc.ThrownExceptions.Add(ConsumeIfOfType(TokenType.Ident, "exception identifier"));
+            ConsumeToken(); // consume ,
+        }
+        memberFunc.ThrownExceptions.Add(ConsumeIfOfType(TokenType.Ident, "exception identifier"));
+        
     }
 }

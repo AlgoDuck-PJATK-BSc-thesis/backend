@@ -37,7 +37,7 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
         return _modifierParser.ParseModifiers(legalModifiers);
     }
 
-    public OneOf<MemberType, SpecialMemberType, ArrayType, Token>? ParseType()
+    public OneOf<MemberType, SpecialMemberType, ArrayType, ComplexTypeDeclaration> ParseType()
     {
         return _typeParser.ParseType();
     }
@@ -50,5 +50,10 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
     public MemberType ParseSimpleType(Token token)
     {
         return _typeParser.ParseSimpleType(token);
+    }
+
+    public ComplexTypeDeclaration ParseComplexTypDeclaration()
+    {
+        return _typeParser.ParseComplexTypDeclaration();
     }
 }

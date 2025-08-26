@@ -6,8 +6,6 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer.AstBuilder;
-using ExecutorService.Analyzer.AstBuilder.Lexer;
-using ExecutorService.Analyzer.AstBuilder.Parser;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Types;
 using OneOf;
@@ -26,13 +24,10 @@ internal enum ComparisonStyle
 
 public class AnalyzerSimple
 {
-    private readonly ILexer _lexerSimple;
-    private readonly IParser _parserSimple;
-
     private readonly AstNodeProgram _userProgramRoot;
     private readonly AstNodeProgram? _templateProgramRoot;
 
-    private StringBuilder? _userCode;
+    private readonly StringBuilder? _userCode;
     
     private const string BaselineMainCode = "public static void main(String[] args){}";
     private readonly AstNodeClassMemberFunc _baselineMainSignature;
@@ -42,14 +37,14 @@ public class AnalyzerSimple
     {
         _userCode = fileContents;
 
-        _lexerSimple = new LexerSimple();
-        _parserSimple = new ParserSimple();
+        var lexerSimple = new LexerSimple();
+        var parserSimple = new ParserSimple();
         _baselineMainSignature = CreateNewMainNode();
         if (templateContents != null)
         {
-            _templateProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(templateContents)]);
+            _templateProgramRoot = parserSimple.ParseProgram([lexerSimple.Tokenize(templateContents)]);
         }
-        _userProgramRoot = _parserSimple.ParseProgram([_lexerSimple.Tokenize(_userCode.ToString())]);
+        _userProgramRoot = parserSimple.ParseProgram([lexerSimple.Tokenize(_userCode.ToString())]);
     }
 
     public CodeAnalysisResult AnalyzeUserCode(ExecutionStyle executionStyle)
@@ -58,7 +53,7 @@ public class AnalyzerSimple
         if (executionStyle == ExecutionStyle.Execution && mainClass == null) throw new EmptyProgramException();
         var main = mainClass == null ? InsertEntrypointMethod() : FindAndGetFunc(_baselineMainSignature, mainClass);
 
-        var mainClassName = main.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier.Value!;
+        var mainClassName = main.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier!.Value!;
         var validatedTemplateFunctions = executionStyle == ExecutionStyle.Submission ? ValidateTemplateFunctions() : true;
         
         return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClassName, validatedTemplateFunctions);
@@ -124,11 +119,11 @@ public class AnalyzerSimple
     {
         var doAccessModifiersMatch = baseline.ClassAccessModifier == compared.ClassAccessModifier;
         if (!doAccessModifiersMatch) return false;
-        var doClassNamesMatch = baseline.Identifier.Value!.Equals(compared.Identifier.Value!);
+        var doClassNamesMatch = baseline.Identifier!.Value!.Equals(compared.Identifier!.Value!);
         if (!doClassNamesMatch && comparisonStyle != ComparisonStyle.Lax) return false;
         var doGenericDeclarationCountsMatch = baseline.GenericTypes.Count == compared.GenericTypes.Count;
         if (!doGenericDeclarationCountsMatch) return false;
-        var doGenericDeclarationsMatch = baseline.GenericTypes.Select(gd => gd.Value).SequenceEqual(compared.GenericTypes.Select(gd => gd.Value));
+        var doGenericDeclarationsMatch = baseline.GenericTypes.Select(gd => gd.GenericIdentifier).SequenceEqual(compared.GenericTypes.Select(gd => gd.GenericIdentifier));
         if (!doGenericDeclarationsMatch) return false;
         var doModifiersMatch = baseline.ClassModifiers.SequenceEqual(compared.ClassModifiers);
         return doModifiersMatch;
@@ -192,7 +187,7 @@ public class AnalyzerSimple
 
     
     
-    private static bool DoesTypeMatch(OneOf<MemberType, ArrayType, Token> baselineType, OneOf<MemberType, ArrayType, Token> comparedType)
+    private static bool DoesTypeMatch(OneOf<MemberType, ArrayType, ComplexTypeDeclaration> baselineType, OneOf<MemberType, ArrayType, ComplexTypeDeclaration> comparedType)
     {
         return baselineType.Match(
             primitiveType =>
@@ -207,21 +202,62 @@ public class AnalyzerSimple
                 if (!comparedType.IsT1) return false;
             
                 var comparedArrayType = comparedType.AsT1;
-            
-                var baselinePrimitiveType = arrayType.BaseType.AsT0;
-                var comparedPrimitiveType = comparedArrayType.BaseType.AsT0;
-            
-                return baselinePrimitiveType == comparedPrimitiveType 
-                       && arrayType.Dim == comparedArrayType.Dim;
+
+                var comparedArrDim = comparedArrayType.Dim;
+                var baselineArrDim = arrayType.Dim;
+
+                if (comparedArrDim != baselineArrDim) return false;
+
+                return DoesTypeMatch(arrayType.BaseType, comparedArrayType.BaseType);
             },
-            tokenType =>
+            complexType =>
             {
                 if (!comparedType.IsT2) return false;
-                
-                var comparedTokenType = comparedType.AsT2;
-                return tokenType.Value?.Equals(comparedTokenType.Value) == true;
+
+                return CompareComplexTypes(complexType, comparedType.AsT2);
             }
         );
+    }
+
+    private static bool CompareComplexTypes(ComplexTypeDeclaration baseline, ComplexTypeDeclaration compared)
+    {
+        if (baseline.Identifier != compared.Identifier) return false;
+
+        if (baseline.GenericInitializations == null) return true;
+        
+        if (compared.GenericInitializations == null) return false;
+
+        if (baseline.GenericInitializations.Count != compared.GenericInitializations.Count) return false;
+
+        if (baseline.GenericInitializations
+            .Where((gi, i) => !CompareGenericInitializations(gi, compared.GenericInitializations[i]))
+            .Any()) return false;
+            
+        return true;
+    }
+
+    private static bool CompareGenericInitializations(GenericInitialization baseline, GenericInitialization compared)
+    {
+        if (baseline.IsWildCard != compared.IsWildCard) return false;
+        if (baseline.IsWildCard)
+        {
+            if ((baseline.SupersType != null) != (compared.SupersType != null) || (baseline.ExtendsTypes != null) != (compared.ExtendsTypes != null)) return false;
+            if (baseline.SupersType != null)
+            {
+                return CompareComplexTypes(baseline.SupersType, compared.SupersType!);
+            }
+
+            if (baseline.ExtendsTypes != null && baseline.ExtendsTypes.Where((t, i) => !CompareComplexTypes(t, compared.ExtendsTypes![i])).Any())
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return CompareComplexTypes(baseline.Identifier!, compared.Identifier!);
+        }
+
+        return true;
     }
     
     // TODO clean this up
@@ -245,21 +281,10 @@ public class AnalyzerSimple
             }
         }
 
-        
-
         baseline.FuncReturnType?.Switch(
             _ => // primitive type
             {
-                if (!compared.FuncReturnType!.Value.IsT0)
-                {
-                    isValid = false;
-                    return;
-                }
-                
-                var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT0;
-                var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT0;
-                
-                isValid = baselinePrimitiveReturnType == comparedPrimitiveReturnType;
+                isValid = DoesTypeMatch(baseline.FuncReturnType!.Value.AsT0, compared.FuncReturnType!.Value.AsT0);
             },
             _ => // special type for now just void, further down the line might add varargs
             {
@@ -276,36 +301,15 @@ public class AnalyzerSimple
             },
             _ => // array type
             {
-                if (!compared.FuncReturnType!.Value.IsT2)
-                {
-                    isValid = false;
-                    return;
-                }
-                
-                var baselinePrimitiveReturnType = baseline.FuncReturnType!.Value.AsT2.BaseType.AsT0; // TODO this only presumes primitive arrays + String work on this
-                var comparedPrimitiveReturnType = compared.FuncReturnType!.Value.AsT2.BaseType.AsT0;
-                
-                var baselineArrayDim = baseline.FuncReturnType.Value.AsT2.Dim;
-                var comparedArrayDim = compared.FuncReturnType.Value.AsT2.Dim;
-                
-                isValid = 
-                    baselinePrimitiveReturnType == comparedPrimitiveReturnType 
-                    &&
-                    baselineArrayDim == comparedArrayDim;
+                isValid = DoesTypeMatch(baseline.FuncReturnType!.Value.AsT2, compared.FuncReturnType!.Value.AsT2);
+
             },
             _ => // complex type
             {
-                if (!compared.FuncReturnType!.Value.IsT3)
-                {
-                    isValid = false;
-                    return;
-                }
-
-                var baselineComplexReturnType = baseline.FuncReturnType!.Value.AsT3.Value!;
-                var comparedComplexReturnType = compared.FuncReturnType!.Value.AsT3.Value!;
-                isValid = baselineComplexReturnType.Equals(comparedComplexReturnType);
+                isValid = CompareComplexTypes(baseline.FuncReturnType!.Value.AsT3, compared.FuncReturnType!.Value.AsT3);
             }
         );
+        
         if (!isValid) return false;
         var isBaselineConstructor = baseline.IsConstructor;
         var isComparedConstructor = compared.IsConstructor;
@@ -313,6 +317,7 @@ public class AnalyzerSimple
 
         if (!isBaselineConstructor && baseline.Identifier?.Value != compared.Identifier?.Value) return false;
 
+        
         if (baseline.FuncArgs.Count != compared.FuncArgs.Count) return false;
 
 

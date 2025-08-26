@@ -1,7 +1,7 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
 
-namespace ExecutorService.Analyzer.AstBuilder.Lexer;
+namespace ExecutorService.Analyzer.AstBuilder;
 
 public interface ILexer
 {
@@ -82,6 +82,18 @@ public class LexerSimple : ILexer
                 case '>':
                     _tokens.Add(CreateToken(TokenType.CloseChevron));
                     break;
+                case '?':
+                    _tokens.Add(CreateToken(TokenType.Wildcard));
+                    break;
+                case '&':
+                    _tokens.Add(CreateToken(TokenType.And));
+                    break;
+                case '|':
+                    _tokens.Add(CreateToken(TokenType.Or));
+                    break;
+                case '^':
+                    _tokens.Add(CreateToken(TokenType.Xor));
+                    break;
                 default:
                     if (Char.IsNumber(consumedChar))
                     {
@@ -103,7 +115,7 @@ public class LexerSimple : ILexer
     
     private Token ConsumeKeyword(StringBuilder buf)
     {
-        while (PeekChar() != null && Char.IsLetterOrDigit(PeekChar()!.Value))
+        while (PeekChar() != null && char.IsLetterOrDigit(PeekChar()!.Value))
         {
             buf.Append(ConsumeChar());
         }
@@ -128,6 +140,13 @@ public class LexerSimple : ILexer
             "class" => CreateToken(TokenType.Class),
             "String" => CreateToken(TokenType.String),
             "import" => CreateToken(TokenType.Import),
+            "interface" => CreateToken(TokenType.Interface),
+            "throws" => CreateToken(TokenType.Throws),
+            "abstract" => CreateToken(TokenType.Abstract),
+            "enum" => CreateToken(TokenType.Enum),
+            "implements" => CreateToken(TokenType.Implements),
+            "extends" => CreateToken(TokenType.Extends),
+            "super" => CreateToken(TokenType.Super),
             _ => CreateToken(TokenType.Ident, result),
         };
         buf.Clear();
@@ -173,7 +192,7 @@ public class LexerSimple : ILexer
     
 private Token ConsumeNumericLit(char prevChar) // TODO needs cleaning up, bit of a monstrosity atm
     {
-        StringBuilder numLit = new StringBuilder();
+        var numLit = new StringBuilder();
         if (CheckForChar('-'))
         {
             numLit.Append(ConsumeChar());

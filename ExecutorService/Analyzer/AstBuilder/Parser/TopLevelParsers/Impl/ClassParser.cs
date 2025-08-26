@@ -24,6 +24,8 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         }
 
         nodeClass.ClassModifiers = ParseModifiers(legalModifiers);
+
+        nodeClass.IsAbstract = nodeClass.ClassModifiers.Contains(MemberModifier.Abstract);
         
         ConsumeIfOfType(TokenType.Class, "class");
 
@@ -31,9 +33,14 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
 
         ParseGenericDeclaration(nodeClass);
 
+        ParseExtendsKeyword(nodeClass);
+        
+        ParseImplementsKeyword(nodeClass);
+        
         nodeClass.ClassScope = ParseClassScope(nodeClass);
         return nodeClass;
     }
+    
     public AstNodeCLassScope ParseClassScope(AstNodeClass clazz)
     {
 
@@ -50,5 +57,23 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         
         classScope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos;
         return classScope;
+    }
+
+    private void ParseExtendsKeyword(AstNodeClass clazz)
+    {
+        if (!CheckTokenType(TokenType.Extends)) return;
+        ConsumeToken();
+        clazz.Extends = ConsumeIfOfType(TokenType.Ident, "extended class");
+    }
+
+    private void ParseImplementsKeyword(AstNodeClass clazz)
+    {
+        if (!CheckTokenType(TokenType.Implements)) return;
+        while (PeekToken(1) != null && PeekToken(1)!.Type != TokenType.OpenCurly)
+        {
+            clazz.Implements.Add(ConsumeIfOfType(TokenType.Ident, "implemented interface"));
+            ConsumeIfOfType(TokenType.Comma, ",");
+        }
+        clazz.Implements.Add(ConsumeIfOfType(TokenType.Ident, "implemented interface"));
     }
 }

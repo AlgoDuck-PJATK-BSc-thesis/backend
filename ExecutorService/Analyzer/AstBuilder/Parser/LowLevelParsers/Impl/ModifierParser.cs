@@ -56,7 +56,6 @@ public class ModifierParser(List<Token> tokens, FilePosition filePosition) :
             {
                 throw new JavaSyntaxException($"illegal modifier: {modifier}");
             }
-
         }
         
         return modifiers;

@@ -26,7 +26,7 @@ public class TopLevelStatementParser(List<Token> tokens, FilePosition filePositi
 
         return PeekToken(lookahead)!.Type switch
         {
-            TokenType.Class => new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static]),
+            TokenType.Class => new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract]),
             _ => throw new JavaSyntaxException($"Unexpected token: {PeekToken(lookahead)!.Type}")
         };
     }

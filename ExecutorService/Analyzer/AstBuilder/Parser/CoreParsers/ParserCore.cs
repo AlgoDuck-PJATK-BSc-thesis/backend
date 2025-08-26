@@ -22,6 +22,7 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
     
     protected Token ConsumeToken()
     {
+        Console.WriteLine("consumed token");
         if (filePosition.GetFilePos() >= tokens.Count)
         {
             throw new InvalidOperationException("No more tokens");

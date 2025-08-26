@@ -41,7 +41,7 @@ public class ClassMemberParser(List<Token> tokens, FilePosition filePosition) : 
         }
         else if (CheckTokenType(TokenType.OpenCurly, forwardOffset+1))
         {
-            classMember.ClassMember = new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static]);
+            classMember.ClassMember = new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract]);
         }
         
         return classMember;

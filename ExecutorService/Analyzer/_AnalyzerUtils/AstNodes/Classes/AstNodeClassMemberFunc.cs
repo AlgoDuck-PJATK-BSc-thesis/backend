@@ -10,14 +10,15 @@ public class AstNodeClassMemberFunc : IGenericSettable
     public AstNodeClassMember? OwnerClassMember { get; set; }
     public AccessModifier AccessModifier { get; set; } = AccessModifier.Public;
     public List<MemberModifier> Modifiers { get; set; } = [];
-    public List<Token> GenericTypes { get; set; } = []; // TODO Idk if tokens here are super optimal, probably should wrap them in some customType node
-    public OneOf<MemberType,SpecialMemberType, ArrayType, Token>? FuncReturnType { get; set; } // same here
+    public List<GenericTypeDeclaration> GenericTypes { get; set; } = []; // TODO Idk if tokens here are super optimal, probably should wrap them in some customType node
+    public OneOf<MemberType,SpecialMemberType, ArrayType, ComplexTypeDeclaration>? FuncReturnType { get; set; } // same here
     public Token? Identifier { get; set; }
     public List<AstNodeScopeMemberVar> FuncArgs { get; set; } = [];
     public AstNodeStatementScope? FuncScope { get; set; }
     public bool IsConstructor { get; set; } = false;
+    public List<Token> ThrownExceptions { get; set; } = [];
 
-    public void SetGenericTypes(List<Token> tokens)
+    public void SetGenericTypes(List<GenericTypeDeclaration> tokens)
     {
         GenericTypes = tokens;
     }

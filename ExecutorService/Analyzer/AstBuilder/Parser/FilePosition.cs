@@ -1,4 +1,4 @@
-namespace ExecutorService.Analyzer._AnalyzerUtils;
+namespace ExecutorService.Analyzer.AstBuilder.Parser;
 
 public class FilePosition(int filePos = 0)
 {

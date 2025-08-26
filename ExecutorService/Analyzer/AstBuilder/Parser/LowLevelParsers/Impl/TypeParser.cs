@@ -16,39 +16,66 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
         TokenType.Boolean, TokenType.String
     ];
     
-    public OneOf<MemberType, SpecialMemberType, ArrayType, Token>? ParseType()
+    
+    // TODO clean up the null checks here
+    public OneOf<MemberType, SpecialMemberType, ArrayType, ComplexTypeDeclaration> ParseType()
     {
-        var token = TryConsume();
-        if (TokenIsSimpleType(token))
+        if (PeekToken() != null && PeekToken()!.Type == TokenType.Void)
         {
-            var type = ParseSimpleType(token);
-            var dim = 0;
-            if (CheckTokenType(TokenType.OpenBrace) && CheckTokenType(TokenType.CloseBrace, 1))
-            {
-                TryConsumeNTokens(2);
-                dim++;
-                while (CheckTokenType(TokenType.OpenBrace) && CheckTokenType(TokenType.CloseBrace, 1))
-                {
-                    dim++;
-                    TryConsumeNTokens(2);
-                }
-                return new ArrayType()
-                {
-                    BaseType = type,
-                    Dim = dim
-                };
-            }
-
-            return type;
-
+            ConsumeToken();
+            
+            return SpecialMemberType.Void;
         }
 
-        return token.Type switch
+
+        if (PeekToken() != null && (PeekToken(1)!.Type == TokenType.Dot || PeekToken(1)!.Type == TokenType.OpenBrace))
         {
-            TokenType.Ident => token,
-            TokenType.Void => SpecialMemberType.Void,
-            _ => null
-        };
+            return ParseArrayType();
+        }
+
+
+        if (TokenIsSimpleType(PeekToken()))
+        {
+            return ParseSimpleType(ConsumeToken());
+        }
+
+        if (PeekToken() != null && PeekToken()!.Type == TokenType.Ident) return ParseComplexTypDeclaration();
+
+        throw new JavaSyntaxException("huhhhhhhh");
+    }
+
+    private ArrayType ParseArrayType()
+    {
+        var arrayType = new ArrayType();
+        if (TokenIsSimpleType(PeekToken()))
+        {
+            arrayType.BaseType = ParseSimpleType(ConsumeToken());
+        }else if (PeekToken()!.Type == TokenType.Ident)
+        {
+            arrayType.BaseType = ParseComplexTypDeclaration();
+        }
+
+        if (CheckTokenType(TokenType.Dot))
+        {
+            ConsumeIfOfType(TokenType.Dot, ".");
+            ConsumeIfOfType(TokenType.Dot, ".");
+            ConsumeIfOfType(TokenType.Dot, ".");
+            arrayType.Dim = 1;
+            arrayType.IsVarArgs = true;
+            return arrayType;
+        }
+
+        ConsumeIfOfType(TokenType.OpenBrace, "[");
+        ConsumeIfOfType(TokenType.CloseBrace, "]");
+        var dim = 1;
+        while (CheckTokenType(TokenType.OpenBrace) && CheckTokenType(TokenType.CloseBrace, 1))
+        {
+            TryConsumeNTokens(2);
+            dim++;
+        }
+
+        arrayType.Dim = dim;
+        return arrayType;
     }
 
     public bool TokenIsSimpleType(Token? token)
@@ -77,5 +104,59 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
             TokenType.String => MemberType.String,
             _ => throw new ArgumentOutOfRangeException()
         };    
+    }
+
+    public ComplexTypeDeclaration ParseComplexTypDeclaration()
+    {
+        var complexTypeDeclaration = new ComplexTypeDeclaration
+        {
+            Identifier = ConsumeIfOfType(TokenType.Ident, "Type name").Value!
+        };
+        if (!CheckTokenType(TokenType.OpenChevron)) return complexTypeDeclaration;
+
+        ConsumeToken(); //consume <
+        complexTypeDeclaration.GenericInitializations = [];
+        while (CheckTokenType(TokenType.Comma, 1))
+        {
+            complexTypeDeclaration.GenericInitializations.Add(ParseGenericInitialization());
+            ConsumeIfOfType(TokenType.Comma, ",");
+        }
+        complexTypeDeclaration.GenericInitializations.Add(ParseGenericInitialization());
+        
+        ConsumeIfOfType(TokenType.CloseChevron, ">");
+
+        return complexTypeDeclaration;
+    }
+
+    private GenericInitialization ParseGenericInitialization()
+    {
+        var initialization = new GenericInitialization();
+        if (CheckTokenType(TokenType.Wildcard))
+        {
+            ConsumeToken(); // consume ?
+            initialization.IsWildCard = true;
+            if (CheckTokenType(TokenType.Extends))
+            {
+                ConsumeToken();
+                initialization.ExtendsTypes = [];
+                while (CheckTokenType(TokenType.And, 1))
+                {
+                    initialization.ExtendsTypes.Add(ParseComplexTypDeclaration());
+                    ConsumeToken(); // consume &
+                }
+                initialization.ExtendsTypes.Add(ParseComplexTypDeclaration());
+            }
+            else if (CheckTokenType(TokenType.Super))
+            {
+                ConsumeToken();
+                initialization.SupersType = ParseComplexTypDeclaration();
+            }
+        }
+        else
+        {
+            initialization.Identifier = ParseComplexTypDeclaration();
+        }
+
+        return initialization;
     }
 }

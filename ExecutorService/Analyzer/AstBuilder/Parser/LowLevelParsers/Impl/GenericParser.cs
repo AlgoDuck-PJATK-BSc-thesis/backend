@@ -1,5 +1,6 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer.AstBuilder.Parser.CoreParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
 
@@ -17,15 +18,39 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
         }
 
         ConsumeToken();
-        List<Token> genericTypes = [];
+        List<GenericTypeDeclaration> genericTypes = [];
         while (!CheckTokenType(TokenType.CloseChevron, 1))
         {
-            genericTypes.Add(ConsumeIfOfType(TokenType.Ident, "Type declaration"));
+            var typeDeclaration = new GenericTypeDeclaration
+            {
+                GenericIdentifier = ConsumeIfOfType(TokenType.Ident, "Type declaration").Value!
+            };
+            ParseUpperBound(typeDeclaration);
+            genericTypes.Add(typeDeclaration);
             ConsumeIfOfType(TokenType.Comma, "comma");
         }
-        genericTypes.Add(ConsumeIfOfType(TokenType.Ident, "Type declaration"));
-        ConsumeIfOfType(TokenType.CloseChevron, "Closing chevron");
+
+        var finalTypeDeclaration = new GenericTypeDeclaration
+        {
+            GenericIdentifier = ConsumeIfOfType(TokenType.Ident, "Type declaration").Value!
+        };
+        ParseUpperBound(finalTypeDeclaration);
+        genericTypes.Add(finalTypeDeclaration);
         
+        ConsumeIfOfType(TokenType.CloseChevron, "Closing chevron");
         funcOrClass.SetGenericTypes(genericTypes);
+    }
+
+    private void ParseUpperBound(GenericTypeDeclaration typeDeclaration)
+    {
+        if (!CheckTokenType(TokenType.Extends)) return;
+        
+        ConsumeIfOfType(TokenType.Extends, "");
+        typeDeclaration.UpperBounds.Add(ConsumeIfOfType(TokenType.Ident, "Upper bound"));
+        while (CheckTokenType(TokenType.And))
+        {
+            ConsumeToken(); // consume &
+            typeDeclaration.UpperBounds.Add(ConsumeIfOfType(TokenType.Ident, "Upper bound"));        
+        }
     }
 }

@@ -21,6 +21,6 @@ public class MainMethod(int begin, int end)
             return null;
         }
 
-        return new MainMethod(main.FuncScope.ScopeBeginOffset, main.FuncScope.ScopeEndOffset);
+        return new MainMethod(main.FuncScope!.ScopeBeginOffset, main.FuncScope.ScopeEndOffset);
     }
 }
