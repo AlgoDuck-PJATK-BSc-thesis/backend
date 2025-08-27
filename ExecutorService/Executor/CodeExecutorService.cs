@@ -19,7 +19,7 @@ public class CodeExecutorService(
     ) : ICodeExecutorService
 {
     private const string JavaGsonImport = "import com.google.gson.Gson;\n"; // TODO this is temporary, not the gson but the way it's imported
-
+    private ExecutorFileOperationHandler? _executorFileOperationHandler;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
@@ -27,7 +27,7 @@ public class CodeExecutorService(
         
         var testCases = await executorRepository.GetTestCasesAsync(fileData.ExerciseId, fileData.MainClassName);
 
-        ExecutorFileOperationHandler.InsertTestCases(fileData, testCases);
+        _executorFileOperationHandler!.InsertTestCases(testCases);
         
         return await InsertTimingAndProceedToExecution(fileData);
     }
@@ -45,20 +45,35 @@ public class CodeExecutorService(
         var fileData = CreateSolutionCodeData(executeRequest, executionStyle, exerciseId);
 
         var template = exerciseId != null ? await executorRepository.GetTemplateAsync(exerciseId) : null;
-        
-        var analyzer = new AnalyzerSimple(fileData.FileContents, template);
-        var codeAnalysisResult = analyzer.AnalyzeUserCode(executionStyle);
+        try
+        {
+            var analyzer = new AnalyzerSimple(fileData.FileContents, template);
+            var codeAnalysisResult = analyzer.AnalyzeUserCode(executionStyle);
 
-        fileData.IngestCodeAnalysisResult(codeAnalysisResult);
+            fileData.IngestCodeAnalysisResult(codeAnalysisResult);
 
-        if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
+            if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
+        }
+        catch (JavaSyntaxException)
+        {
+            /*
+             * this is just meant to short circuit the analysis process as at this point we can guarantee that compilation will fail
+             * we skip over the other pre-compilation task straight to the compilation which will receive a 400 throw an error which will be caught by a middleware
+             * in turn returning a ExceptionResponseDto
+             *
+             * We do it this way as we want the client to receive a javac error but cannot proceed with the regular pipeline
+             */
+            await CompileCode(fileData);
+            throw;
+        }
 
+        _executorFileOperationHandler = new ExecutorFileOperationHandler(fileData);
         return fileData;
     }
 
     private async Task<ExecuteResultDto> InsertTimingAndProceedToExecution(UserSolutionData userSolutionData)
     {
-        ExecutorFileOperationHandler.InsertTiming(userSolutionData);
+        _executorFileOperationHandler!.InsertTiming();
         return await Execute(userSolutionData);
     }
 
@@ -88,9 +103,9 @@ public class CodeExecutorService(
         
         return new ExecuteResultDto
         {
-            StdOutput = await ExecutorFileOperationHandler.ReadExecutionStandardOut(userSolutionData),
-            TestResults = await ExecutorFileOperationHandler.ReadTestingResults(userSolutionData),
-            ExecutionTime = await ExecutorFileOperationHandler.ReadExecutionTime(userSolutionData)
+            StdOutput = await _executorFileOperationHandler!.ReadExecutionStandardOut(),
+            TestResults = await _executorFileOperationHandler!.ReadTestingResults(),
+            ExecutionTime = await _executorFileOperationHandler!.ReadExecutionTime()
         };
     }
 

@@ -32,7 +32,7 @@ public class CompilationUnitParser(List<Token> tokens, FilePosition filePosition
         while (PeekToken() != null)
         {
         
-            compilationUnit.CompilationUnitTopLevelStatements.Add(new TopLevelStatementParser(_tokens, _filePosition).ParseTopLevelStatement());
+            compilationUnit.CompilationUnitTopLevelStatements.Add(new TopLevelStatementParser(_tokens, _filePosition).ParseTypeDefinition());
         }
 
         return compilationUnit;

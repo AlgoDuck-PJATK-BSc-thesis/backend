@@ -1,7 +1,8 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
+using ExecutorService.Errors.Exceptions;
 
-namespace ExecutorService.Analyzer.AstBuilder;
+namespace ExecutorService.Analyzer.AstBuilder.Lexer;
 
 public interface ILexer
 {
@@ -95,27 +96,32 @@ public class LexerSimple : ILexer
                     _tokens.Add(CreateToken(TokenType.Xor));
                     break;
                 default:
-                    if (Char.IsNumber(consumedChar))
+                    if (char.IsNumber(consumedChar))
                     {
                         _tokens.Add(ConsumeNumericLit(consumedChar));
                     }
-                    else if (Char.IsLetter(consumedChar))
+                    else if (char.IsLetter(consumedChar))
                     {
                         _buf.Append(consumedChar);
                         _tokens.Add(ConsumeKeyword(_buf));
-                    }else if (Char.IsWhiteSpace(consumedChar))
+                    }else if (char.IsWhiteSpace(consumedChar))
                     {
                         
                     }
                     break;
             }
         }
+
+        foreach (var token in _tokens)
+        {
+            Console.WriteLine(token.Type);
+        }
         return _tokens;
     }
     
     private Token ConsumeKeyword(StringBuilder buf)
     {
-        while (PeekChar() != null && char.IsLetterOrDigit(PeekChar()!.Value))
+        while (PeekChar() != null && (char.IsLetterOrDigit(PeekChar()!.Value) || PeekChar()!.Value == '_'))
         {
             buf.Append(ConsumeChar());
         }
@@ -147,6 +153,8 @@ public class LexerSimple : ILexer
             "implements" => CreateToken(TokenType.Implements),
             "extends" => CreateToken(TokenType.Extends),
             "super" => CreateToken(TokenType.Super),
+            "strictfp" => CreateToken(TokenType.Strictfp),
+            "default" => CreateToken(TokenType.Default),
             _ => CreateToken(TokenType.Ident, result),
         };
         buf.Clear();

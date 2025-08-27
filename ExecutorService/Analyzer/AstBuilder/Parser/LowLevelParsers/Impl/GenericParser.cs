@@ -1,6 +1,8 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using ExecutorService.Analyzer.AstBuilder.Parser.CoreParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
 
@@ -43,14 +45,15 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
 
     private void ParseUpperBound(GenericTypeDeclaration typeDeclaration)
     {
+        var typeParser = new TypeParser(tokens, filePosition);
         if (!CheckTokenType(TokenType.Extends)) return;
         
         ConsumeIfOfType(TokenType.Extends, "");
-        typeDeclaration.UpperBounds.Add(ConsumeIfOfType(TokenType.Ident, "Upper bound"));
+        typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());
         while (CheckTokenType(TokenType.And))
         {
             ConsumeToken(); // consume &
-            typeDeclaration.UpperBounds.Add(ConsumeIfOfType(TokenType.Ident, "Upper bound"));        
+            typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());        
         }
     }
 }

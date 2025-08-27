@@ -1,10 +1,8 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
-using ExecutorService.Analyzer.AstBuilder.Parser;
 using ExecutorService.Analyzer.AstBuilder.Parser.TopLevelParsers;
-using ExecutorService.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
-namespace ExecutorService.Analyzer.AstBuilder;
+namespace ExecutorService.Analyzer.AstBuilder.Parser;
 
 public interface IParser
 {

@@ -22,7 +22,7 @@ public enum TokenType
 
     FloatLit, DoubleLit, CharLit, BooleanLit, IntLit, LongLit, StringLit,
     
-    Static, Final, Abstract,
+    Static, Final, Abstract, Default, Transient, Synchronized, Volatile, Strictfp,
     
     Dot, Comma,
     

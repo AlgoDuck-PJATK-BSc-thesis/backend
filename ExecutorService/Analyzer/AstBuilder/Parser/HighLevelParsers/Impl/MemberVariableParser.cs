@@ -1,6 +1,8 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
 using ExecutorService.Analyzer.AstBuilder.Parser.MidLevelParsers;
 
@@ -11,14 +13,12 @@ public class MemberVariableParser(List<Token> tokens, FilePosition filePosition)
     IMemberVariableParser
 {
 
-    public AstNodeClassMemberVar ParseMemberVariableDeclaration(AstNodeClassMember classMember)
+    public AstNodeMemberVar<T> ParseMemberVariableDeclaration<T>(AstNodeTypeMember<T> typeMember) where T: IType<T>
     {
-        AstNodeClassMemberVar memberVar = new()
-        {
-            ClassMember  = classMember
-        };
+        var memberVar = new AstNodeMemberVar<T>();
+        memberVar.SetMemberType(typeMember.GetMemberType()!);
         var accessModifier = TokenIsAccessModifier(PeekToken());
-        memberVar.AccessModifier = accessModifier ?? AccessModifier.Public;
+        memberVar.AccessModifier = accessModifier ?? AccessModifier.Default;
         if (accessModifier is not null)
         {
             ConsumeToken();

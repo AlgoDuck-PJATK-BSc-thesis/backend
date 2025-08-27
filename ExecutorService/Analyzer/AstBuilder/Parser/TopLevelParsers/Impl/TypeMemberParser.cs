@@ -1,18 +1,19 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 using ExecutorService.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
 
 namespace ExecutorService.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
-public class ClassMemberParser(List<Token> tokens, FilePosition filePosition) : HighLevelParser(tokens, filePosition), IClassMemberParser
+public class TypeMemberParser(List<Token> tokens, FilePosition filePosition) : HighLevelParser(tokens, filePosition), ITypeMemberParser
 {
     private readonly FilePosition _filePosition = filePosition;
     private readonly List<Token> _tokens = tokens;
 
-    public AstNodeClassMember ParseClassMember(AstNodeCLassScope classScope)
+    public AstNodeTypeMember<T> ParseTypeMember<T>(T member) where T: IType<T>
     {
         var forwardOffset = 0;
         /*
@@ -26,24 +27,29 @@ public class ClassMemberParser(List<Token> tokens, FilePosition filePosition) : 
         {
             forwardOffset++;
         }
+
+        var typeMember = new AstNodeTypeMember<T>();
         
-        AstNodeClassMember classMember = new()
-        {
-            OwnerClassScope = classScope
-        };
+        typeMember.SetMemberType(member);
+        
         if (CheckTokenType(TokenType.Assign, forwardOffset+1) || CheckTokenType(TokenType.Semi, forwardOffset+1)) //variable declaration
         {
-            classMember.ClassMember = new MemberVariableParser(_tokens, _filePosition).ParseMemberVariableDeclaration(classMember);
+            typeMember.ClassMember = new MemberVariableParser(_tokens, _filePosition).ParseMemberVariableDeclaration(typeMember);
         }
         else if (CheckTokenType(TokenType.OpenParen, forwardOffset+1)) //function declaration
         {
-            classMember.ClassMember = new MemberFunctionParser(_tokens, _filePosition).ParseMemberFunctionDeclaration(classMember);
+            typeMember.ClassMember = new MemberFunctionParser(_tokens, _filePosition).ParseMemberFunctionDeclaration(typeMember);
         }
         else if (CheckTokenType(TokenType.OpenCurly, forwardOffset+1))
         {
-            classMember.ClassMember = new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract]);
+            var astNodeMemberClass = new AstNodeMemberClass<T>
+            {
+                Class = new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract])
+            };
+            astNodeMemberClass.SetMemberType(member);
+            typeMember.ClassMember = astNodeMemberClass;
         }
         
-        return classMember;
+        return typeMember;
     }
 }

@@ -15,7 +15,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
 
     public AstNodeClass ParseClass(List<MemberModifier> legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low-hanging fruit
     {
-        AstNodeClass nodeClass = new();
+        var nodeClass = new AstNodeClass();
         var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier != null)
         {
@@ -41,18 +41,18 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         return nodeClass;
     }
     
-    public AstNodeCLassScope ParseClassScope(AstNodeClass clazz)
+    public AstNodeTypeScope<AstNodeClass> ParseClassScope(AstNodeClass clazz)
     {
 
-        AstNodeCLassScope classScope = new()
+        var classScope = new AstNodeTypeScope<AstNodeClass>
         {
-            OwnerClass = clazz,
+            OwnerMember = clazz,
             ScopeBeginOffset = ConsumeIfOfType(TokenType.OpenCurly, "'{'").FilePos
         };
         
         while (!CheckTokenType(TokenType.CloseCurly))
         {
-            classScope.ClassMembers.Add(new ClassMemberParser(_tokens, _filePosition).ParseClassMember(classScope));
+            classScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition).ParseTypeMember(clazz));
         }
         
         classScope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos;
@@ -62,18 +62,19 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
     private void ParseExtendsKeyword(AstNodeClass clazz)
     {
         if (!CheckTokenType(TokenType.Extends)) return;
-        ConsumeToken();
-        clazz.Extends = ConsumeIfOfType(TokenType.Ident, "extended class");
+        ConsumeToken(); // consume "extends"
+        clazz.Extends = ParseComplexTypDeclaration();
     }
 
     private void ParseImplementsKeyword(AstNodeClass clazz)
     {
         if (!CheckTokenType(TokenType.Implements)) return;
+        ConsumeToken(); // consume "implements"
         while (PeekToken(1) != null && PeekToken(1)!.Type != TokenType.OpenCurly)
         {
-            clazz.Implements.Add(ConsumeIfOfType(TokenType.Ident, "implemented interface"));
+            clazz.Implements.Add(ParseComplexTypDeclaration());
             ConsumeIfOfType(TokenType.Comma, ",");
         }
-        clazz.Implements.Add(ConsumeIfOfType(TokenType.Ident, "implemented interface"));
+        clazz.Implements.Add(ParseComplexTypDeclaration());
     }
 }

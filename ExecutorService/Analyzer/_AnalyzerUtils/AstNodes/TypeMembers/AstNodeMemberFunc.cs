@@ -1,16 +1,18 @@
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using OneOf;
 
-namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 
-public class AstNodeClassMemberFunc : IGenericSettable
+public class AstNodeMemberFunc<T> : IGenericSettable, ITypeMember<T> where T : IType<T>
 {
-    public AstNodeClassMember? OwnerClassMember { get; set; }
-    public AccessModifier AccessModifier { get; set; } = AccessModifier.Public;
+    private T? Owner { get; set; }
+    public AccessModifier AccessModifier { get; set; } = AccessModifier.Default;
     public List<MemberModifier> Modifiers { get; set; } = [];
-    public List<GenericTypeDeclaration> GenericTypes { get; set; } = []; // TODO Idk if tokens here are super optimal, probably should wrap them in some customType node
+    public List<GenericTypeDeclaration> GenericTypes { get; set; } = [];
     public OneOf<MemberType,SpecialMemberType, ArrayType, ComplexTypeDeclaration>? FuncReturnType { get; set; } // same here
     public Token? Identifier { get; set; }
     public List<AstNodeScopeMemberVar> FuncArgs { get; set; } = [];
@@ -21,5 +23,15 @@ public class AstNodeClassMemberFunc : IGenericSettable
     public void SetGenericTypes(List<GenericTypeDeclaration> tokens)
     {
         GenericTypes = tokens;
+    }
+
+    public T? GetMemberType()
+    {
+        return Owner;
+    }
+
+    public void SetMemberType(T t)
+    {
+        Owner = t;
     }
 }

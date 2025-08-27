@@ -3,6 +3,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer.AstBuilder.Parser.CoreParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
+using ExecutorService.Errors.Exceptions;
 using OneOf;
 
 namespace ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
@@ -108,6 +109,15 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
 
     public ComplexTypeDeclaration ParseComplexTypDeclaration()
     {
+        // Console.WriteLine("==========| start |==========");
+        // Console.WriteLine(PeekToken(-3).Type);
+        // Console.WriteLine(PeekToken(-2).Type);
+        // Console.WriteLine(PeekToken(-1).Type);
+        // Console.WriteLine($"Curr:{PeekToken().Type}");
+        // Console.WriteLine(PeekToken(1).Type);
+        // Console.WriteLine(PeekToken(2).Type);
+        // Console.WriteLine(PeekToken(3).Type);
+        // Console.WriteLine("==========| end |==========");
         var complexTypeDeclaration = new ComplexTypeDeclaration
         {
             Identifier = ConsumeIfOfType(TokenType.Ident, "Type name").Value!

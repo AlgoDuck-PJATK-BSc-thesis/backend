@@ -1,10 +1,13 @@
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
 using ExecutorService.Analyzer.AstBuilder.Parser.MidLevelParsers;
+using ExecutorService.Errors.Exceptions;
 
 namespace ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 
@@ -12,12 +15,10 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
     MidLevelParser(tokens, filePosition),
     IMemberFunctionParser
 {
-    public AstNodeClassMemberFunc ParseMemberFunctionDeclaration(AstNodeClassMember classMember)
+    public AstNodeMemberFunc<T> ParseMemberFunctionDeclaration<T>(AstNodeTypeMember<T> typeMember) where T: IType<T>
     {
-        AstNodeClassMemberFunc memberFunc = new()
-        {
-            OwnerClassMember = classMember
-        };
+        var memberFunc = new AstNodeMemberFunc<T>();
+        memberFunc.SetMemberType(typeMember.GetMemberType()!);
         
         var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier is not null)
@@ -26,7 +27,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
             ConsumeToken();
         }
 
-        memberFunc.Modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]);
+        memberFunc.Modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final, MemberModifier.Abstract, MemberModifier.Strictfp, MemberModifier.Default]);
 
         ParseGenericDeclaration(memberFunc);
         
@@ -40,15 +41,22 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         ParseMemberFunctionArguments(memberFunc);
         
         ParseThrowsDirective(memberFunc);
-        
-        memberFunc.FuncScope = ParseStatementScope();
+
+        if (CheckTokenType(TokenType.Semi))
+        {
+            ConsumeToken();
+        }
+        else
+        {
+            memberFunc.FuncScope = ParseStatementScope();
+        }
         return memberFunc;
     }
 
-    public void ParseMemberFuncReturnType(AstNodeClassMemberFunc memberFunc)
+    public void ParseMemberFuncReturnType<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
     {
         if (CheckTokenType(TokenType.Ident) && PeekToken()!.Value! ==
-            memberFunc.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier!.Value)
+            memberFunc.GetMemberType()!.GetIdentifier()!.Value)
         {
             memberFunc.IsConstructor = true;
             memberFunc.FuncReturnType = new ComplexTypeDeclaration
@@ -61,7 +69,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         memberFunc.FuncReturnType = ParseType();
     }
 
-    public void ParseMemberFunctionArguments(AstNodeClassMemberFunc memberFunc)
+    public void ParseMemberFunctionArguments<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
     {
         ConsumeIfOfType(TokenType.OpenParen, "'('");
         List<AstNodeScopeMemberVar> funcArguments = [];
@@ -105,7 +113,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         ConsumeIfOfType(TokenType.CloseParen, ")");
     }
 
-    private void ParseThrowsDirective(AstNodeClassMemberFunc memberFunc)
+    private void ParseThrowsDirective<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
     {
         if (!CheckTokenType(TokenType.Throws)) return;
         ConsumeToken(); // consume throws directive

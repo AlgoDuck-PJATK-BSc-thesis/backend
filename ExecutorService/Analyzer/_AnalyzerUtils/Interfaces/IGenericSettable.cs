@@ -1,6 +1,6 @@
 ﻿using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 
-namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
+namespace ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 
 public interface IGenericSettable
 {

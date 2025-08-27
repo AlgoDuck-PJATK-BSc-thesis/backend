@@ -1,11 +1,16 @@
 using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
+using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
 using ExecutorService.Analyzer.AstBuilder;
+using ExecutorService.Analyzer.AstBuilder.Lexer;
+using ExecutorService.Analyzer.AstBuilder.Parser;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Types;
 using OneOf;
@@ -30,7 +35,7 @@ public class AnalyzerSimple
     private readonly StringBuilder? _userCode;
     
     private const string BaselineMainCode = "public static void main(String[] args){}";
-    private readonly AstNodeClassMemberFunc _baselineMainSignature;
+    private readonly AstNodeMemberFunc<AstNodeClass> _baselineMainSignature;
     
 
     public AnalyzerSimple(StringBuilder fileContents, string? templateContents = null)
@@ -51,15 +56,15 @@ public class AnalyzerSimple
     {
         var mainClass = GetMainClass();
         if (executionStyle == ExecutionStyle.Execution && mainClass == null) throw new EmptyProgramException();
-        var main = mainClass == null ? InsertEntrypointMethod() : FindAndGetFunc(_baselineMainSignature, mainClass);
+        var main = mainClass == null ? InsertEntrypointMethod() : FindAndGetFunc<AstNodeClass>(_baselineMainSignature, mainClass);
 
-        var mainClassName = main.OwnerClassMember!.OwnerClassScope!.OwnerClass!.Identifier!.Value!;
+        var mainClassName = main.GetMemberType()!.Identifier!.Value!;
         var validatedTemplateFunctions = executionStyle == ExecutionStyle.Submission ? ValidateTemplateFunctions() : true;
         
         return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClassName, validatedTemplateFunctions);
     }
 
-    private AstNodeClassMemberFunc InsertEntrypointMethod()
+    private AstNodeMemberFunc<AstNodeClass> InsertEntrypointMethod()
     {
         var astNodeClass = _userProgramRoot.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).First(tls => tls.IsT0 && tls.AsT0.ClassAccessModifier == AccessModifier.Public).AsT0;
         var endOfEntrypointClassOffset = astNodeClass.ClassScope!.ScopeEndOffset;
@@ -72,10 +77,9 @@ public class AnalyzerSimple
             ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 1,
         };
         
-        astNodeClass.ClassScope.ClassMembers.Add(new AstNodeClassMember
+        astNodeClass.ClassScope.TypeMembers.Add(new AstNodeTypeMember<AstNodeClass>()
         {
-            OwnerClassScope = astNodeClass.ClassScope,
-            ClassMember = insertedMainFuncNode,
+            
         });
         return insertedMainFuncNode;
     }
@@ -107,10 +111,10 @@ public class AnalyzerSimple
             return isValidOtherClass;
         }
 
-        var matchedClass = toBeSearched!.ClassScope!.ClassMembers.Where(cm=>cm.ClassMember.IsT2).Select(cm=>cm.ClassMember.AsT2).FirstOrDefault(cm=>DoClassSignaturesMatch(baselineClass, comparisonStyle, cm));
+        var matchedClass = toBeSearched!.ClassScope!.TypeMembers.Where(cm=>cm.ClassMember.IsT2).Select(cm=>cm.ClassMember.AsT2).FirstOrDefault(cm=> DoClassSignaturesMatch(baselineClass, comparisonStyle, cm.Class!));
         if (matchedClass != null)
         {
-            return DoClassScopesMatch(baselineClass, matchedClass);
+            return DoClassScopesMatch(baselineClass, matchedClass.Class!);
         }
         return false;
     }
@@ -129,49 +133,49 @@ public class AnalyzerSimple
         return doModifiersMatch;
     }
 
-    private bool DoClassScopesMatch(AstNodeClass baselineClass, AstNodeClass comparedClass)
+    private bool DoClassScopesMatch(AstNodeClass baselineClass, AstNodeClass  comparedClass)
     {
-        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT0).Select(cm => cm.ClassMember.AsT0).Any(classMemberFunc => !FindAndCompareFunc(classMemberFunc, comparedClass))) return false;
+        if (baselineClass.ClassScope!.TypeMembers.Where(cm => cm.ClassMember.IsT0).Select(cm => cm.ClassMember.AsT0).Any(classMemberFunc => !FindAndCompareFunc(classMemberFunc, comparedClass))) return false;
 
-        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT1).Select(cm => cm.ClassMember.AsT1).Any(cm => !FindAndCompareVariable(cm, comparedClass))) return false;
+        if (baselineClass!.ClassScope!.TypeMembers.Where(cm => cm.ClassMember.IsT1).Select(cm => cm.ClassMember.AsT1).Any(cm => !FindAndCompareVariable(cm, comparedClass))) return false;
         
-        if (baselineClass.ClassScope!.ClassMembers.Where(cm => cm.ClassMember.IsT2).Select(cm => cm.ClassMember.AsT2).Any(cm => !FindAndCompareClass(cm, ComparisonStyle.Strict, comparedClass))) return false;
+        if (baselineClass!.ClassScope!.TypeMembers.Where(cm => cm.ClassMember.IsT2).Select(cm => cm.ClassMember.AsT2).Any(cm => !FindAndCompareClass(cm.Class!, ComparisonStyle.Strict, comparedClass))) return false;
 
         return true;
     }
 
-    private static bool FindAndCompareFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
+    private static bool FindAndCompareFunc<T>(AstNodeMemberFunc<T> baselineFunc, T toBeSearched)where T : IType<T>
     {
-        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0)
+        return toBeSearched.GetMembers().Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
             .Any(func => ValidateFunctionSignature(baselineFunc, func));
     }
     
-    private static AstNodeClassMemberFunc FindAndGetFunc(AstNodeClassMemberFunc baselineFunc, AstNodeClass toBeSearched)
+    private static AstNodeMemberFunc<T> FindAndGetFunc<T>(AstNodeMemberFunc<T> baselineFunc, T typeToBeSearched) where T : IType<T>
     {
-        return toBeSearched.ClassScope!.ClassMembers.Where(func => func.ClassMember.IsT0)
+        return typeToBeSearched.GetMembers().Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
-            .First(func => ValidateFunctionSignature(baselineFunc, func));
+            .First(func => ValidateFunctionSignature<T>(baselineFunc, func));
     }
 
-    private static bool FindAndCompareVariable(AstNodeClassMemberVar baselineVar, AstNodeClass toBeSearched)
+    private static bool FindAndCompareVariable<T>(AstNodeMemberVar<T> baseline, T toBeSearched) where T : IType<T>
     {
-        return toBeSearched.ClassScope!.ClassMembers.Where(var => var.ClassMember.IsT1)
-            .Select(var => var.ClassMember.AsT1).Any(var => ValidateClassVariable(baselineVar, var));
+        return toBeSearched.GetMembers()!.Where(var => var.ClassMember.IsT1)
+            .Select(var => var.ClassMember.AsT1).Any(var => ValidateClassVariable(baseline, var));
     }
 
-    private static bool ValidateClassVariable(AstNodeClassMemberVar baselineVar, AstNodeClassMemberVar comparedVar)
+    private static bool ValidateClassVariable<T>(AstNodeMemberVar<T> baseline, AstNodeMemberVar<T> compared) where T : IType<T>
     {
-        var doAccessModifiersMatch = baselineVar.AccessModifier == comparedVar.AccessModifier;
+        var doAccessModifiersMatch = baseline.AccessModifier == compared.AccessModifier;
         if (!doAccessModifiersMatch) return false;
         
-        var doIdentifiersMatch = baselineVar.ScopeMemberVar.Identifier!.Value!.Equals(comparedVar.ScopeMemberVar.Identifier!.Value);
+        var doIdentifiersMatch = baseline.ScopeMemberVar.Identifier!.Value!.Equals(compared.ScopeMemberVar.Identifier!.Value);
         if (!doIdentifiersMatch) return false;
         
-        var doModifiersMatch = baselineVar.ScopeMemberVar.VarModifiers.SequenceEqual(comparedVar.ScopeMemberVar.VarModifiers);
+        var doModifiersMatch = baseline.ScopeMemberVar.VarModifiers.SequenceEqual(compared.ScopeMemberVar.VarModifiers);
         if (!doModifiersMatch) return false;
         
-        var doesTypeMatch = DoesTypeMatch(baselineVar.ScopeMemberVar.Type, comparedVar.ScopeMemberVar.Type);
+        var doesTypeMatch = DoesTypeMatch(baseline.ScopeMemberVar.Type, compared.ScopeMemberVar.Type);
         if (!doesTypeMatch) return false;
         
         return true;
@@ -208,6 +212,8 @@ public class AnalyzerSimple
 
                 if (comparedArrDim != baselineArrDim) return false;
 
+                if (comparedArrayType.IsVarArgs != arrayType.IsVarArgs) return false;
+                
                 return DoesTypeMatch(arrayType.BaseType, comparedArrayType.BaseType);
             },
             complexType =>
@@ -261,7 +267,7 @@ public class AnalyzerSimple
     }
     
     // TODO clean this up
-    private static bool ValidateFunctionSignature(AstNodeClassMemberFunc baseline, AstNodeClassMemberFunc compared)
+    private static bool ValidateFunctionSignature<T>(AstNodeMemberFunc<T> baseline, AstNodeMemberFunc<T> compared) where T: IType<T>
     {
         if (baseline.AccessModifier != compared.AccessModifier) return false;
         if (!baseline.Modifiers.OrderBy(m => m).SequenceEqual(compared.Modifiers.OrderBy(m => m))) return false;
@@ -335,16 +341,10 @@ public class AnalyzerSimple
         return isValid;
     }
 
-    private static AstNodeClassMemberFunc CreateNewMainNode(AstNodeClass? ownerClass = null)
+    private static AstNodeMemberFunc<AstNodeClass> CreateNewMainNode(AstNodeClass? ownerClass = null)
     {
-        var ownerClassMember = new AstNodeClassMember
+        var createdMain = new AstNodeMemberFunc<AstNodeClass>
         {
-            OwnerClassScope = ownerClass?.ClassScope
-        };
-        
-        return new AstNodeClassMemberFunc
-        {
-            OwnerClassMember = ownerClassMember,
             AccessModifier = AccessModifier.Public,
             Modifiers = [MemberModifier.Static],
             FuncReturnType = SpecialMemberType.Void,
@@ -358,5 +358,7 @@ public class AnalyzerSimple
                 }
             ],
         };
+        
+        return createdMain;
     }
 }
