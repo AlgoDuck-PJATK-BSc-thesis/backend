@@ -1,42 +1,41 @@
-using System.Text;
 using ExecutorService.Analyzer._AnalyzerUtils;
-using ExecutorService.Errors.Exceptions;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
+using ExecutorService.Analyzer.AstBuilder.Lexer.HelperLexers;
+using ExecutorService.Analyzer.AstBuilder.Parser;
 
 namespace ExecutorService.Analyzer.AstBuilder.Lexer;
 
-public interface ILexer
-{
-    public List<Token> Tokenize(string fileContents);
-}
 
-public class LexerSimple : ILexer
+public class LexerSimple : 
+    HelperLexer
 {
     private char[] _fileChars;
-    private int _currPos;
-    private StringBuilder _buf;
-    private List<Token> _tokens;
-    
-    public List<Token> Tokenize(string fileContents)
-    {
-        fileContents = fileContents.ReplaceLineEndings();
-         _tokens = new List<Token>();
-        _fileChars = fileContents.ToCharArray();
-        _buf = new StringBuilder();
-        _currPos = 0;
+    private FilePosition _filePosition;
+    private readonly List<Token> _tokens;
 
+    private LexerSimple(char[] fileChars, FilePosition filePosition, List<Token> tokens) : base(fileChars, filePosition, tokens)
+    {
+        _fileChars = fileChars;
+        _filePosition = filePosition;
+        _tokens = tokens;
+    }
+
+    public static List<Token> Tokenize(string fileContents)
+    {
+        var fileContentsSanitized = fileContents.ReplaceLineEndings();
+        var lexer = new LexerSimple(fileContentsSanitized.ToCharArray(), new FilePosition(), []);
+        return lexer.Tokenize();
+    }
+    
+    private List<Token> Tokenize()
+    {
         while (PeekChar() != null)
         {
             char consumedChar = ConsumeChar();
             switch (consumedChar)
             {
                 case '/':
-                    if (CheckForChar('/', 1))
-                    {
-                        ConsumeComment();
-                    }else if (CheckForChar('*', 1))
-                    {
-                        ConsumeMultiLineComment();
-                    }
+                    HandleForwardSlash();
                     break;
                 case '{':
                     _tokens.Add(CreateToken(TokenType.OpenCurly));
@@ -57,7 +56,7 @@ public class LexerSimple : ILexer
                     _tokens.Add(CreateToken(TokenType.CloseParen));
                     break;
                 case '=':
-                    _tokens.Add(CreateToken(TokenType.Assign));
+                    HandleEqual();
                     break;
                 case ';':
                     _tokens.Add(CreateToken(TokenType.Semi));
@@ -75,13 +74,22 @@ public class LexerSimple : ILexer
                     _tokens.Add(ConsumeCharLit());
                     break;
                 case '-':
-                    _tokens.Add(CreateToken(TokenType.Minus));
+                    HandleMinus(consumedChar);
+                    break;
+                case '+':
+                    HandlePlus();
+                    break;
+                case '*':
+                    _tokens.Add(CreateToken(TokenType.Mul));
+                    break;
+                case '%':
+                    _tokens.Add(CreateToken(TokenType.Mod));
                     break;
                 case '<':
-                    _tokens.Add(CreateToken(TokenType.OpenChevron));
+                    HandleOpenChevron();
                     break;
                 case '>':
-                    _tokens.Add(CreateToken(TokenType.CloseChevron));
+                    HandleCloseChevron();                    
                     break;
                 case '?':
                     _tokens.Add(CreateToken(TokenType.Wildcard));
@@ -96,300 +104,109 @@ public class LexerSimple : ILexer
                     _tokens.Add(CreateToken(TokenType.Xor));
                     break;
                 default:
-                    if (char.IsNumber(consumedChar))
-                    {
-                        _tokens.Add(ConsumeNumericLit(consumedChar));
-                    }
-                    else if (char.IsLetter(consumedChar))
-                    {
-                        _buf.Append(consumedChar);
-                        _tokens.Add(ConsumeKeyword(_buf));
-                    }else if (char.IsWhiteSpace(consumedChar))
-                    {
-                        
-                    }
+                    HandleDefaultCase(consumedChar);
                     break;
             }
         }
-
-        foreach (var token in _tokens)
-        {
-            Console.WriteLine(token.Type);
-        }
+        
         return _tokens;
     }
-    
-    private Token ConsumeKeyword(StringBuilder buf)
+
+    private void HandleOpenChevron()
     {
-        while (PeekChar() != null && (char.IsLetterOrDigit(PeekChar()!.Value) || PeekChar()!.Value == '_'))
-        {
-            buf.Append(ConsumeChar());
-        }
-
-        var result = buf.ToString();
-        var token = result switch
-        {
-            "private" => CreateToken(TokenType.Private),
-            "public" => CreateToken(TokenType.Public),
-            "protected" => CreateToken(TokenType.Protected),
-            "void" => CreateToken(TokenType.Void),
-            "byte" => CreateToken(TokenType.Byte),
-            "short" => CreateToken(TokenType.Short),
-            "int" => CreateToken(TokenType.Int),
-            "long" => CreateToken(TokenType.Long),
-            "float" => CreateToken(TokenType.Float),
-            "double" => CreateToken(TokenType.Double),
-            "char" => CreateToken(TokenType.Char),
-            "boolean" => CreateToken(TokenType.Boolean),
-            "static" => CreateToken(TokenType.Static),
-            "final" => CreateToken(TokenType.Final),
-            "class" => CreateToken(TokenType.Class),
-            "String" => CreateToken(TokenType.String),
-            "import" => CreateToken(TokenType.Import),
-            "interface" => CreateToken(TokenType.Interface),
-            "throws" => CreateToken(TokenType.Throws),
-            "abstract" => CreateToken(TokenType.Abstract),
-            "enum" => CreateToken(TokenType.Enum),
-            "implements" => CreateToken(TokenType.Implements),
-            "extends" => CreateToken(TokenType.Extends),
-            "super" => CreateToken(TokenType.Super),
-            "strictfp" => CreateToken(TokenType.Strictfp),
-            "default" => CreateToken(TokenType.Default),
-            _ => CreateToken(TokenType.Ident, result),
-        };
-        buf.Clear();
-
-        return token;
-    }
-
-    private void ConsumeComment()
-    {
-        ConsumeChar(); // consume '/'
-        ConsumeChar(); // consume '/'
-        while (PeekChar() != null && !(CheckForChar('\n') || CheckForChar('\r')))
+        if (CheckForChar('=', 1))
         {
             ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Le));
         }
-
-        ConsumeChar(); // consume '\n' or '\r'
-        if (CheckForChar('\n')) // for windows
+        else
         {
-            ConsumeChar(); 
+            _tokens.Add(CreateToken(TokenType.OpenChevron));
         }
     }
-
-    private void ConsumeMultiLineComment()
+    
+    private void HandleCloseChevron()
     {
-        ConsumeChar(); // consume '/'
-        ConsumeChar(); // consume '/*'
-        
-        while (PeekChar() != null && !(CheckForChar('*') && CheckForChar('/', 1)))
+        if (CheckForChar('=', 1))
         {
             ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Ge));
         }
-
-        if (PeekChar() is not null)
+        else
         {
-            ConsumeChar(); // consume '*'
-        }
-        if (PeekChar() is not null)
-        {
-            ConsumeChar(); // consume '/'
-        }
+            _tokens.Add(CreateToken(TokenType.CloseChevron));
+        }    
     }
     
-private Token ConsumeNumericLit(char prevChar) // TODO needs cleaning up, bit of a monstrosity atm
+    private void HandleForwardSlash()
     {
-        var numLit = new StringBuilder();
-        if (CheckForChar('-'))
+        if (CheckForChar('/', 1))
         {
-            numLit.Append(ConsumeChar());
-        }
-
-        char peekedLitTypeChar = prevChar; // if 0 then either octal, bin or hex decimal
-        char? peekedLitValStartChar = PeekChar(); // first numeric value of literal
-        if (peekedLitTypeChar is '0' && peekedLitValStartChar.HasValue)
+            ConsumeComment();
+        }else if (CheckForChar('*', 1))
         {
-
-            numLit.Append(prevChar);
-            switch (peekedLitValStartChar.Value)
-            {
-                case 'b':
-                case 'B':
-                    numLit.Append(ConsumeChar());
-                    numLit.Append(ConsumeBin());
-                    break;
-                case 'x':
-                case 'X':
-                    numLit.Append(ConsumeChar());
-                    numLit.Append(ConsumeHex());
-                    if (CheckForChar('.'))
-                    {
-                        numLit.Append(ConsumeChar());
-                        numLit.Append(ConsumeHex());
-                    }
-                    
-                    if (CheckForChar('p'))
-                    {
-                        numLit.Append(ConsumeChar());
-                        if (CheckForChar('-')) // todo make consumeIfOfType()
-                        {
-                            numLit.Append(ConsumeChar());
-                        }
-                        numLit.Append(ConsumeDec());
-                        if (CheckForChar('.'))
-                        {
-                            numLit.Append(ConsumeChar());
-                            numLit.Append(ConsumeDec());
-                        }
-                        if (CheckForChar('f') || CheckForChar('F')) // todo use toLowerCase() here, just don't know in what context as CheckForCharProbably shouldn't auto lowercase, perhaps separate method? 
-                        {
-                            ConsumeChar();
-                            return CreateToken(TokenType.FloatLit, numLit.ToString());
-                        }
-                        return CreateToken(TokenType.DoubleLit, numLit.ToString());
-                    }
-                    break;
-                default:
-                    numLit.Append(ConsumeOct());
-                    break;
-            }
-
-            return CreateToken(TokenType.IntLit, numLit.ToString());
+            ConsumeMultiLineComment();
         }
-
-        if (char.IsNumber(prevChar))
+        else
         {
-            numLit.Append(prevChar);
+            _tokens.Add(CreateToken(TokenType.Div));
         }
-        
-        numLit.Append(ConsumeDec());
-        var delim = PeekChar();
-        if (delim is not null && delim.Value == '.')
-        {
-            numLit.Append(ConsumeChar());
-            numLit.Append(ConsumeDec());
-            delim = PeekChar();
-        }
-        
-        if (delim is not null)
-        {
-            numLit.Append(ConsumeDec());
-            delim = PeekChar();
-            switch (delim)
-            {
-                case 'f':
-                case 'F':
-                    ConsumeChar();
-                    return CreateToken(TokenType.FloatLit, numLit.ToString());
-                case 'e':
-                case 'E':
-                    numLit.Append(ConsumeChar());
-                    if (CheckForChar('-'))
-                    {
-                        numLit.Append(ConsumeChar());
-                    }
-                    numLit.Append(ConsumeDec());
-                    if (CheckForChar('f'))
-                    {
-                        ConsumeChar();
-                        return CreateToken(TokenType.FloatLit, numLit.ToString());
-                    }
-
-                    ConsumeChar();
-                    return CreateToken(TokenType.DoubleLit, numLit.ToString());
-                case 'l':
-                case 'L':
-                    ConsumeChar(); // I guess we could append this but from the perspective of ast building or generation we have all the necessary info in TokenType so it's enough to just consume
-                    return CreateToken(TokenType.LongLit, numLit.ToString());
-                default: 
-                    return numLit.ToString().Contains('.') ? CreateToken(TokenType.DoubleLit, numLit.ToString()) : CreateToken(TokenType.IntLit, numLit.ToString());
-            }
-        }
-        throw new JavaSyntaxException("idk man");
     }
 
-    private string ConsumeBin() => ConsumeWhileLegalChar(new int[][] { [48, 49] });
-    private string ConsumeOct() => ConsumeWhileLegalChar(new int[][] { [48, 55] });
-    private string ConsumeDec() => ConsumeWhileLegalChar(new int[][] { [48, 57] });
-    private string ConsumeHex() => ConsumeWhileLegalChar(new int[][] { [48, 57], [65, 70], [97, 102] });
-    
-    
-    private String ConsumeWhileLegalChar(int[][] legalCharRanges)
+    private void HandleEqual()
     {
-        char? peekedChar = PeekChar();
-        StringBuilder consumed = new StringBuilder();
-        while (peekedChar is not null)
+        if (CheckForChar('=', 1))
         {
-            int peekedCharNum = (int)peekedChar;
-            foreach (var legalRange in legalCharRanges)
-            {
-                if (peekedCharNum >= legalRange[0] && peekedCharNum <= legalRange[1])
-                {
-                    consumed.Append(ConsumeChar());
-                    peekedChar = PeekChar();
-                    goto validCharacter;
-                }
-            }
-
-            break;
-            validCharacter: ;
+            ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Eq));
         }
-
-        return consumed.ToString();
+        else
+        {
+            _tokens.Add(CreateToken(TokenType.Assign));
+        }
     }
 
-    private Token ConsumeStringLit()
+    private void HandlePlus()
     {
-        var stringLit = new StringBuilder();
-        // check if this doesn't break if a file begins with '"' illegal statement so shouldn't pass either way but not because of a ArrayIndexOutOfBoundsException
-        // which might get thrown. PeekChar should handle it but best to check
-        //!CheckForChar('"') && !CheckForChar('\\', -1)
-        while (!(CheckForChar('"') && !CheckForChar('\\', -1)))
+        if (CheckForChar('+', 1))
         {
-            stringLit.Append(ConsumeChar());
+            ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Increment));
         }
-
-        ConsumeChar(); // close string lit
-        return CreateToken(TokenType.StringLit, stringLit.ToString());
-    }
-
-    private Token ConsumeCharLit()
-    {
-        ConsumeChar(); // consume opening ' 
-        var charLit = new StringBuilder();
-
-        // same case as in ConsumeStringLit()
-        while (!(CheckForChar('\'') && !CheckForChar('\\', -1)))
+        else
         {
-            charLit.Append(ConsumeChar());
-        }
-
-        ConsumeChar(); // consume closing '
-        return CreateToken(TokenType.CharLit, charLit.ToString());
-    }
-
-    private bool CheckForChar(char checkedChar, int offset = 0)
-    {
-        return PeekChar(offset) == checkedChar;
-    }
-    private char? PeekChar(int offset = 0)
-    {
-        var accessIndex = offset + _currPos;
-        if (accessIndex < _fileChars.Length && accessIndex >= 0)
-        {
-            return _fileChars[accessIndex];
-        }
-
-        return null;
+            _tokens.Add(CreateToken(TokenType.Plus));
+        }  
     }
     
-    private Token CreateToken(TokenType type, string? value = null)
+    private void HandleMinus(char consumedChar)
     {
-        return new Token(type, _currPos - 1, value);
+        if (CheckForChar('-', 1))
+        {
+            ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Decrement));
+        }else if (PeekChar(1) != null && char.IsNumber(PeekChar(1)!.Value))
+        {
+            _tokens.Add(ConsumeNumericLit(consumedChar));
+        }
+        else
+        {
+            _tokens.Add(CreateToken(TokenType.Minus));
+        } 
     }
-    private char ConsumeChar()
+
+    private void HandleDefaultCase(char consumedChar)
     {
-        return _fileChars[_currPos++];
+        if (char.IsNumber(consumedChar))
+        {
+            _tokens.Add(ConsumeNumericLit(consumedChar));
+        }
+        else if (char.IsLetter(consumedChar))
+        {
+            _tokens.Add(ConsumeKeyword(consumedChar));
+        }else if (char.IsWhiteSpace(consumedChar))
+        {
+            // just skip
+        }
     }
 }

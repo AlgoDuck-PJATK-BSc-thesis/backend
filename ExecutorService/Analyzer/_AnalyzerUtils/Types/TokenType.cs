@@ -1,4 +1,4 @@
-namespace ExecutorService.Analyzer._AnalyzerUtils;
+namespace ExecutorService.Analyzer._AnalyzerUtils.Types;
 
 public enum TokenType
 {
@@ -26,9 +26,11 @@ public enum TokenType
     
     Dot, Comma,
     
-    Plus, Minus, Mul, Div, Mod,
+    Plus, Minus, Mul, Div, Mod, Increment, Decrement,
     
-    And, Or, Xor,
+    And, LAnd, Or, LOr, Xor, LXor, Not, LNot,
+    
+    Eq, Neq, Le, Ge,
     
     Throws,
     

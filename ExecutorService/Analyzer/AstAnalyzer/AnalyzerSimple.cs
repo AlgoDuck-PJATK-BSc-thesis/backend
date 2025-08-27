@@ -8,6 +8,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
 using ExecutorService.Analyzer.AstBuilder;
 using ExecutorService.Analyzer.AstBuilder.Lexer;
 using ExecutorService.Analyzer.AstBuilder.Parser;
@@ -42,14 +43,13 @@ public class AnalyzerSimple
     {
         _userCode = fileContents;
 
-        var lexerSimple = new LexerSimple();
         var parserSimple = new ParserSimple();
         _baselineMainSignature = CreateNewMainNode();
         if (templateContents != null)
         {
-            _templateProgramRoot = parserSimple.ParseProgram([lexerSimple.Tokenize(templateContents)]);
+            _templateProgramRoot = parserSimple.ParseProgram([LexerSimple.Tokenize(templateContents)]);
         }
-        _userProgramRoot = parserSimple.ParseProgram([lexerSimple.Tokenize(_userCode.ToString())]);
+        _userProgramRoot = parserSimple.ParseProgram([LexerSimple.Tokenize(_userCode.ToString())]);
     }
 
     public CodeAnalysisResult AnalyzeUserCode(ExecutionStyle executionStyle)

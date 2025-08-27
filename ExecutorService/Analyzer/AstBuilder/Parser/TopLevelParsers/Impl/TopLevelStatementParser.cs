@@ -4,6 +4,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Interfaces;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
 using ExecutorService.Errors.Exceptions;
