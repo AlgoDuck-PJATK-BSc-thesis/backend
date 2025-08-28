@@ -37,7 +37,7 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition) 
             ConsumeToken();
             while (!CheckTokenType(TokenType.Semi))
             {
-                TryConsume();
+                scopedVar.VariableValue = ParseExpr();
             }
         }
 

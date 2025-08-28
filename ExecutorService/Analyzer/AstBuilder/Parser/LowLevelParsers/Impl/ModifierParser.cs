@@ -27,7 +27,7 @@ public class ModifierParser(List<Token> tokens, FilePosition filePosition) :
     {
         return token.Type switch
         {
-            TokenType.Static or TokenType.Final => true,
+            TokenType.Static or TokenType.Final or TokenType.Abstract or TokenType.Default or TokenType.Strictfp => true,
             _ => false
         };
     }
@@ -48,6 +48,9 @@ public class ModifierParser(List<Token> tokens, FilePosition filePosition) :
             {
                 TokenType.Static => MemberModifier.Static,
                 TokenType.Final => MemberModifier.Final,
+                TokenType.Abstract => MemberModifier.Abstract,
+                TokenType.Default => MemberModifier.Default,
+                TokenType.Strictfp => MemberModifier.Strictfp,
                 _ => throw new JavaSyntaxException("unexpected token")
             };
             if (legalModifiers.Contains(modifier))

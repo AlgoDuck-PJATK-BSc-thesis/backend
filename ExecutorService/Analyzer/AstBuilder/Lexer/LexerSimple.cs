@@ -74,7 +74,7 @@ public class LexerSimple :
                     _tokens.Add(ConsumeCharLit());
                     break;
                 case '-':
-                    HandleMinus(consumedChar);
+                    HandleMinus();
                     break;
                 case '+':
                     HandlePlus();
@@ -179,15 +179,12 @@ public class LexerSimple :
         }  
     }
     
-    private void HandleMinus(char consumedChar)
+    private void HandleMinus()
     {
         if (CheckForChar('-', 1))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Decrement));
-        }else if (PeekChar(1) != null && char.IsNumber(PeekChar(1)!.Value))
-        {
-            _tokens.Add(ConsumeNumericLit(consumedChar));
         }
         else
         {

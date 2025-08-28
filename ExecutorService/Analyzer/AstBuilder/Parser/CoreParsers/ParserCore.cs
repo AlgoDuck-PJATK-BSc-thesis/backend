@@ -13,7 +13,7 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
         {
             return ConsumeToken();
         }
-        throw new JavaSyntaxException($"Expected {expectedTokenMsg} declaration");
+        throw new JavaSyntaxException(expectedTokenMsg);
     }
     
     protected Token? PeekToken(int offset = 0)
@@ -31,6 +31,7 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
 
         var filePos = filePosition.GetFilePos();
         filePosition.IncrementFilePos();
+        Console.WriteLine(tokens[filePos].Type);
         return tokens[filePos];
     }
     

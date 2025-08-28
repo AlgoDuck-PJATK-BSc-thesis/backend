@@ -110,15 +110,6 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
 
     public ComplexTypeDeclaration ParseComplexTypDeclaration()
     {
-        // Console.WriteLine("==========| start |==========");
-        // Console.WriteLine(PeekToken(-3).Type);
-        // Console.WriteLine(PeekToken(-2).Type);
-        // Console.WriteLine(PeekToken(-1).Type);
-        // Console.WriteLine($"Curr:{PeekToken().Type}");
-        // Console.WriteLine(PeekToken(1).Type);
-        // Console.WriteLine(PeekToken(2).Type);
-        // Console.WriteLine(PeekToken(3).Type);
-        // Console.WriteLine("==========| end |==========");
         var complexTypeDeclaration = new ComplexTypeDeclaration
         {
             Identifier = ConsumeIfOfType(TokenType.Ident, "Type name").Value!
