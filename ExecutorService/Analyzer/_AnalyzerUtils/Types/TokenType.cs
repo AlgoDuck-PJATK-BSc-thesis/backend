@@ -6,7 +6,7 @@ public enum TokenType
     
     OpenCurly, CloseCurly, OpenParen, CloseParen, OpenBrace, CloseBrace, OpenChevron, CloseChevron,
 
-    Assign, 
+    Assign, PlusAssign, MinusAssign, MulAssign, DivAssign, ModAssign, LBitShiftAssign, RBitShiftAssign, UrBitShiftAssign,
 
     Semi,
     
@@ -26,9 +26,11 @@ public enum TokenType
     
     Dot, Comma,
     
-    Plus, Minus, Mul, Div, Mod, Increment, Decrement,
+    Negation, // TOOD put unaries here
     
-    And, LAnd, Or, LOr, Xor, LXor, Not, LNot,
+    Plus, Minus, Mul, Div, Mod, Increment, Decrement, LBitShift, RBitShift, UrBitShift,
+    
+    BitAnd, LogAnd, BitOr, LogOr, BitXor, BitOrAssign, BitAndAssign, BitXorAssign,
     
     Eq, Neq, Le, Ge,
     

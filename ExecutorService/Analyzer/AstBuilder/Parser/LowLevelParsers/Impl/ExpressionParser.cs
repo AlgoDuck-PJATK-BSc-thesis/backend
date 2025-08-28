@@ -7,34 +7,82 @@ using OneOf;
 
 namespace ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
 
+
+public enum BinaryOperator
+{
+    Mul, Plus, Minus, Div, LBitShift, RBitShift, UrBitShift, Le, Ge, Eq, Neq, Lt, Gt, BitAnd, BitXor, BitOr, LogAnd, LogOr
+}
+public enum UnaryOperator
+{
+    Increment, Decrement, Tilde, Negation, Plus, Minus
+}
 public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : ParserCore(tokens, filePosition), IExpressionParser
 {
     private readonly Dictionary<TokenType, int> _operatorPrecedences = new()
     {
-        [TokenType.Mul] = 2,
-        [TokenType.Div] = 2,
-        [TokenType.Plus] = 1,
-        [TokenType.Minus] = 1
+        [TokenType.Mul] = 10,
+        [TokenType.Div] = 10,
+        [TokenType.Plus] = 9,
+        [TokenType.Minus] = 9,
+        [TokenType.LBitShift] = 8,
+        [TokenType.RBitShift] = 8,
+        [TokenType.UrBitShift] = 8,
+        [TokenType.CloseChevron] = 7,
+        [TokenType.OpenChevron] = 7,
+        [TokenType.Le] = 7,
+        [TokenType.Ge] = 7,
+        [TokenType.Eq] = 6,
+        [TokenType.Neq] = 6,
+        [TokenType.BitAnd] = 5,
+        [TokenType.BitXor] = 4,
+        [TokenType.BitOr] = 3,
+        [TokenType.LogAnd] = 2,
+        [TokenType.LogOr] = 1,
     };
 
-    private readonly HashSet<TokenType> _binaryOperators = [TokenType.Mul, TokenType.Plus, TokenType.Minus, TokenType.Div];
-    
-    public NodeTerm ParseTerm()
+    private NodeTerm ParseTerm()
     {
         if (PeekToken() == null) throw new JavaSyntaxException("");
-        return PeekToken()!.Type switch
+        var nodeTerm = new NodeTerm();
+        if (PeekToken()!.Type == TokenType.OpenParen)
         {
-            TokenType.OpenParen => new NodeTerm{ Val = ParseBinExpr() },
-            TokenType.Ident => new NodeTerm{ Val = new NodeTermIdent{ Identifier = ConsumeToken() } },
-            TokenType.IntLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.LongLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.FloatLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.DoubleLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.CharLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.StringLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            TokenType.BooleanLit => new NodeTerm{ Val = new NodeTermLit{ TermLit = ConsumeToken() } },
-            _ => throw new JavaSyntaxException("unexpected token"),
-        };
+            var binaryExpression = ParseBinExpr();
+            nodeTerm.Val = binaryExpression;
+        }
+        else if (PeekToken()!.Type == TokenType.Ident)
+        {
+            var variableIdentifier  = ConsumeToken();
+            
+            if (CheckTokenType(TokenType.OpenBrace))
+            {
+                ConsumeToken(); // consume '['
+                var arrIndex = ParseExpr();
+                nodeTerm = new NodeTerm { Val = new NodeTermArrayReference { ArrIndex = arrIndex, ArrReference = variableIdentifier } };
+                ConsumeIfOfType(TokenType.CloseBrace, "]"); 
+            }
+            else
+            {
+                nodeTerm = new NodeTerm { Val = new NodeTermIdent { Identifier = variableIdentifier } };
+            }
+            nodeTerm = CheckPostfix(nodeTerm);
+        }
+        else
+        {
+            var numericLiteral = PeekToken()!.Type switch
+            {
+                TokenType.LongLit => ConsumeToken(),
+                TokenType.IntLit => ConsumeToken(),
+                TokenType.FloatLit => ConsumeToken(),
+                TokenType.DoubleLit => ConsumeToken(),
+                TokenType.CharLit => ConsumeToken(),
+                TokenType.StringLit => ConsumeToken(),
+                TokenType.BooleanLit => ConsumeToken(),
+                _ => throw new JavaSyntaxException("unexpected token"),
+            };
+            nodeTerm.Val = new NodeTermLit { TermLit = numericLiteral };
+        }
+
+        return nodeTerm;
     }
 
     private NodeTermParen ParseBinExpr()
@@ -50,21 +98,24 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
     
     public NodeExpr ParseExpr(int minPrecedence = 1)
     {
-        var lhs = new NodeExpr { Expr = ParseTerm() };
+        var lhs = new NodeExpr { Expr = CheckUnaryPreTermParse() };
         while (true)
         {
             var curToken = PeekToken();
             if (curToken == null) break;
-            
-            if (!_binaryOperators.Contains(curToken.Type)) return lhs;
+            var op = MapTokensToBinaryOperators(curToken);
+
+            if (op == null) return lhs;
+            ConsumeToken();
+
             var currentPrecedence = _operatorPrecedences[curToken.Type];
             if (currentPrecedence < minPrecedence) break;
             var nextMinPrecedence = currentPrecedence + 1;
-            ConsumeToken();
+
             var rhs = ParseExpr(nextMinPrecedence);
             var binExpr = new NodeBinExpr
             {
-                Lhs = lhs, Rhs = rhs, Operator = curToken.Type
+                Lhs = lhs, Rhs = rhs, Operator = (BinaryOperator) op
             };
             lhs = new NodeExpr { Expr = binExpr };
         }
@@ -72,57 +123,87 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
         return lhs;
     }
     
-    
-    
-    /*
-    TODO this is mainly for live testing purposes. Delete
-    ================| start |================
-    */
-        
-        
-    public static double EvaluateExpr(NodeExpr expr)
+    private NodeTerm CheckPostfix(NodeTerm term)
     {
-        return expr.Expr.Match(
-            binExpr => ComputeOp(binExpr.Operator, EvaluateExpr(binExpr.Lhs!), EvaluateExpr(binExpr.Rhs!)),
-            term => EvaluateTerm(term)
-        );
+        if (CheckTokenType(TokenType.Decrement, 1) && (term.Val.IsT2 || term.Val.IsT3))
+        {
+            term = CreateWrappedPostfixExpression(term, BinaryOperator.Minus);
+        }else if (CheckTokenType(TokenType.Increment, 1) && (term.Val.IsT2 || term.Val.IsT3))
+        {
+            term = CreateWrappedPostfixExpression(term, BinaryOperator.Plus);
+        }
+
+        return term;
     }
 
-    private static double EvaluateTerm(NodeTerm term)
+
+    private NodeTerm CheckUnaryPreTermParse()
     {
-        return term.Val.Match(
-            intLit =>
-            {
-                try
-                {
-                    return (double) int.Parse(intLit.TermLit!.Value!.ToString());
-                }
-                catch (FormatException)
-                {
-                    return double.Parse(intLit.TermLit!.Value!.ToString());
-                }
-            },
-            paren => EvaluateExpr(paren.Expr!),
-            iden => 1
-        );
-    }
-    private static double ComputeOp(TokenType type, double lhs, double rhs)
-    {
-        return type switch
+        if (CheckTokenType(TokenType.Minus))
         {
-            TokenType.Mul => lhs * rhs,
-            TokenType.Plus => lhs + rhs,
-            TokenType.Minus => lhs - rhs,
-            TokenType.Div => lhs / rhs,
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            ConsumeToken();
+            return CreateWrappedUnaryExpression(UnaryOperator.Minus);
+        }
+        if (CheckTokenType(TokenType.Increment))
+        {
+            ConsumeToken();
+            return CreateWrappedUnaryExpression(UnaryOperator.Increment);
+        }
+
+        if (CheckTokenType(TokenType.Decrement))
+        {
+            ConsumeToken();
+            return CreateWrappedUnaryExpression(UnaryOperator.Decrement);
+        }
+
+        if (CheckTokenType(TokenType.Negation)) // TODO implement this and add TokenType.Tilde
+        {
+            
+        }
+
+        if (CheckTokenType(TokenType.Plus))
+        {
+            ConsumeToken();
+        }
+
+        return ParseTerm();
+    }
+
+    private NodeTerm CreateWrappedUnaryExpression(UnaryOperator op) // shorthand for operator which is a restricted keyword. Stating the obvious I guess
+    {
+            return new NodeTerm {Val = new NodeTermParen {Expr = new NodeExpr {Expr = new NodeUnaryExpr { Rhs = new NodeExpr {Expr = new NodeTerm { Val = new NodeTermParen {Expr = ParseExpr() } } }, Operator = op } } } };
+    }
+
+    private NodeTerm CreateWrappedPostfixExpression(NodeTerm term, BinaryOperator op)
+    {
+        return new NodeTerm {Val =  new NodeTermParen { Expr = new NodeExpr { Expr = new NodeBinExpr { Lhs = new NodeExpr {Expr = term}, Operator = BinaryOperator.Minus, Rhs = new NodeExpr {Expr = new NodeTerm {Val = new NodeTermLit { TermLit = new Token(TokenType.IntLit, "1") } } } } } }};
+    }
+    
+    private static BinaryOperator? MapTokensToBinaryOperators(Token token)
+    {
+        return token.Type switch
+        {
+            TokenType.Mul => BinaryOperator.Mul,
+            TokenType.Plus => BinaryOperator.Plus,
+            TokenType.Minus => BinaryOperator.Minus,
+            TokenType.Div => BinaryOperator.Div,
+            TokenType.LBitShift => BinaryOperator.LBitShift,
+            TokenType.RBitShift => BinaryOperator.RBitShift,
+            TokenType.UrBitShift => BinaryOperator.UrBitShift,
+            TokenType.Le => BinaryOperator.Le,
+            TokenType.Ge => BinaryOperator.Ge,
+            TokenType.Eq => BinaryOperator.Eq,
+            TokenType.Neq => BinaryOperator.Neq,
+            TokenType.BitAnd => BinaryOperator.BitAnd,
+            TokenType.BitXor => BinaryOperator.BitXor,
+            TokenType.BitOr => BinaryOperator.BitOr,
+            TokenType.LogAnd => BinaryOperator.LogAnd,
+            TokenType.LogOr => BinaryOperator.LogOr,
+            TokenType.OpenChevron => BinaryOperator.Lt,
+            TokenType.CloseChevron => BinaryOperator.Gt,
+            _ => null,
         };
     }
-    
-     /*
-     ================| end |================
-     */
-    
-    
 }
 
 
@@ -130,7 +211,13 @@ public class NodeBinExpr
 {
     public NodeExpr? Lhs { get; set; }
     public NodeExpr? Rhs { get; set; }
-    public TokenType Operator { get; set; }
+    public BinaryOperator Operator { get; set; }
+}
+
+public class NodeUnaryExpr
+{
+    public NodeExpr? Rhs { get; set; }
+    public UnaryOperator Operator { get; set; }
 }
 
 public class NodeTermIdent
@@ -147,12 +234,18 @@ public class NodeTermParen
     public NodeExpr? Expr { get; set; }
 }
 
+public class NodeTermArrayReference
+{
+    public Token? ArrReference { get; set; }
+    public NodeExpr? ArrIndex { get; set; }
+}
+
 public class NodeTerm
 {
-    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent> Val { get; set; }
+    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent, NodeTermArrayReference> Val { get; set; }
 }
 
 public class NodeExpr
 {
-    public OneOf<NodeBinExpr, NodeTerm> Expr { get; set; }
+    public OneOf<NodeBinExpr, NodeUnaryExpr, NodeTerm> Expr { get; set; }
 }

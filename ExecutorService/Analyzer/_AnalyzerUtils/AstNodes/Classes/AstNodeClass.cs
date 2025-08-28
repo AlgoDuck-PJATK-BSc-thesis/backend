@@ -2,6 +2,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
 
 namespace ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 

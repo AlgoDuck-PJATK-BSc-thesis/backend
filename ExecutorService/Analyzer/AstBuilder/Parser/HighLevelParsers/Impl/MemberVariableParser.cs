@@ -3,6 +3,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
 using ExecutorService.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
 using ExecutorService.Analyzer.AstBuilder.Parser.MidLevelParsers;
 

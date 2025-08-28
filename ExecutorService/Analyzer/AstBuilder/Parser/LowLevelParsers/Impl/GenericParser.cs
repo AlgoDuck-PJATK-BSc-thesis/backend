@@ -51,7 +51,7 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
         
         ConsumeIfOfType(TokenType.Extends, "");
         typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());
-        while (CheckTokenType(TokenType.And))
+        while (CheckTokenType(TokenType.BitAnd))
         {
             ConsumeToken(); // consume &
             typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());        

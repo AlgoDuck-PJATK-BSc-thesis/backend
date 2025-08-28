@@ -4,6 +4,7 @@ using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using ExecutorService.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using ExecutorService.Analyzer._AnalyzerUtils.Interfaces;
+using ExecutorService.Analyzer._AnalyzerUtils.Types;
 using ExecutorService.Analyzer.AstBuilder.Parser.CoreParsers;
 using ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
 using ExecutorService.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
@@ -65,8 +66,8 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
         return _expressionParser.ParseExpr(minPrecedence);
     }
 
-    public NodeTerm? ParseTerm()
-    {
-        return _expressionParser.ParseTerm();
-    }
+    // public NodeTerm? ParseTerm()
+    // {
+    //     return _expressionParser.ParseTerm();
+    // }
 }

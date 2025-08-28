@@ -141,7 +141,7 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
             {
                 ConsumeToken();
                 initialization.ExtendsTypes = [];
-                while (CheckTokenType(TokenType.And, 1))
+                while (CheckTokenType(TokenType.BitAnd, 1))
                 {
                     initialization.ExtendsTypes.Add(ParseComplexTypDeclaration());
                     ConsumeToken(); // consume &
