@@ -16,7 +16,7 @@ public class CompilationUnitParser(List<Token> tokens, FilePosition filePosition
 
         if (CheckTokenType(TokenType.Package))
         {
-            ConsumeIfOfType(TokenType.Package, "not gonna happen, put here for readability");
+            ConsumeIfOfType("not gonna happen, put here for readability", TokenType.Package);
             AstNodePackage package = new();
             new TopLevelStatementParser(_tokens, _filePosition).ParseImportsAndPackages(package);
             compilationUnit.Package = package;
@@ -24,7 +24,7 @@ public class CompilationUnitParser(List<Token> tokens, FilePosition filePosition
 
         while (CheckTokenType(TokenType.Import))
         {
-            ConsumeIfOfType(TokenType.Import, "not gonna happen, put here for readability");
+            ConsumeIfOfType("not gonna happen, put here for readability", TokenType.Import);
             AstNodeImport import = new();
             new TopLevelStatementParser(_tokens, _filePosition).ParseImportsAndPackages(import);
             compilationUnit.Imports.Add(import);

@@ -6,13 +6,16 @@ namespace ExecutorService.Analyzer.AstBuilder.Parser.CoreParsers;
 
 public class ParserCore(List<Token> tokens, FilePosition filePosition)
 {
-    protected Token ConsumeIfOfType(TokenType tokenType, string expectedTokenMsg)
+    protected Token ConsumeIfOfType(string expectedTokenMsg, params TokenType[] tokenType)
     {
         var peekedToken = PeekToken();
-        if (peekedToken != null && peekedToken.Type == tokenType)
+        if (peekedToken == null) throw new JavaSyntaxException(expectedTokenMsg);
+        
+        if (tokenType.Any(type => peekedToken.Type == type))
         {
             return ConsumeToken();
         }
+        
         throw new JavaSyntaxException(expectedTokenMsg);
     }
     

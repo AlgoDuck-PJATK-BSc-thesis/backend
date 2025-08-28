@@ -36,7 +36,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         
         if (!memberFunc.IsConstructor)
         {
-            memberFunc.Identifier = ConsumeIfOfType(TokenType.Ident, "identifier");
+            memberFunc.Identifier = ConsumeIfOfType("identifier", TokenType.Ident);
         }
 
         ParseMemberFunctionArguments(memberFunc);
@@ -72,7 +72,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
 
     public void ParseMemberFunctionArguments<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
     {
-        ConsumeIfOfType(TokenType.OpenParen, "'('");
+        ConsumeIfOfType("'('", TokenType.OpenParen);
         List<AstNodeScopeMemberVar> funcArguments = [];
 
         while (!CheckTokenType(TokenType.CloseParen))
@@ -93,7 +93,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
                     t4 => functionArgument.Type = t4
                 );
                 
-                functionArgument.Identifier = ConsumeIfOfType(TokenType.Ident, "identifier");
+                functionArgument.Identifier = ConsumeIfOfType("identifier", TokenType.Ident);
                 funcArguments.Add(functionArgument);
             }
             else
@@ -111,7 +111,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
             }
         }
         memberFunc.FuncArgs = funcArguments;
-        ConsumeIfOfType(TokenType.CloseParen, ")");
+        ConsumeIfOfType(")", TokenType.CloseParen);
     }
 
     private void ParseThrowsDirective<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
@@ -120,10 +120,10 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         ConsumeToken(); // consume throws directive
         while (CheckTokenType(TokenType.Comma, 1))
         {
-            memberFunc.ThrownExceptions.Add(ConsumeIfOfType(TokenType.Ident, "exception identifier"));
+            memberFunc.ThrownExceptions.Add(ConsumeIfOfType("exception identifier", TokenType.Ident));
             ConsumeToken(); // consume ,
         }
-        memberFunc.ThrownExceptions.Add(ConsumeIfOfType(TokenType.Ident, "exception identifier"));
+        memberFunc.ThrownExceptions.Add(ConsumeIfOfType("exception identifier", TokenType.Ident));
         
     }
 }

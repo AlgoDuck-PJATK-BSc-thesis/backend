@@ -28,9 +28,9 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
 
         nodeClass.IsAbstract = nodeClass.ClassModifiers.Contains(MemberModifier.Abstract);
         
-        ConsumeIfOfType(TokenType.Class, "class");
+        ConsumeIfOfType("class", TokenType.Class);
 
-        nodeClass.Identifier = ConsumeIfOfType(TokenType.Ident, "class name");
+        nodeClass.Identifier = ConsumeIfOfType("class name", TokenType.Ident);
 
         ParseGenericDeclaration(nodeClass);
 
@@ -48,7 +48,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         var classScope = new AstNodeTypeScope<AstNodeClass>
         {
             OwnerMember = clazz,
-            ScopeBeginOffset = ConsumeIfOfType(TokenType.OpenCurly, "'{'").FilePos
+            ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos
         };
         
         while (!CheckTokenType(TokenType.CloseCurly))
@@ -56,7 +56,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
             classScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition).ParseTypeMember(clazz));
         }
         
-        classScope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos;
+        classScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
         return classScope;
     }
 
@@ -74,7 +74,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         while (PeekToken(1) != null && PeekToken(1)!.Type != TokenType.OpenCurly)
         {
             clazz.Implements.Add(ParseComplexTypDeclaration());
-            ConsumeIfOfType(TokenType.Comma, ",");
+            ConsumeIfOfType(",", TokenType.Comma);
         }
         clazz.Implements.Add(ParseComplexTypDeclaration());
     }

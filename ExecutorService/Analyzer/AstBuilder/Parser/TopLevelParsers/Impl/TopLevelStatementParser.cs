@@ -52,8 +52,8 @@ public class TopLevelStatementParser(List<Token> tokens, FilePosition filePositi
             ConsumeToken(); // consume delim
         }
 
-        var lastUriComponentToken = ConsumeIfOfType(TokenType.Ident, "identifier");
-        ConsumeIfOfType(TokenType.Semi, "semi colon");
+        var lastUriComponentToken = ConsumeIfOfType("identifier", TokenType.Ident);
+        ConsumeIfOfType("semi colon", TokenType.Semi);
         uri.Append(lastUriComponentToken.Value!);
 
         statement.SetUri(uri.ToString());

@@ -26,21 +26,21 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
         {
             var typeDeclaration = new GenericTypeDeclaration
             {
-                GenericIdentifier = ConsumeIfOfType(TokenType.Ident, "Type declaration").Value!
+                GenericIdentifier = ConsumeIfOfType("Type declaration", TokenType.Ident).Value!
             };
             ParseUpperBound(typeDeclaration);
             genericTypes.Add(typeDeclaration);
-            ConsumeIfOfType(TokenType.Comma, "comma");
+            ConsumeIfOfType("comma", TokenType.Comma);
         }
 
         var finalTypeDeclaration = new GenericTypeDeclaration
         {
-            GenericIdentifier = ConsumeIfOfType(TokenType.Ident, "Type declaration").Value!
+            GenericIdentifier = ConsumeIfOfType("Type declaration", TokenType.Ident).Value!
         };
         ParseUpperBound(finalTypeDeclaration);
         genericTypes.Add(finalTypeDeclaration);
         
-        ConsumeIfOfType(TokenType.CloseChevron, "Closing chevron");
+        ConsumeIfOfType("Closing chevron", TokenType.CloseChevron);
         funcOrClass.SetGenericTypes(genericTypes);
     }
 
@@ -49,7 +49,7 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
         var typeParser = new TypeParser(tokens, filePosition);
         if (!CheckTokenType(TokenType.Extends)) return;
         
-        ConsumeIfOfType(TokenType.Extends, "");
+        ConsumeIfOfType("", TokenType.Extends);
         typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());
         while (CheckTokenType(TokenType.BitAnd))
         {

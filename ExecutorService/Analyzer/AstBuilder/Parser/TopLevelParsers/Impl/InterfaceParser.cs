@@ -31,9 +31,9 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition) :
 
         nodeInterface.Modifiers = ParseModifiers(legalModifiers);
 
-        ConsumeIfOfType(TokenType.Interface, "interface");
+        ConsumeIfOfType("interface", TokenType.Interface);
         
-        nodeInterface.Identifier = ConsumeIfOfType(TokenType.Ident, "interface name");
+        nodeInterface.Identifier = ConsumeIfOfType("interface name", TokenType.Ident);
         
         ParseGenericDeclaration(nodeInterface);
         
@@ -48,13 +48,13 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition) :
         var interfaceScope = new AstNodeTypeScope<AstNodeInterface>()
         {
             OwnerMember = astNodeInterface,
-            ScopeBeginOffset = ConsumeIfOfType(TokenType.OpenCurly, "'{'").FilePos,
+            ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos,
         };
         while (!CheckTokenType(TokenType.CloseCurly))
         {
             interfaceScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition).ParseTypeMember(astNodeInterface));
         }
-        interfaceScope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos;
+        interfaceScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
         return interfaceScope;
     }
     
@@ -65,7 +65,7 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition) :
         while (PeekToken(1) != null && PeekToken(1)!.Type != TokenType.OpenCurly)
         {
             interfase.Extends.Add(ParseComplexTypDeclaration());
-            ConsumeIfOfType(TokenType.Comma, ",");
+            ConsumeIfOfType(",", TokenType.Comma);
         }
         interfase.Extends.Add(ParseComplexTypDeclaration());
     }

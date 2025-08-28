@@ -16,6 +16,14 @@ public enum UnaryOperator
 {
     Increment, Decrement, Tilde, Negation, Plus, Minus
 }
+
+public enum LiteralType
+{
+    Long, Int, Float, Double, Char, String, Boolean, Array, Ident
+}
+
+
+
 public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : ParserCore(tokens, filePosition), IExpressionParser
 {
     private readonly Dictionary<TokenType, int> _operatorPrecedences = new()
@@ -40,7 +48,7 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
         [TokenType.LogOr] = 1,
     };
 
-    private NodeTerm ParseTerm()
+    public NodeTerm ParseTerm()
     {
         if (PeekToken() == null) throw new JavaSyntaxException("");
         var nodeTerm = new NodeTerm();
@@ -58,13 +66,17 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
                 ConsumeToken(); // consume '['
                 var arrIndex = ParseExpr();
                 nodeTerm = new NodeTerm { Val = new NodeTermArrayReference { ArrIndex = arrIndex, ArrReference = variableIdentifier } };
-                ConsumeIfOfType(TokenType.CloseBrace, "]"); 
+                ConsumeIfOfType("]", TokenType.CloseBrace); 
             }
             else
             {
                 nodeTerm = new NodeTerm { Val = new NodeTermIdent { Identifier = variableIdentifier } };
             }
             nodeTerm = CheckPostfix(nodeTerm);
+        }
+        else if (CheckTokenType(TokenType.OpenCurly))
+        {
+            nodeTerm = new NodeTerm { Val = new NodeTermLit { TermLit = ParseArrayLiteral() } };
         }
         else
         {
@@ -87,9 +99,9 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
 
     private NodeTermParen ParseBinExpr()
     {
-        ConsumeIfOfType(TokenType.OpenParen, "unexpected token");
+        ConsumeIfOfType("unexpected token", TokenType.OpenParen);
         var nodeExpr = ParseExpr();
-        ConsumeIfOfType(TokenType.CloseParen, "Unclosed (");
+        ConsumeIfOfType("Unclosed (", TokenType.CloseParen);
         return new NodeTermParen
         {
             Expr = nodeExpr
@@ -106,11 +118,12 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
             var op = MapTokensToBinaryOperators(curToken);
 
             if (op == null) return lhs;
-            ConsumeToken();
 
             var currentPrecedence = _operatorPrecedences[curToken.Type];
             if (currentPrecedence < minPrecedence) break;
             var nextMinPrecedence = currentPrecedence + 1;
+            
+            ConsumeToken(); // consume operator token
 
             var rhs = ParseExpr(nextMinPrecedence);
             var binExpr = new NodeBinExpr
@@ -136,6 +149,39 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
         return term;
     }
 
+
+    private NodeTermArrayLiteral ParseArrayLiteral()
+    {
+        ConsumeIfOfType("open curly brace", TokenType.OpenCurly); // consume opening '{'
+        var arrayLiteral = new NodeTermArrayLiteral
+        {
+            ArrayType = LiteralType.Ident
+        };
+        if (PeekToken() == null) throw new JavaSyntaxException("expected tokens");
+        var inferredType = TokenType.Ident;
+        while (PeekToken() != null && CheckTokenType(TokenType.Comma, 1))
+        {
+            /*
+             *  Early type checking for literals.
+             *  Find first non Identifier literal (as an identifier can be a variable which we cannot at this point type check)
+             *  and set it as expected type
+             */
+            var curToken = PeekToken()!;
+            var tokenLiteralType = MapTokenTypeToLiteralType(curToken.Type);
+            if (inferredType == TokenType.Ident && tokenLiteralType != null && tokenLiteralType != LiteralType.Ident)
+            {
+                inferredType = PeekToken()!.Type;
+            }
+            arrayLiteral.ArrayMembers.Add(ConsumeIfOfType($"\nType mismatch.\n\texpected: {inferredType}\n\tgot:\t{PeekToken()!.Type}", TokenType.Ident, inferredType));
+            ConsumeIfOfType("expected ','", TokenType.Comma);
+        }
+        arrayLiteral.ArrayMembers.Add(ConsumeIfOfType($"\nType mismatch.\n\texpected: {inferredType}\n\tgot:\t{PeekToken()!.Type}", TokenType.Ident, inferredType));
+        ConsumeIfOfType("expected '}'", TokenType.CloseCurly);
+
+        arrayLiteral.ArrayType = (LiteralType) MapTokenTypeToLiteralType(inferredType)!; 
+        
+        return arrayLiteral;
+    }
 
     private NodeTerm CheckUnaryPreTermParse()
     {
@@ -171,12 +217,12 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
 
     private NodeTerm CreateWrappedUnaryExpression(UnaryOperator op) // shorthand for operator which is a restricted keyword. Stating the obvious I guess
     {
-            return new NodeTerm {Val = new NodeTermParen {Expr = new NodeExpr {Expr = new NodeUnaryExpr { Rhs = new NodeExpr {Expr = new NodeTerm { Val = new NodeTermParen {Expr = ParseExpr() } } }, Operator = op } } } };
+        return new NodeTerm {Val = new NodeTermParen {Expr = new NodeExpr {Expr = new NodeUnaryExpr { Rhs = new NodeExpr {Expr = new NodeTerm { Val = new NodeTermParen {Expr = ParseExpr() } } }, Operator = op } } } };
     }
 
     private NodeTerm CreateWrappedPostfixExpression(NodeTerm term, BinaryOperator op)
     {
-        return new NodeTerm {Val =  new NodeTermParen { Expr = new NodeExpr { Expr = new NodeBinExpr { Lhs = new NodeExpr {Expr = term}, Operator = BinaryOperator.Minus, Rhs = new NodeExpr {Expr = new NodeTerm {Val = new NodeTermLit { TermLit = new Token(TokenType.IntLit, "1") } } } } } }};
+        return new NodeTerm {Val =  new NodeTermParen { Expr = new NodeExpr { Expr = new NodeBinExpr { Lhs = new NodeExpr {Expr = term}, Operator = op, Rhs = new NodeExpr {Expr = new NodeTerm {Val = new NodeTermLit { TermLit = new Token(TokenType.IntLit, "1") } } } } } }};
     }
     
     private static BinaryOperator? MapTokensToBinaryOperators(Token token)
@@ -204,6 +250,23 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
             _ => null,
         };
     }
+
+    private static LiteralType? MapTokenTypeToLiteralType(TokenType token)
+    {
+        return token switch
+        {
+            TokenType.LongLit => LiteralType.Long,
+            TokenType.IntLit => LiteralType.Int,
+            TokenType.FloatLit => LiteralType.Float,
+            TokenType.DoubleLit => LiteralType.Double,
+            TokenType.CharLit => LiteralType.Char,
+            TokenType.StringLit => LiteralType.String,
+            TokenType.BooleanLit => LiteralType.Boolean,
+            TokenType.OpenBrace => LiteralType.Array,
+            TokenType.Ident => LiteralType.Ident,
+            _ => null,
+        };
+    }
 }
 
 
@@ -226,7 +289,13 @@ public class NodeTermIdent
 }
 public class NodeTermLit
 {
-    public Token? TermLit { get;set; }
+    public OneOf<Token, NodeTermArrayLiteral>? TermLit { get; set; }
+}
+
+public class NodeTermArrayLiteral
+{
+    public LiteralType ArrayType { get; set; }
+    public List<Token> ArrayMembers { get; set; } = [];
 }
 
 public class NodeTermParen
@@ -239,6 +308,8 @@ public class NodeTermArrayReference
     public Token? ArrReference { get; set; }
     public NodeExpr? ArrIndex { get; set; }
 }
+
+
 
 public class NodeTerm
 {

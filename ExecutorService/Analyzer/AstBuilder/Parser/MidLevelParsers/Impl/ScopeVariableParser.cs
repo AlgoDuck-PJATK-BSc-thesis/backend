@@ -31,7 +31,7 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition) 
             _ => throw new ArgumentOutOfRangeException()
         };
         
-        scopedVar.Identifier = ConsumeIfOfType(TokenType.Ident, "ident");
+        scopedVar.Identifier = ConsumeIfOfType("ident", TokenType.Ident);
         if (CheckTokenType(TokenType.Assign))//TODO suboptimal
         {
             ConsumeToken();

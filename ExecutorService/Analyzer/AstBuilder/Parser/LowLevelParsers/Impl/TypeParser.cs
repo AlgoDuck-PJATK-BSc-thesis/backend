@@ -59,16 +59,16 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
 
         if (CheckTokenType(TokenType.Dot))
         {
-            ConsumeIfOfType(TokenType.Dot, ".");
-            ConsumeIfOfType(TokenType.Dot, ".");
-            ConsumeIfOfType(TokenType.Dot, ".");
+            ConsumeIfOfType(".", TokenType.Dot);
+            ConsumeIfOfType(".", TokenType.Dot);
+            ConsumeIfOfType(".", TokenType.Dot);
             arrayType.Dim = 1;
             arrayType.IsVarArgs = true;
             return arrayType;
         }
 
-        ConsumeIfOfType(TokenType.OpenBrace, "[");
-        ConsumeIfOfType(TokenType.CloseBrace, "]");
+        ConsumeIfOfType("[", TokenType.OpenBrace);
+        ConsumeIfOfType("]", TokenType.CloseBrace);
         var dim = 1;
         while (CheckTokenType(TokenType.OpenBrace) && CheckTokenType(TokenType.CloseBrace, 1))
         {
@@ -112,7 +112,7 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
     {
         var complexTypeDeclaration = new ComplexTypeDeclaration
         {
-            Identifier = ConsumeIfOfType(TokenType.Ident, "Type name").Value!
+            Identifier = ConsumeIfOfType("Type name", TokenType.Ident).Value!
         };
         if (!CheckTokenType(TokenType.OpenChevron)) return complexTypeDeclaration;
 
@@ -121,11 +121,11 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition) : ParserC
         while (CheckTokenType(TokenType.Comma, 1))
         {
             complexTypeDeclaration.GenericInitializations.Add(ParseGenericInitialization());
-            ConsumeIfOfType(TokenType.Comma, ",");
+            ConsumeIfOfType(",", TokenType.Comma);
         }
         complexTypeDeclaration.GenericInitializations.Add(ParseGenericInitialization());
         
-        ConsumeIfOfType(TokenType.CloseChevron, ">");
+        ConsumeIfOfType(">", TokenType.CloseChevron);
 
         return complexTypeDeclaration;
     }

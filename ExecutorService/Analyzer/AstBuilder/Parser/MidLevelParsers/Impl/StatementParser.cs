@@ -13,7 +13,7 @@ public class StatementParser(List<Token> tokens, FilePosition filePosition) : Pa
 
         AstNodeStatementScope scope = new()
         {
-            ScopeBeginOffset = ConsumeIfOfType(TokenType.OpenCurly, "'{'").FilePos //consume '{' token
+            ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos //consume '{' token
         };
 
         AstNodeStatement? scopedStatement;
@@ -22,7 +22,7 @@ public class StatementParser(List<Token> tokens, FilePosition filePosition) : Pa
             scope.ScopedStatements.Add(scopedStatement);
         }
         
-        scope.ScopeEndOffset = ConsumeIfOfType(TokenType.CloseCurly, "'}'").FilePos; //consume '}' token
+        scope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos; //consume '}' token
         
         return scope;
     }
