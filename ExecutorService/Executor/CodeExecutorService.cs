@@ -18,7 +18,7 @@ public class CodeExecutorService(
     ICompilationHandler compilationHandler
     ) : ICodeExecutorService
 {
-    private const string JavaGsonImport = "import com.google.gson.Gson;\n"; // TODO this is temporary, not the gson but the way it's imported
+    private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
     private ExecutorFileOperationHandler? _executorFileOperationHandler;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
@@ -77,40 +77,20 @@ public class CodeExecutorService(
         return await Execute(userSolutionData);
     }
 
-    private Task<CompileResultDto> CompileCode(UserSolutionData userSolutionData)
+    private Task CompileCode(UserSolutionData userSolutionData)
     {
-        var codeBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
-        var codeB64 = Convert.ToBase64String(codeBytes);
-        
-        return compilationHandler.CompileAsync(codeB64, userSolutionData.MainClassName);
+        return compilationHandler.CompileAsync(userSolutionData);
     }
 
     private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
-        var compilationTask = CompileCode(userSolutionData);
-        var fsCopyTask = ExecutorScriptHandler.CopyTemplateFs(userSolutionData);
-        
-        await Task.WhenAll(compilationTask, fsCopyTask);
-        
-        await ExecutorScriptHandler.PopulateCopyFs(userSolutionData, await compilationTask);
-        
-        return await DispatchExecutorVm(userSolutionData);
+        ExecutorScriptHandler.LaunchExecutor(userSolutionData);
+        await CompileCode(userSolutionData);
+        await ExecutorScriptHandler.SendExecutionData(userSolutionData);
+        return await _executorFileOperationHandler!.ParseVmOutput();
     }
-
-    private async Task<ExecuteResultDto> DispatchExecutorVm(UserSolutionData userSolutionData)
-    {
-        await ExecutorScriptHandler.ExecuteJava(userSolutionData);
-        
-        return new ExecuteResultDto
-        {
-            StdOutput = await _executorFileOperationHandler!.ReadExecutionStandardOut(),
-            TestResults = await _executorFileOperationHandler!.ReadTestingResults(),
-            ExecutionTime = await _executorFileOperationHandler!.ReadExecutionTime()
-        };
-    }
-
     
-
+    
     private static UserSolutionData CreateSolutionCodeData(IExecutionRequestBase executionRequest, ExecutionStyle executionStyle, string? exerciseId = null)
     {
         var codeBytes = Convert.FromBase64String(executionRequest.GetCodeB64());
@@ -120,13 +100,12 @@ public class CodeExecutorService(
 
         if (executionStyle == ExecutionStyle.Submission)
         {
-            code.Insert(0, JavaGsonImport);
+            code.Insert(0, JavaGsonImport); // TODO move this to fileOperationsHandler
         }
 
         return new UserSolutionData(executionRequest.GetLang(), code, exerciseId);
     }
     
-
     private async Task CheckLanguageSupported(string lang)
     {
         var supportedLanguages = await executorRepository.GetSupportedLanguagesAsync();

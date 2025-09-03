@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
-using ExecutorService.Executor._ExecutorUtils;
 using ExecutorService.Executor.Configs;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
@@ -14,109 +13,88 @@ namespace ExecutorService.Executor;
 
 public interface ICompilationHandler
 {
-    public Task<CompileResultDto> CompileAsync(string codeB64, string classname);
+    public Task CompileAsync(UserSolutionData userSolutionData);
 }
 
-public sealed class CompilationHandler : ICompilationHandler, IDisposable
+public class CompilerData
 {
-    private static readonly JsonSerializerOptions JsonSerializerConfiguration = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-    
-    private readonly Channel<CompileTask> _tasksToDispatch;
+    internal int Pid { get; set; }
+    internal int GuestCid { get; set; }
+    internal Guid CompilerId { get; set; }
+    internal DateTime CreatedAt { get; set; }
+    internal string Status { get; set; } = "NOMINAL";
+}
+
+public sealed class CompilationHandler : ICompilationHandler
+{
     private readonly ChannelWriter<CompileTask> _taskWriter;
     private readonly ChannelReader<CompileTask> _taskReader;
-    
-    private readonly Channel<int> _availableContainerPorts;
-    private readonly ChannelWriter<int> _portWriter;
-    private readonly ChannelReader<int> _portReader;
-    
-    private readonly HttpClient _client;
+
+    private readonly ChannelWriter<CompilerData> _compilerDataWriter;
+    private readonly ChannelReader<CompilerData> _compilerDataReader;
     
     public CompilationHandler()
     {
-        var config = YmlConfigReader.ReadExecutorYmlConfig();
-        
-        _client = new HttpClient();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        
-        _tasksToDispatch = Channel.CreateBounded<CompileTask>(new BoundedChannelOptions(1000)
+        var tasksToDispatch = Channel.CreateBounded<CompileTask>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.Wait,
         });
-        _taskWriter = _tasksToDispatch.Writer;
-        _taskReader = _tasksToDispatch.Reader;
+        _taskWriter = tasksToDispatch.Writer;
+        _taskReader = tasksToDispatch.Reader;
         
-        _availableContainerPorts = Channel.CreateUnbounded<int>();
-        _portWriter = _availableContainerPorts.Writer;
-        _portReader = _availableContainerPorts.Reader;
-
-        for (var i = 0; i < config.COMPILATION_HANDLER.BASE_COUNT; i++)
+        var availableCompilerChannel = Channel.CreateUnbounded<CompilerData>();
+        _compilerDataWriter = availableCompilerChannel.Writer;
+        _compilerDataReader = availableCompilerChannel.Reader;
+        
+        for (var i = 0; i < 1; i++)
         {
-            var containerPort = config.COMPILATION_HANDLER.BASE_PORT + i;
-            _portWriter.TryWrite(containerPort);
+            Task.Run(DispatchCompilationHandlers);
         }
 
-        for (var i = 0; i < config.COMPILATION_HANDLER.THREAD_COUNT; i++)
+        for (var i = 0; i < 1; i++)
         {
-            Task.Run(DispatchContainers);
+            var compilerData = DeployCompilerVmAsync(3 + i);
+
+            _compilerDataWriter.TryWrite(compilerData);
         }
     }
 
-    public async Task<CompileResultDto> CompileAsync(string codeB64, string classname)
+    public async Task CompileAsync(UserSolutionData userSolutionData)
     {
-        TaskCompletionSource<CompileResultDto> compileTask = new();
-        await _taskWriter.WriteAsync(new CompileTask(codeB64, classname, compileTask));
-        return await compileTask.Task;
+        var compileTask = new TaskCompletionSource();
+        await _taskWriter.WriteAsync(new CompileTask(userSolutionData, compileTask));
+        await compileTask.Task;
     }
 
-    private async Task DispatchContainers()
+    private async Task DispatchCompilationHandlers()
     {
         while (true)
         {
             var task = await GetCompilationTask();
-            var port = await GetAvailableContainerPort();
+            var chosenCompiler = await GetAvailableCompilerId();
 
-            var url = $"http://compiler{port}:5137/compile";
-            
-            try
+            var process = new Process
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                StartInfo = new ProcessStartInfo
                 {
-                    Content = new StringContent(
-                        JsonSerializer.Serialize(new CompileRequestDto(task.Code, task.ClassName)),
-                        Encoding.UTF8, "application/json")
-                };
-                var response = await _client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-
-                    var raw = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<CompileResultDto>(raw, JsonSerializerConfiguration);
-                    if (result == null)
+                    FileName = "/bin/bash",
+                    ArgumentList =
                     {
-                        throw new CompilationException("Something went wrong during compilation");
-                    }
-                    task.Tcs.SetResult(result);
+                        "/app/firecracker/send-compilation.sh",
+                        BuildWrappedRequestJson(task.UserSolutionData),
+                        chosenCompiler.CompilerId.ToString()
+                    },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                 }
-                else if(response.StatusCode == HttpStatusCode.BadRequest)
-                {
-                    var rawResponse = await response.Content.ReadAsStringAsync();
-                    var exceptionContents = new CompilationException(rawResponse);
-                    task.Tcs.SetException(exceptionContents);
-                }
-                else
-                {
-                    var exceptionContents = new UnknownCompilationException(":(");
-                    task.Tcs.SetException(exceptionContents);
-                }
-            }
-            catch (Exception ex)
-            {
-                task.Tcs.SetException(ex);
-            }
-            finally
-            {
-                _portWriter.TryWrite(port);
-            }
+            };
+            process.Start();
+            await process.WaitForExitAsync();
+
+            
+            task.Tcs.SetResult();
+            
+            _compilerDataWriter.TryWrite(chosenCompiler);
         }
     }
 
@@ -133,11 +111,11 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
 
-    private async Task<int> GetAvailableContainerPort()
+    private async Task<CompilerData> GetAvailableCompilerId()
     {
-        while (await _portReader.WaitToReadAsync())
+        while (await _compilerDataReader.WaitToReadAsync())
         {
-            if (_portReader.TryRead(out var task))
+            if (_compilerDataReader.TryRead(out var task))
             {
                 return task;
             } 
@@ -146,36 +124,31 @@ public sealed class CompilationHandler : ICompilationHandler, IDisposable
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
     
-    private static async Task DeployCompilerContainerAsync(int port) // made to allow dynamic runtime scaling
+    private static CompilerData DeployCompilerVmAsync(int guestCid) 
     {
-        var launchProcess = CreateLaunchProcess(port);
-        launchProcess.Start();
-        await launchProcess.WaitForExitAsync();
-    }
-    
-    private static Process CreateLaunchProcess(int port)
-    {
-        return  new Process
+        var compilerData = new CompilerData
+        {
+            CompilerId =  Guid.NewGuid(),
+            GuestCid = guestCid,
+            CreatedAt = DateTime.Now,
+        };
+        var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
-                Arguments = $"/app/app-scripts/deploy-compiler.sh {port}", 
-                RedirectStandardError = true,
-                CreateNoWindow = true
+                Arguments = $"/app/firecracker/launch-compiler.sh \"{compilerData.CompilerId}\" \"{compilerData.GuestCid}\""
             }
         };
+        process.Start();
+        return compilerData;
     }
 
-    public void Dispose()
+    private static string BuildWrappedRequestJson(UserSolutionData userSolutionData)
     {
-        Console.WriteLine("Shutting down compile cluster. Please wait...");
-        while (_portReader.TryRead(out var port))
-        {
-            var url = $"http://warden:7139/container/{port}";
-
-            var request = new HttpRequestMessage(HttpMethod.Delete, url);
-            _client.Send(request);
-        }
+        var plainTextBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
+        var userCodeB64 = Convert.ToBase64String(plainTextBytes);
+        return $"{{\"endpoint\":\"compile\",\"method\":\"POST\",\"content\":\"{{\\\"SrcCodeB64\\\":\\\"{userCodeB64}\\\",\\\"ClassName\\\":\\\"{userSolutionData.MainClassName}\\\",\\\"ExecutionId\\\":\\\"{userSolutionData.ExecutionId}\\\"}}\",\"ctype\":\"application/json\"}}";
+        
     }
 }

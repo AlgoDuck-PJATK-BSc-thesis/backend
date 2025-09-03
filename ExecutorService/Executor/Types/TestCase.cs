@@ -1,7 +1,6 @@
-using System.Text;
 using ExecutorService.Errors.Exceptions;
 
-namespace ExecutorService.Executor.Models;
+namespace ExecutorService.Executor.Types;
 
 public class TestCase(
     string id,

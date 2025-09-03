@@ -34,7 +34,6 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
 
         var filePos = filePosition.GetFilePos();
         filePosition.IncrementFilePos();
-        Console.WriteLine(tokens[filePos].Type);
         return tokens[filePos];
     }
     

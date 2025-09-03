@@ -1,4 +1,4 @@
-namespace ExecutorService.Executor._ExecutorUtils;
+namespace ExecutorService.Executor.Types;
 
 public class Template(string templateContents)
 {

@@ -1,57 +1,104 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
+using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Dtos;
-using ExecutorService.Executor.Models;
 using ExecutorService.Executor.Types;
+// ReSharper disable ReplaceSubstringWithRangeIndexer
 
 namespace ExecutorService.Executor;
 
 internal enum SigningType
 {
-    Time, PowerOff, Answer
+    Time, Answer
 }
 public class ExecutorFileOperationHandler(UserSolutionData userSolutionData)
 {
-    public static readonly string JavaGsonImport = "import com.google.gson.Gson;\n";
     private const string TestCaseIdStartFlag = "tc_id:";
+    private const string AnswerControlSymbol = "-answ:";
+    private const string TimeControlSymbol = "-time:";
     private const int UuidLength = 36;
+    private const int SigningKeyStringLen = UuidLength + 4; // "ctr-70fcae06-b1ac-453b-b0a0-57812ba86cf4". 4 chars for "ctr-" + uuid length
+    private static JsonSerializerOptions _serializerOptions = new(){PropertyNameCaseInsensitive = true};
 
-    public async Task<List<TestResultDto>> ReadTestingResults()
+
+    private async Task<VmOutput> ReadVmOutput()
     {
-        List<TestResultDto> parsedTestCases = [];
-        var testResultsRaw = await File.ReadAllTextAsync(GetTestResultLogFilePath(userSolutionData.ExecutionId));
-        if (string.IsNullOrEmpty(testResultsRaw)) return parsedTestCases;
-        var testResLines = testResultsRaw.ReplaceLineEndings().Trim().Split("\n");
-        foreach (var testResLine in testResLines)
+        string rawVmOutput;
+        try
         {
-            var testResLineSanitized = testResLine.Replace(GetExecutionSigningString(userSolutionData.SigningKey, SigningType.Answer), "");
-            var idStartIndex = testResLineSanitized.IndexOf(TestCaseIdStartFlag, StringComparison.Ordinal) + TestCaseIdStartFlag.Length;
-            var idEndIndex = idStartIndex + UuidLength;
-            var testCaseId = testResLineSanitized.Substring(idStartIndex, UuidLength);
-            var testCaseRes = testResLineSanitized[idEndIndex..].Trim() == "true";
-            parsedTestCases.Add(new TestResultDto
-            {
-                TestId = testCaseId,
-                IsTestPassed = testCaseRes
-            });
+            rawVmOutput = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-response.json");
+        }
+        catch (FileNotFoundException)
+        {
+            throw new ExecutionOutputNotFoundException();
+        }
+        
+        var vmOutput = JsonSerializer.Deserialize<VmOutput>(rawVmOutput, _serializerOptions);
+        if (vmOutput != null)
+        {
+            return vmOutput;
         }
 
-        return parsedTestCases;
-    }
-    
-    public async Task<int> ReadExecutionTime()
-    {
-        var executionTimeRaw = await File.ReadAllTextAsync(GetTimingLogFilePath(userSolutionData.ExecutionId));
-        var executionTimeSanitized = executionTimeRaw.Replace(GetExecutionSigningString(userSolutionData.SigningKey, SigningType.Time), "");
-        return int.Parse(executionTimeSanitized.Trim());
+        throw new ExecutionOutputNotFoundException();
+
     }
 
-    public async Task<string> ReadExecutionStandardOut()
+    internal async Task<ExecuteResultDto> ParseVmOutput()
     {
-        var readAllTextAsync = await File.ReadAllTextAsync(GetStdOutLogFilePath(userSolutionData.ExecutionId));
-        return readAllTextAsync;
+        var vmOutput = await ReadVmOutput();
+        var executeResultDto = new ExecuteResultDto
+        {
+            StdError = vmOutput.Err!,
+        };
+
+        var javaStdOut = new StringBuilder();
+        
+        foreach (var line in vmOutput.Out!.ReplaceLineEndings().Split(Environment.NewLine))
+        {
+            if (line.Contains($"ctr-{userSolutionData.SigningKey}"))
+            {
+                switch (line.Substring(SigningKeyStringLen, AnswerControlSymbol.Length))
+                {
+                    case "-answ:":
+                        executeResultDto.TestResults.Add(ParseTestCaseResult(line));
+                        break;
+                    case "-time:":
+                        executeResultDto.ExecutionTime = ParseTimingOutput(line);
+                        break;
+                    default:
+                        throw new MangledControlSymbolException();
+                }
+            }
+            else
+            {
+                javaStdOut.Append(line);
+            }
+        }
+
+        executeResultDto.StdOutput = javaStdOut.ToString();
+        return executeResultDto;
     }
     
+    private TestResultDto ParseTestCaseResult(string line)
+    {
+        var idStartIndex = line.IndexOf(TestCaseIdStartFlag, StringComparison.Ordinal) + TestCaseIdStartFlag.Length;
+        var testCaseId = line.Substring(idStartIndex, UuidLength);
+        var testResultRaw = line.Substring(idStartIndex + UuidLength);
+        var testResult = testResultRaw.Trim() == "true";
+        return new TestResultDto
+        {
+            IsTestPassed = testResult,
+            TestId = testCaseId,
+        };
+    }
+
+    private int ParseTimingOutput(string line)
+    {
+        var timeInMillis = line.Substring(line.IndexOf("-time:", StringComparison.Ordinal) + TimeControlSymbol.Length);
+        return int.Parse(timeInMillis.Trim());
+    }
+
     public void InsertTestCases(List<TestCase> testCases)
     {
         var gsonInstanceName = $"{GetHelperVariableNamePrefix()}_gson";
@@ -109,33 +156,12 @@ public class ExecutorFileOperationHandler(UserSolutionData userSolutionData)
         return $"long {variableName} = System.currentTimeMillis();\n";
     }
 
-    private static string GetStdOutLogFilePath(Guid executionId)
-    {
-        return $"/tmp/{executionId}-OUT-LOG.log";
-    }
-
-    private static string GetTimingLogFilePath(Guid executionId)
-    {
-        return $"/tmp/{executionId}-TIME-LOG.log";
-    }
-
-    private static string GetStdErrLogFilePath(Guid executionId)
-    {
-        return $"/tmp/{executionId}-ERR-LOG.log";
-    }
-
-    private static string GetTestResultLogFilePath(Guid executionId)
-    {
-        return $"/tmp/{executionId}-ANSW-LOG.log";
-    }
-
     private static string GetExecutionSigningString(Guid signingKey, SigningType signingType)
     {
         var signingTypeFlag = signingType switch
         {
-            SigningType.Answer => "ans",
+            SigningType.Answer => "answ",
             SigningType.Time => "time",
-            SigningType.PowerOff => "pof",
             _ => throw new ArgumentOutOfRangeException(nameof(signingType), signingType, null)
         };
         

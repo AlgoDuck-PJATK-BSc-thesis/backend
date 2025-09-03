@@ -35,7 +35,10 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 
 builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
-builder.Services.AddSingleton<ICompilationHandler, CompilationHandler>();
+
+// eager initialization
+var compilationHandler = new CompilationHandler();
+builder.Services.AddSingleton<ICompilationHandler>(compilationHandler);
 
 var app = builder.Build();
 

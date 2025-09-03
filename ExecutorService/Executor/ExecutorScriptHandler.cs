@@ -5,41 +5,25 @@ using ExecutorService.Executor.Types;
 
 namespace ExecutorService.Executor;
 
+public class VmOutput
+{
+    public string? Out { get; init; }
+    public string? Err { get; init; }
+}
+
 public static class ExecutorScriptHandler
 {
-    public static async Task CopyTemplateFs(UserSolutionData userSolutionData)
+    internal static void LaunchExecutor(UserSolutionData userSolutionData)
     {
-        var buildProcess = CreateBashExecutionProcess( "/app/fc-scripts/copy-template-fs.sh",
-            userSolutionData.MainClassName, userSolutionData.ExecutionId.ToString(), userSolutionData.SigningKey.ToString());
-        
-        buildProcess.Start();
-        await buildProcess.WaitForExitAsync();
-    }    
-    
-    public static async Task PopulateCopyFs(UserSolutionData userSolutionData, CompileResultDto userByteCode)
-    {
-        var bytecodeDirPath = $"/tmp/{userSolutionData.ExecutionId}/bytecode";
-        Directory.CreateDirectory(bytecodeDirPath);
-        foreach (var generatedClassFile in userByteCode.GeneratedClassFiles)
-        {
-            var fileBytes = Convert.FromBase64String(generatedClassFile.Value);
-            await File.WriteAllBytesAsync($"{bytecodeDirPath}/{generatedClassFile.Key}", fileBytes);
-        }
-
-        var buildProcess = CreateBashExecutionProcess("/app/fc-scripts/populate-execution-fs.sh",
-            userSolutionData.MainClassName, userSolutionData.ExecutionId.ToString());
-        
-        buildProcess.Start();
-        await buildProcess.WaitForExitAsync();
-        Directory.Delete(bytecodeDirPath);
+        var launchProcess = CreateBashExecutionProcess("/app/firecracker/launch-executor.sh", userSolutionData.ExecutionId.ToString(), "10");
+        launchProcess.Start();
     }
 
-    public static async Task ExecuteJava(UserSolutionData userSolutionData)
+    internal static async Task SendExecutionData(UserSolutionData userSolutionData)
     {
-        var execProcess = CreateBashExecutionProcess("/app/fc-scripts/java-exec.sh",
-            userSolutionData.ExecutionId.ToString(), userSolutionData.SigningKey.ToString());
-        execProcess.Start();
-        await execProcess.WaitForExitAsync();
+        var sendProcess = CreateBashExecutionProcess("/app/firecracker/send-execution.sh", userSolutionData.ExecutionId.ToString());
+        sendProcess.Start();
+        await sendProcess.WaitForExitAsync();
     }
     
     private static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)

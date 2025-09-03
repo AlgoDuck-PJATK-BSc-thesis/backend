@@ -35,32 +35,30 @@ RUN apt-get update && \
     libvirt-daemon-system \
     libvirt-clients \
     netcat-openbsd \
+    procps \
+    uuid-runtime \
+    jq \
+    yq \
+    socat \
     bash && \
     apt-get clean
   
 RUN wget https://github.com/firecracker-microvm/firecracker/releases/download/v1.2.0/firecracker-v1.2.0-x86_64.tgz && \
     tar -xvf firecracker-v1.2.0-x86_64.tgz && \
     mv release-v1.2.0-x86_64/firecracker-v1.2.0-x86_64 /usr/local/bin/ && \
-    mkdir -p /app/fc-scripts && \
-    wget https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux.bin -O /app/fc-scripts/vmlinux.bin && \
+    mkdir -p /app/firecracker && \
+    wget https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux.bin -O /app/firecracker/vmlinux.bin && \
     rm -rf firecracker-v1.2.0-x86_64.tgz && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf release-v1.2.0-x86_64 
-
-RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
-        chmod +x /usr/bin/yq
+    rm -rf release-v1.2.0-x86_64 && \
+    ln -s /usr/local/bin/firecracker-v1.2.0-x86_64 /usr/local/bin/firecracker && \
+    export PATH="/usr/local/bin/firecracker:$PATH"
 
 COPY --from=publish /app/publish .
-COPY ExecutorService/Executor/fc-scripts fc-scripts
-COPY ExecutorService/Executor/app-scripts app-scripts
-COPY ExecutorService/entrypoint.sh .
+COPY ExecutorService/Executor/VmScripts firecracker
+COPY ExecutorService/VmImages firecracker
 COPY ExecutorService/ExecutorConfig.yml .
     
+RUN find firecracker -name "*.sh" -execdir chmod u+x {} +
 
-RUN    echo '/usr/local/bin/firecracker-v1.2.0-x86_64' >> ~/.bashrc && \
-    chmod +x fc-scripts/java-exec.sh  && \
-    chmod +x fc-scripts/copy-template-fs.sh && \
-    chmod +x fc-scripts/populate-execution-fs.sh && \
-    chmod +x /app/entrypoint.sh
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["dotnet", "ExecutorService.dll"]

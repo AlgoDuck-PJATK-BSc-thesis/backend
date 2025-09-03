@@ -29,6 +29,7 @@ using WebApplication1.Modules.ProblemModule.Services;
 using WebApplication1.Modules.UserModule.Interfaces;
 using WebApplication1.Modules.UserModule.Services;
 using WebApplication1.Shared.Configs;
+using WebApplication1.Shared.Utilities;
 
 Env.Load(); 
 
@@ -132,6 +133,7 @@ builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<IProblemService, ProblemService>();
 builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
+builder.Services.AddScoped<DataSeedingService>();
 
 builder.Services.AddCors(options =>
 {
@@ -173,6 +175,16 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    context.Database.Migrate();
+    
+    var seedingService = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
+    await seedingService.SeedDataAsync();
+}
+
 
 await SeedRoles(app.Services);
 await SeedUserRoles(app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>());

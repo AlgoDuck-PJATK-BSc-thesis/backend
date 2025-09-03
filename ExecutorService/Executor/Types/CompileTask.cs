@@ -1,10 +1,7 @@
-using ExecutorService.Executor.Dtos;
-
 namespace ExecutorService.Executor.Types;
 
-public class CompileTask(string code, string classname, TaskCompletionSource<CompileResultDto> tcs)
+public class CompileTask(UserSolutionData userSolutionData, TaskCompletionSource tcs)
 {
-    public string Code => code;
-    public string ClassName => classname;
-    public TaskCompletionSource<CompileResultDto> Tcs => tcs;
+    internal UserSolutionData UserSolutionData => userSolutionData;
+    internal TaskCompletionSource Tcs => tcs;
 }

@@ -23,7 +23,7 @@ namespace WebApplication1.Modules.ItemModule.Models
 
         [ForeignKey("Rarity")]
         public Guid RarityId { get; set; }
-        public required Rarity Rarity { get; set; }
+        public Rarity? Rarity { get; set; }
         
         public ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
     }

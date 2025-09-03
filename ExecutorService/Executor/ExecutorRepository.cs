@@ -1,12 +1,10 @@
 using System.Net;
 using System.Text;
 using Dapper;
-using ExecutorService.Executor._ExecutorUtils;
-
 using Amazon.S3;
 using Amazon.S3.Model;
 using ExecutorService.Executor.Configs;
-using ExecutorService.Executor.Models;
+using ExecutorService.Executor.Types;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
