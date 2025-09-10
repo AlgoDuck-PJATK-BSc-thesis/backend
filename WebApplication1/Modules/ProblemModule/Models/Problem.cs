@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using DuelNamespace = WebApplication1.Modules.DuelModule.Models;
+using WebApplication1.Modules.DuelModule.Models;
 using ContestNamespace = WebApplication1.Modules.ContestModule.Models;
 
 namespace WebApplication1.Modules.ProblemModule.Models
@@ -10,30 +9,30 @@ namespace WebApplication1.Modules.ProblemModule.Models
     {
         [Key]
         public Guid ProblemId { get; set; } = Guid.NewGuid();
+        
+        [Required, MaxLength(256)] 
+        public string ProblemTitle { get; set; } = string.Empty;
 
-        [Required, MaxLength(256)]
-        public required string ProblemTitle { get; set; }
-
-        [Required]
-        public required string Description { get; set; }
+        [Required, MaxLength(1024)]
+        public string Description { get; set; }= string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [ForeignKey("Category")]
         public Guid CategoryId { get; set; }
-        public required Category Category { get; set; }
+        public Category? Category { get; set; }
 
         [ForeignKey("Difficulty")]
         public Guid DifficultyId { get; set; }
-        public required Difficulty Difficulty { get; set; }
+        public Difficulty? Difficulty { get; set; }
 
         [ForeignKey("ProblemType")]
         public Guid ProblemTypeId { get; set; }
-        public required ProblemType ProblemType { get; set; }
+        public ProblemType? ProblemType { get; set; }
 
         [ForeignKey("Duel")]
         public Guid? DuelId { get; set; }
-        public required DuelNamespace.Duel Duel { get; set; }
+        public Duel? Duel { get; set; }
 
         public ICollection<ProblemTemplate> ProblemTemplates { get; set; } = new List<ProblemTemplate>();
         public ICollection<ContestNamespace.ContestProblem> ContestProblems { get; set; } = new List<ContestNamespace.ContestProblem>();

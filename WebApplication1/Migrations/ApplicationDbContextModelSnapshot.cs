@@ -189,6 +189,9 @@ namespace WebApplication1.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -201,6 +204,8 @@ namespace WebApplication1.Migrations
 
                     b.HasKey("CohortId");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.ToTable("Cohorts");
                 });
 
@@ -208,21 +213,26 @@ namespace WebApplication1.Migrations
                 {
                     b.Property<Guid>("MessageId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
 
                     b.Property<Guid>("CohortId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("cohort_id");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("content");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
                     b.HasKey("MessageId");
 
@@ -230,7 +240,7 @@ namespace WebApplication1.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Messages");
+                    b.ToTable("message", (string)null);
                 });
 
             modelBuilder.Entity("WebApplication1.Modules.CohortModule.Models.Notification", b =>
@@ -247,7 +257,8 @@ namespace WebApplication1.Migrations
 
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.HasKey("NotificationId");
 
@@ -506,7 +517,8 @@ namespace WebApplication1.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<Guid>("DifficultyId")
                         .HasColumnType("uuid");
@@ -828,6 +840,17 @@ namespace WebApplication1.Migrations
                         .HasConstraintName("fk_session_user");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WebApplication1.Modules.CohortModule.Models.Cohort", b =>
+                {
+                    b.HasOne("WebApplication1.Modules.UserModule.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("WebApplication1.Modules.CohortModule.Models.Message", b =>

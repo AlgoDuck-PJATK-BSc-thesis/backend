@@ -1,0 +1,3 @@
+### Get my cohort
+GET http://localhost:5082/api/cohorts/mine
+Authorization: Bearer {{access_token}}

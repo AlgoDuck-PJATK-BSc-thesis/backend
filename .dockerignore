@@ -1,4 +1,6 @@
-﻿**/.dockerignore
+﻿VmBuild/
+
+**/.dockerignore
 **/.env
 **/.git
 **/.gitignore

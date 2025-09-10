@@ -22,12 +22,17 @@ public class TokenService : ITokenService
 
     public string CreateAccessToken(ApplicationUser user)
     {
+        if (user.UserRole == null)
+        {
+            throw new InvalidTokenException("User role is not set for the user.");
+        }
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.UserName ?? ""),
             new Claim(ClaimTypes.Email, user.Email ?? ""),
-            new Claim(ClaimTypes.Role, user.UserRole?.Name ?? "user")
+            new Claim(ClaimTypes.Role, user.UserRole.Name)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
@@ -38,7 +43,8 @@ public class TokenService : ITokenService
             audience: _jwtSettings.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes),
-            signingCredentials: creds);
+            signingCredentials: creds
+        );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
@@ -63,7 +69,7 @@ public class TokenService : ITokenService
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        
+
         try
         {
             var principal = tokenHandler.ValidateToken(token, tokenValidationParams, out _);

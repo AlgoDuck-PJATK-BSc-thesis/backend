@@ -1,35 +1,127 @@
-POST http://localhost:5001/api/auth/register
+### Register new user
+POST http://localhost:5082/api/auth/register
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "email": "testuser@example.com",
-  "password": "SecureP@ssw0rd",
-  "cohortId": "b83a0fa7-6a6a-4f0e-bc80-61b6a7a75231"
-}
-
-###
-
-POST http://localhost:5001/api/auth/login
-Content-Type: application/json
-
-{
-  "username": "testuser",
+  "username": "testuser4",
+  "email": "testuser4@example.com",
   "password": "SecureP@ssw0rd"
 }
 
 ###
 
-POST http://localhost:5001/api/auth/refresh
+### Login
+POST http://localhost:5082/api/auth/login
 Content-Type: application/json
 
 {
-  "refreshToken": "{your_refresh_token_here}"
+  "username": "testuser4",
+  "password": "SecureP@ssw0rd"
 }
 
 ###
 
-POST http://localhost:5001/api/auth/logout
-Authorization: Bearer {your_access_token_here}
+### Refresh token
+POST http://localhost:5082/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh_token}}"
+}
 
 ###
+
+### Logout
+POST http://localhost:5082/api/auth/logout
+Authorization: Bearer {{access_token}}
+
+###
+
+### Get all cohorts
+GET http://localhost:5082/api/cohorts
+Authorization: Bearer {{access_token}}
+
+###
+
+### Create new cohort
+POST http://localhost:5082/api/cohorts
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Test Cohort",
+  "imageUrl": "https://example.com/image.png"
+}
+
+###
+
+### Get cohort by ID
+GET http://localhost:5082/api/cohorts/{{cohortId}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### Update cohort
+PUT http://localhost:5082/api/cohorts/{{cohortId}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Cohort Name",
+  "imageUrl": "https://example.com/updated-image.png"
+}
+
+###
+
+### Delete cohort
+DELETE http://localhost:5082/api/cohorts/{{cohortId}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### Add user to cohort
+POST http://localhost:5082/api/cohorts/{{cohortId}}/users/{{userId}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### Remove user from cohort
+DELETE http://localhost:5082/api/cohorts/{{cohortId}}/users/{{userId}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### Get cohort users
+GET http://localhost:5082/api/cohorts/{{cohortId}}/users
+Authorization: Bearer {{access_token}}
+
+###
+
+### Get chat messages
+GET http://localhost:5082/api/cohorts/{{cohortId}}/chat/messages
+Authorization: Bearer {{access_token}}
+
+###
+
+### Get leaderboard
+GET http://localhost:5082/api/cohorts/{{cohortId}}/leaderboard
+Authorization: Bearer {{access_token}}
+
+###
+
+### Get current user profile
+GET http://localhost:5082/api/user/me
+Authorization: Bearer {{access_token}}
+
+###
+
+### Update user profile
+PUT http://localhost:5082/api/user/me
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "username": "updateduser",
+  "email": "updateduser@example.com",
+  "profilePicture": "https://example.com/newpic.png"
+}

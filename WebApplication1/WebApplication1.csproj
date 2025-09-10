@@ -8,46 +8,53 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AWSSDK.S3" Version="4.0.6.6" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.Json" Version="10.0.0-preview.4.25258.110" />
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Modules\AuthModule\Controllers\" />
-      <Folder Include="Modules\AuthModule\Services\" />
-      <Folder Include="Modules\CohortModule\Controllers\" />
-      <Folder Include="Modules\CohortModule\DTOs\" />
-      <Folder Include="Modules\CohortModule\Repositories\" />
-      <Folder Include="Modules\CohortModule\Services\" />
-      <Folder Include="Modules\DuelModule\Controllers\" />
-      <Folder Include="Modules\DuelModule\DTOs\" />
-      <Folder Include="Modules\DuelModule\Repositories\" />
-      <Folder Include="Modules\DuelModule\Services\" />
-      <Folder Include="Modules\ProblemModule\Controllers\" />
-      <Folder Include="Modules\ProblemModule\DTOs\" />
-      <Folder Include="Modules\ProblemModule\Repositories\" />
-      <Folder Include="Modules\ProblemModule\Services\" />
-      <Folder Include="Modules\ItemModule\Controllers\" />
-      <Folder Include="Modules\ItemModule\DTOs\" />
-      <Folder Include="Modules\ItemModule\Repositories\" />
-      <Folder Include="Modules\ItemModule\Services\" />
-      <Folder Include="Modules\UserModule\Controllers\" />
-      <Folder Include="Modules\UserModule\DTOs\" />
-      <Folder Include="Modules\UserModule\Services\" />
+        <Folder Include="Modules\AuthModule\Controllers\" />
+        <Folder Include="Modules\AuthModule\Services\" />
+        <Folder Include="Modules\ContestModule\Controllers\" />
+        <Folder Include="Modules\ContestModule\DTOs\" />
+        <Folder Include="Modules\ContestModule\Repositories\" />
+        <Folder Include="Modules\ContestModule\Services\" />
+        <Folder Include="Modules\CohortModule\Controllers\" />
+        <Folder Include="Modules\CohortModule\DTOs\" />
+        <Folder Include="Modules\CohortModule\Repositories\" />
+        <Folder Include="Modules\CohortModule\Services\" />
+        <Folder Include="Modules\DuelModule\Controllers\" />
+        <Folder Include="Modules\DuelModule\DTOs\" />
+        <Folder Include="Modules\DuelModule\Repositories\" />
+        <Folder Include="Modules\DuelModule\Services\" />
+        <Folder Include="Modules\ProblemModule\Controllers\" />
+        <Folder Include="Modules\ProblemModule\DTOs\" />
+        <Folder Include="Modules\ProblemModule\Repositories\" />
+        <Folder Include="Modules\ProblemModule\Services\" />
+        <Folder Include="Modules\ItemModule\Controllers\" />
+        <Folder Include="Modules\ItemModule\DTOs\" />
+        <Folder Include="Modules\ItemModule\Repositories\" />
+        <Folder Include="Modules\ItemModule\Services\" />
+        <Folder Include="Modules\UserModule\Controllers\" />
+        <Folder Include="Modules\UserModule\DTOs\" />
+        <Folder Include="Modules\UserModule\Services\" />
     </ItemGroup>
 
 </Project>

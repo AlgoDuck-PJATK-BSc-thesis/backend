@@ -1,0 +1,3 @@
+### Get all cohorts (admin only)
+GET http://localhost:5082/api/cohorts
+Authorization: Bearer {{admin_token}}

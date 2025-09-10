@@ -1,0 +1,3 @@
+### Get leaderboard for cohort
+GET http://localhost:5082/api/cohorts/{{cohort_id}}/leaderboard
+Authorization: Bearer {{access_token}}

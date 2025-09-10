@@ -1,0 +1,3 @@
+### Delete cohort (admin only)
+DELETE http://localhost:5082/api/cohorts/{{cohortId}}
+Authorization: Bearer {{admin_token}}
