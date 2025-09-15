@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.S3" Version="4.0.6.6" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.Json" Version="10.0.0-preview.4.25258.110" />
+        <PackageReference Include="DotNetEnv" Version="3.1.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Modules\Auth\Controllers\" />
+        <Folder Include="Modules\Auth\Services\" />
+        <Folder Include="Modules\Contest\Controllers\" />
+        <Folder Include="Modules\Contest\DTOs\" />
+        <Folder Include="Modules\Contest\Repositories\" />
+        <Folder Include="Modules\Contest\Services\" />
+        <Folder Include="Modules\Duel\Controllers\" />
+        <Folder Include="Modules\Duel\DTOs\" />
+        <Folder Include="Modules\Duel\Repositories\" />
+        <Folder Include="Modules\Duel\Services\" />
+        <Folder Include="Modules\Problem\Controllers\" />
+        <Folder Include="Modules\Problem\DTOs\" />
+        <Folder Include="Modules\Problem\Repositories\" />
+        <Folder Include="Modules\Problem\Services\" />
+        <Folder Include="Modules\Item\Controllers\" />
+        <Folder Include="Modules\Item\DTOs\" />
+        <Folder Include="Modules\Item\Repositories\" />
+        <Folder Include="Modules\Item\Services\" />
+        <Folder Include="Modules\User\Controllers\" />
+        <Folder Include="Modules\User\DTOs\" />
+        <Folder Include="Modules\User\Services\" />
+    </ItemGroup>
+
+</Project>

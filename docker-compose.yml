@@ -21,11 +21,11 @@ services:
     group_add:
       - ${KVM_GID}
     
-  webapplication1:
-    image: webapplication1
+  algoduck:
+    image: algoduck
     build:
       context: .
-      dockerfile: WebApplication1/Dockerfile
+      dockerfile: AlgoDuck/Dockerfile
       args:
         BUILD_CONFIGURATION: ${BUILD_CONFIGURATION}
     ports:
