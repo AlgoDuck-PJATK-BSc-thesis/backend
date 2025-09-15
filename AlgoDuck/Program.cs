@@ -5,7 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Amazon;
 using Amazon.S3;
-using DotNetEnv;
 using Microsoft.Extensions.Options;
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Models;
@@ -26,35 +25,27 @@ using AlgoDuck.Shared.Configs;
 using AlgoDuck.Shared.Utilities;
 using Microsoft.OpenApi.Models;
 
-Env.Load(); 
-
 var builder = WebApplication.CreateBuilder(args);
 
-var jwtSettings = new JwtSettings
+if (builder.Environment.IsDevelopment())
 {
-    Key = Environment.GetEnvironmentVariable("JWT_KEY"),
-    Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER"),
-    Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
-    DurationInMinutes = double.Parse(Environment.GetEnvironmentVariable("JWT_EXP_MINUTES") ?? "120")
-};
+    builder.Configuration.AddUserSecrets<Program>(optional: true);
+}
 
-builder.Services.Configure<JwtSettings>(opts =>
-{
-    opts.Key = jwtSettings.Key;
-    opts.Issuer = jwtSettings.Issuer;
-    opts.Audience = jwtSettings.Audience;
-    opts.DurationInMinutes = jwtSettings.DurationInMinutes;
-});
+builder.Services
+    .AddOptions<JwtSettings>()
+    .Bind(builder.Configuration.GetSection("Jwt"))
+    .Validate(s => !string.IsNullOrWhiteSpace(s.Key))
+    .Validate(s => !string.IsNullOrWhiteSpace(s.Issuer))
+    .Validate(s => !string.IsNullOrWhiteSpace(s.Audience))
+    .Validate(s => s.DurationInMinutes > 0)
+    .ValidateOnStart();
 
-var connectionString =
-    $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
-    $"Port={Environment.GetEnvironmentVariable("DB_PORT")};" +
-    $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
-    $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
-    $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
+builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Settings"));
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
@@ -69,15 +60,20 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var jwtSection = builder.Configuration.GetSection("Jwt");
+        var key = jwtSection["Key"]!;
+        var issuer = jwtSection["Issuer"]!;
+        var audience = jwtSection["Audience"]!;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
         };
 
         options.Events = new JwtBearerEvents
@@ -96,22 +92,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Settings"));
 builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
-    var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-
-    var credentials = new Amazon.Runtime.BasicAWSCredentials(
-        Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
-        Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
-    );
-
-    var config = new AmazonS3Config
-    {
-        RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region)
-    };
-
-    return new AmazonS3Client(credentials, config);
+    var s3 = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3.Region) };
+    return new AmazonS3Client(config);
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -149,17 +134,10 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "AlgoDuck API",
-        Version = "v1"
-    });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AlgoDuck API", Version = "v1" });
 });
 
-builder.Services.AddSignalR(options =>
-{
-    options.EnableDetailedErrors = true;
-});
+builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; });
 
 var app = builder.Build();
 
@@ -182,11 +160,9 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     context.Database.Migrate();
-    
     var seedingService = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
     await seedingService.SeedDataAsync();
 }
-
 
 await SeedRoles(app.Services);
 await SeedUserRoles(app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>());
@@ -198,8 +174,7 @@ async Task SeedRoles(IServiceProvider serviceProvider)
     using var scope = serviceProvider.CreateScope();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-    string[] roles = { "admin", "user" };
-
+    string[] roles = ["admin", "user"];
     foreach (var role in roles)
     {
         if (!await roleManager.RoleExistsAsync(role))
@@ -213,21 +188,11 @@ async Task SeedUserRoles(ApplicationDbContext db)
 {
     if (!await db.UserRoles.AnyAsync(r => r.Name == "user"))
     {
-        db.UserRoles.Add(new UserRole
-        {
-            UserRoleId = Guid.NewGuid(),
-            Name = "user"
-        });
+        db.UserRoles.Add(new UserRole { UserRoleId = Guid.NewGuid(), Name = "user" });
     }
-
     if (!await db.UserRoles.AnyAsync(r => r.Name == "admin"))
     {
-        db.UserRoles.Add(new UserRole
-        {
-            UserRoleId = Guid.NewGuid(),
-            Name = "admin"
-        });
+        db.UserRoles.Add(new UserRole { UserRoleId = Guid.NewGuid(), Name = "admin" });
     }
-
     await db.SaveChangesAsync();
 }
