@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using Amazon;
 using Amazon.S3;
-using Microsoft.Extensions.Options;
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Models;
 using AlgoDuck.Modules.User.Interfaces;
@@ -23,7 +24,6 @@ using AlgoDuck.Modules.Cohort;
 using AlgoDuck.Modules.Problem.Services;
 using AlgoDuck.Shared.Configs;
 using AlgoDuck.Shared.Utilities;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
