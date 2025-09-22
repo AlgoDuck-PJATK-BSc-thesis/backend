@@ -6,23 +6,23 @@ volumes:
   postgres_data:
 
 services:      
-  executor:
-    build:
-      context: .
-      dockerfile: ExecutorService/Dockerfile
-    ports:
-      - "${EXECUTOR_PORT:-1337}:1337"
-    extra_hosts:
-      - "postgres-host:host-gateway"
-      - "host.docker.internal:host-gateway"
-    devices:
-      - /dev/kvm:/dev/kvm
-    env_file:
-      - .env
-    networks:
-      - app_network
-    group_add:
-      - ${KVM_GID}
+#  executor:
+#    build:
+#      context: .
+#      dockerfile: ExecutorService/Dockerfile
+#    ports:
+#      - "${EXECUTOR_PORT:-1337}:1337"
+#    extra_hosts:
+#      - "postgres-host:host-gateway"
+#      - "host.docker.internal:host-gateway"
+#    devices:
+#      - /dev/kvm:/dev/kvm
+#    env_file:
+#      - .env
+#    networks:
+#      - app_network
+#    group_add:
+#      - ${KVM_GID}
     
   algoduck:
     image: algoduck
@@ -48,12 +48,6 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     networks:
       - app_network 
-    depends_on:
-      db:
-        condition: service_healthy
-      executor:
-        condition: service_started
-    restart : unless-stopped
 
 # this is just for development purposes. Remove later on        
   db:
@@ -68,9 +62,3 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart : unless-stopped
