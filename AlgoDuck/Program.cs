@@ -27,10 +27,7 @@ using AlgoDuck.Shared.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Configuration.AddUserSecrets<Program>(optional: true);
-}
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services
     .AddOptions<JwtSettings>()

@@ -1,6 +1,9 @@
 ﻿networks:
   app_network:
     driver: bridge
+    
+volumes:
+  postgres_data:
 
 services:      
   executor:
@@ -33,22 +36,24 @@ services:
       - "${WEB_PORT2:-8081}:8081"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_KEY: ${JWT_KEY}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-      JWT_EXP_MINUTES: ${JWT_EXP_MINUTES}
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__DefaultConnection: "Host=${DB_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__DurationInMinutes: ${JWT_EXP_MINUTES}
+      S3Settings__Region: ${AWS_DEFAULT_REGION}
+      S3Settings__BucketName: ${S3_BUCKET}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     networks:
       - app_network 
     depends_on:
-      - executor
+      db:
+        condition: service_healthy
+      executor:
+        condition: service_started
+    restart : unless-stopped
 
 # this is just for development purposes. Remove later on        
   db:
@@ -61,6 +66,11 @@ services:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+    networks:
+      - app_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart : unless-stopped
