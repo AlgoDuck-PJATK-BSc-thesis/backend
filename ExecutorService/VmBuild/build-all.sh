@@ -16,9 +16,9 @@ if [[ ! -d "$VMIMAGES_PATH" ]]; then
       break
     fi
   done
+  VMIMAGES_PATH=$(cat $FALLBACK_PATH_FILE_VM_IMAGES)
 fi
 
-VMIMAGES_PATH=$(cat $FALLBACK_PATH_FILE_VM_IMAGES)
 
 echo $VMIMAGES_PATH
 
@@ -42,9 +42,8 @@ if [[ -z "$MICRONAUT_PATH" ]]; then
         fi
       fi
     done
+  MICRONAUT_PATH=$(cat $FALLBACK_PATH_FILE | head -1)
 fi
-
-MICRONAUT_PATH=$(cat $FALLBACK_PATH_FILE | head -1)
 
 echo $MICRONAUT_PATH
 
@@ -59,8 +58,9 @@ echo "building compiler service"
 
 cd $MICRONAUT_PATH
 /bin/bash gradlew build 
+cd -
+echo "$VMIMAGES_PATH"
 cd $VMIMAGES_PATH
-pwd
 cd ../VmBuild
 
 /bin/bash build-compiler.sh "$MICRONAUT_PATH/build/libs/compiler-0.1-all.jar"

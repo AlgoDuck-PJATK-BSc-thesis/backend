@@ -11,11 +11,19 @@ public class VmOutput
     public string? Err { get; init; }
 }
 
-public static class ExecutorScriptHandler
+internal static class ExecutorScriptHandler
 {
+    // private readonly FilesystemPooler _pooler;
+
+    // internal ExecutorScriptHandler(FilesystemPooler pooler)
+    // {
+    //     _pooler = pooler;
+    // }
+
     internal static void LaunchExecutor(UserSolutionData userSolutionData)
-    {
-        var launchProcess = CreateBashExecutionProcess("/app/firecracker/launch-executor.sh", userSolutionData.ExecutionId.ToString(), "10");
+    {;
+        // var executorFilesystemId = await _pooler.EnqueueFilesystemRequestAsync(FilesystemType.Executor); 
+        var launchProcess = CreateBashExecutionProcess("/app/firecracker/launch-executor.sh", userSolutionData.ExecutionId.ToString(), "10"/*, executorFilesystemId.ToString()*/);
         launchProcess.Start();
     }
 
@@ -26,7 +34,7 @@ public static class ExecutorScriptHandler
         await sendProcess.WaitForExitAsync();
     }
     
-    private static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)
+    internal static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)
     {
         var scriptArguments = new StringBuilder();
     
@@ -35,14 +43,18 @@ public static class ExecutorScriptHandler
             scriptArguments.Append($"{arguments[i]} ");
         }
 
-        scriptArguments.Append(arguments[^1]);
-    
+        if (arguments.Length > 0)
+        {
+            scriptArguments.Append(arguments[^1]);
+        }
+
+        var args = $"{scriptPath} {scriptArguments}";
         return new Process
         {
             StartInfo = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
-                Arguments = $"{scriptPath} {scriptArguments}", 
+                Arguments = args, 
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true

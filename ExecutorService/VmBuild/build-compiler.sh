@@ -48,10 +48,6 @@ CLASS_NAME="$1"
 CODE_B64="$2"
 EXEC_ID="$3"
 
-echo $CLASS_NAME
-echo $CODE_B64
-echo $EXEC_ID
-
 mkdir -p "/app/client-src/$EXEC_ID"
 mkdir -p "/app/error-log/$EXEC_ID"
 echo "$CODE_B64" | base64 -d > "/app/client-src/$EXEC_ID/$CLASS_NAME.java"

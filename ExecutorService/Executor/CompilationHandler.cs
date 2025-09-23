@@ -21,20 +21,25 @@ public class CompilerData
     internal int Pid { get; set; }
     internal int GuestCid { get; set; }
     internal Guid CompilerId { get; set; }
+    internal Guid FilesystemId { get; set; }
     internal DateTime CreatedAt { get; set; }
     internal string Status { get; set; } = "NOMINAL";
 }
 
-public sealed class CompilationHandler : ICompilationHandler
+internal sealed class CompilationHandler : ICompilationHandler
 {
     private readonly ChannelWriter<CompileTask> _taskWriter;
     private readonly ChannelReader<CompileTask> _taskReader;
 
     private readonly ChannelWriter<CompilerData> _compilerDataWriter;
     private readonly ChannelReader<CompilerData> _compilerDataReader;
+
+    private readonly FilesystemPooler _pooler;
     
-    public CompilationHandler()
+    private CompilationHandler(FilesystemPooler pooler)
     {
+        _pooler = pooler;
+        
         var tasksToDispatch = Channel.CreateBounded<CompileTask>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -49,13 +54,6 @@ public sealed class CompilationHandler : ICompilationHandler
         for (var i = 0; i < 1; i++)
         {
             Task.Run(DispatchCompilationHandlers);
-        }
-
-        for (var i = 0; i < 1; i++)
-        {
-            var compilerData = DeployCompilerVmAsync(3 + i);
-
-            _compilerDataWriter.TryWrite(compilerData);
         }
     }
 
@@ -72,7 +70,7 @@ public sealed class CompilationHandler : ICompilationHandler
         {
             var task = await GetCompilationTask();
             var chosenCompiler = await GetAvailableCompilerId();
-
+            
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -91,11 +89,32 @@ public sealed class CompilationHandler : ICompilationHandler
             process.Start();
             await process.WaitForExitAsync();
 
-            
-            task.Tcs.SetResult();
-            
+            var exitCode = process.ExitCode;
+
+            if (exitCode == 56)
+            {
+                Console.WriteLine("compilation error");
+                task.Tcs.SetException(new CompilationException(await process.StandardOutput.ReadToEndAsync()));
+            }
+            else
+            {
+                task.Tcs.SetResult();
+            }
+
             _compilerDataWriter.TryWrite(chosenCompiler);
         }
+    }
+    public static async Task<CompilationHandler> CreateAsync(FilesystemPooler pooler)
+    {
+        var handler = new CompilationHandler(pooler);
+        
+        for (var i = 0; i < 1; i++)
+        {
+            var compilerData = await handler.DeployCompilerVmAsync(3 + i);
+            handler._compilerDataWriter.TryWrite(compilerData);
+        }
+        
+        return handler;
     }
 
     private async Task<CompileTask> GetCompilationTask()
@@ -124,23 +143,25 @@ public sealed class CompilationHandler : ICompilationHandler
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
     
-    private static CompilerData DeployCompilerVmAsync(int guestCid) 
+    private async Task<CompilerData> DeployCompilerVmAsync(int guestCid) 
     {
         var compilerData = new CompilerData
         {
             CompilerId =  Guid.NewGuid(),
             GuestCid = guestCid,
+            FilesystemId = await _pooler.EnqueueFilesystemRequestAsync(FilesystemType.Compiler),
             CreatedAt = DateTime.Now,
         };
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/firecracker/launch-compiler.sh \"{compilerData.CompilerId}\" \"{compilerData.GuestCid}\""
-            }
-        };
+
+        Console.WriteLine(compilerData.FilesystemId);
+        var process = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/launch-compiler.sh", compilerData.CompilerId.ToString(), compilerData.GuestCid.ToString(), compilerData.FilesystemId.ToString());
+        
         process.Start();
+        await process.WaitForExitAsync();
+        
+        var output = await process.StandardOutput.ReadToEndAsync();
+
+        compilerData.Pid = int.Parse(output.Trim());
         return compilerData;
     }
 

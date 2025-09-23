@@ -36,3 +36,10 @@ rm -f $COMPILER_IN_FIFO $COMPILER_OUT_FIFO
 
 pos=$(expr index "$response" '{')
 echo "${response:$((pos-1))}" > "/tmp/$EXEC_ID-bytecode.json"
+
+COMP_ERROR=$(jq -r '.ErrorMsg // ""' "/tmp/$EXEC_ID-bytecode.json")
+
+if [[ $COMP_ERROR != "" ]]; then
+  echo $COMP_ERROR
+  exit 56
+fi

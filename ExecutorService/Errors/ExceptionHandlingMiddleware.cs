@@ -36,6 +36,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             LanguageException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             FileNotFoundException _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Something went wrong during code execution. Please try again later"),
             CompilationException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
+            MangledControlSymbolException err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, ""),
             AmazonS3Exception err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, err.Message),
             _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Internal server error"),
         };

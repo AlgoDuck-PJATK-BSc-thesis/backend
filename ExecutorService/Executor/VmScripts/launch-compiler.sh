@@ -2,11 +2,11 @@
 
 COMPILER_ID=$1
 COMPILER_CID=$2
+FILESYSTEM_ID=$3
 
 KERNEL_PATH="/app/firecracker/vmlinux.bin"
 CONFIG_FILE="/tmp/compiler-vm-config.json"
-# it is important to note that all compilers using the same filesystem is an incredibly temporary solution. One of the highest priority things to do is implementing getting those from a premade, managed pool 
-ROOTFS="/app/firecracker/compiler-fs.ext4"
+ROOTFS="/var/algoduck/filesystems/$FILESYSTEM_ID.ext4"
 VSOCK_PATH="/tmp/comp-$COMPILER_ID-firecracker.vsock"
 
 cat > "$CONFIG_FILE" << EOF
@@ -35,4 +35,5 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
-firecracker --no-api --config-file "$CONFIG_FILE" > /dev/null
+firecracker --no-api --config-file "$CONFIG_FILE" >/dev/null 2>&1 & disown
+echo "$!"

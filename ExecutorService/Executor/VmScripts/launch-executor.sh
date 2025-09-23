@@ -2,8 +2,8 @@
 
 EXEC_ID=$1
 GUEST_CID=$2
+#FILESYSTEM_ID=$3
 
-# it is important to note that all executors using the same filesystem is an incredibly temporary solution. One of the highest priority things to do is implementing getting those from a premade, managed pool 
 EXEC_ROOTFS="/app/firecracker/executor-fs.ext4"
 KERNEL_PATH="/app/firecracker/vmlinux.bin"
 
