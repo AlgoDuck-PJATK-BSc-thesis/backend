@@ -52,13 +52,16 @@ while IFS= read -r -n1 char; do
     content="$content$char"
 done
 
-printf "%s" "$content" > /sandbox/content.json
+content_decoded=$(echo "$content" | base64 --decode)
+sync
 
-jq -r '.generatedClassFiles | to_entries[] | "\(.key) \(.value)"' /sandbox/content.json |
+printf "%s" "$content_decoded" > /sandbox/content.json
+
+jq -r '.GeneratedClassFiles | to_entries[] | "\(.key) \(.value)"' /sandbox/content.json |
 while read -r file b64; do
     echo "$b64" | base64 --decode > "/sandbox/$file"
 done
-entrypoint_name=$(jq -r '.entrypoint' /sandbox/content.json)
+entrypoint_name=$(jq -r '.Entrypoint' /sandbox/content.json)
 
 java -cp "/sandbox:.:/sandbox/gson-2.13.1.jar" $entrypoint_name 1>/sandbox/out.log 2>/sandbox/err.log
 out=$(jq -Rs . < /sandbox/out.log)

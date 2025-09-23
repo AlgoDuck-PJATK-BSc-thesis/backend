@@ -1,7 +1,7 @@
 namespace ExecutorService.Executor.Types;
 
-public class CompileTask(UserSolutionData userSolutionData, TaskCompletionSource tcs)
+internal class CompileTask(UserSolutionData userSolutionData, TaskCompletionSource<VmCompilationResponse> tcs)
 {
     internal UserSolutionData UserSolutionData => userSolutionData;
-    internal TaskCompletionSource Tcs => tcs;
+    internal TaskCompletionSource<VmCompilationResponse> Tcs => tcs;
 }

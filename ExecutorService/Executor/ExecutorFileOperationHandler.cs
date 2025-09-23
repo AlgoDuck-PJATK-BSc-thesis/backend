@@ -22,31 +22,8 @@ public class ExecutorFileOperationHandler(UserSolutionData userSolutionData)
     private static JsonSerializerOptions _serializerOptions = new(){PropertyNameCaseInsensitive = true};
 
 
-    private async Task<VmOutput> ReadVmOutput()
+    internal ExecuteResultDto ParseVmOutput(VmExecutionResponse vmOutput)
     {
-        string rawVmOutput;
-        try
-        {
-            rawVmOutput = await File.ReadAllTextAsync($"/tmp/{userSolutionData.ExecutionId}-response.json");
-        }
-        catch (FileNotFoundException)
-        {
-            throw new ExecutionOutputNotFoundException();
-        }
-        
-        var vmOutput = JsonSerializer.Deserialize<VmOutput>(rawVmOutput, _serializerOptions);
-        if (vmOutput != null)
-        {
-            return vmOutput;
-        }
-
-        throw new ExecutionOutputNotFoundException();
-
-    }
-
-    internal async Task<ExecuteResultDto> ParseVmOutput()
-    {
-        var vmOutput = await ReadVmOutput();
         var executeResultDto = new ExecuteResultDto
         {
             StdError = vmOutput.Err!,

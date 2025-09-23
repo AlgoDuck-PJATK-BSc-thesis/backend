@@ -55,20 +55,6 @@ echo "$CODE_B64" | base64 -d > "/app/client-src/$EXEC_ID/$CLASS_NAME.java"
 javac -cp "/app/lib/gson-2.13.1.jar" -proc:none -d "/app/client-bytecode/$EXEC_ID" "/app/client-src/$EXEC_ID/$CLASS_NAME.java" 2>"/app/error-log/$EXEC_ID/err.log"
 EOF
 
-cat > "/tmp/compiler-rootfs/app/sanity-check.sh" << 'EOF'
-#!/bin/sh
-
-sleep 5s
-ping -c 1 127.0.0.1 || echo "Ping failed"
-
-JSON='{"SrcCodeB64": "cHVibGljIGNsYXNzIE1haW57CiAgICBwdWJsaWMgc3RhdGljIHZvaWQgbWFpbihTdHJpbmdbXSBhcmdzKXsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIkhlbGxvIHByb3h5Iik7CiAgICB9Cn0=","ClassName": "Main","ExecutionId": "123e4567-e89b-12d3-a456-426614174000"}'
-LEN=${#JSON}
-
-printf "POST /compile HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: %s\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s" "$LEN" "$JSON" | nc 127.0.0.1 5137
-
-EOF
-
-
 cat > "/tmp/compiler-rootfs/app/proxy.sh" << 'EOF'
 #!/bin/sh
 
@@ -99,10 +85,11 @@ read_until_eot() {
 while true; do
   payload=$(read_until_eot)
   [ -z "$payload" ] && continue
-  endpoint=$(echo $payload | jq -r '.endpoint // "health"')
-  method=$(echo $payload | jq -r '.method // "GET"')
-  content=$(echo $payload | jq -r '.content // "{}"')
-  ctype=$(echo $payload | jq -r '.ctype // ""')
+  payload_decoded=$(echo "$payload" | base64 -d)
+  endpoint=$(echo $payload_decoded | jq -r '.Endpoint // "health"')
+  method=$(echo $payload_decoded | jq -r '.Method.Method // "GET"')
+  content=$(echo $payload_decoded | jq -r '.Content // "{}"')
+  ctype=$(echo $payload_decoded | jq -r '.Ctype // ""')
   exec_id=$(echo $content | jq -r '.ExecutionId // ""')
   
   #TODO this could use cleaning up however using printf to do a quasi string builder resulted in newlines being interpreted literally and not in compliance with http standard 
@@ -116,12 +103,12 @@ while true; do
   else
     response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n" "$method" "$endpoint" | nc 127.0.0.1 5137)
   fi
+  
   printf "%s" "$response"
   printf '\004'
 done
 EOF
 
-chmod +x /tmp/compiler-rootfs/app/sanity-check.sh
 chmod +x /tmp/compiler-rootfs/app/proxy.sh
 chmod +x /tmp/compiler-rootfs/app/process-input.sh
 
@@ -205,31 +192,11 @@ stop() {
 }
 INNER_EOF
 
-cat > "/etc/init.d/sanity_check" << 'INNER_EOF'
-#!/sbin/openrc-run
-
-description="sanity check"
-command="/app/sanity-check.sh"
-command_background=false
-pidfile="/run/sanity-check.pid"
-start_stop_daemon_args="--make-pidfile"
-
-depend(){
-    need localmount
-    need mdevd
-    after proxy
-}
-
-INNER_EOF
-
 chmod +x /etc/init.d/lo
 rc-update add lo boot
 
 chmod +x /etc/init.d/entrypoint
 rc-update add entrypoint default
-
-#chmod +x /etc/init.d/sanity_check
-#rc-update add sanity_check default
 
 chmod +x /etc/init.d/proxy
 rc-update add proxy default

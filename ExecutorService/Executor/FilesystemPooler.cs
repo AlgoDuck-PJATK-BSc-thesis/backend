@@ -114,8 +114,6 @@ internal sealed class FilesystemPooler : IFilesystemPooler
         {
             await MaintainCacheAsync();
             
-            await File.AppendAllTextAsync("/app/log.log", $"Available executors: {_channels[FilesystemType.Executor].Reader.Count}{Environment.NewLine}");
-            await File.AppendAllTextAsync("/app/log.log", $"Available compilers: {_channels[FilesystemType.Compiler].Reader.Count}{Environment.NewLine}{Environment.NewLine}");
             await periodicTimer.WaitForNextTickAsync();
         }
     }
@@ -145,23 +143,16 @@ internal sealed class FilesystemPooler : IFilesystemPooler
         {
             filesystemRequests.TryDequeue(out _);
         }
-
-
+        
         if (filesystemRequests.IsEmpty) return;
         
-        
         var filesystemRequestsCount = filesystemRequests.Count;
-        
         var requestsPerMinute = filesystemRequestsCount / _trackingPeriod.TotalMinutes;
-
         var cachedRequestCount = filesystemRequests.Count(req => req.IsCached);
-
         var cacheRatio = cachedRequestCount / filesystemRequestsCount;
-
         
         _safetyBuffer = CalculateSafetyBuffer(cacheRatio);  // slightly lower safety buffer if cache ratio is super high, slightly raise it if it's okay and raise it by no more than twofold if cache ratio is low 
         var newTarget = (int) Math.Ceiling(requestsPerMinute * _safetyBuffer);
-        
         
         _cacheTargets[fsType].CacheTargetCurrent = newTarget;
     }
@@ -206,7 +197,7 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private static async Task<Guid> CreateFilesystem(FilesystemType fsType)
     {
         var filesystemTypeName = fsType.GetDisplayName().ToLowerInvariant();
-        var fsCopyProcess = ExecutorScriptHandler.CreateBashExecutionProcess($"/app/firecracker/get-{filesystemTypeName}-fs.sh");
+        var fsCopyProcess = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/make-copy-image.sh", filesystemTypeName);
 
         fsCopyProcess.Start();
         await fsCopyProcess.WaitForExitAsync();
@@ -216,6 +207,3 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     }
     
 }
-
-
-internal class ChannelReadException(string? message = "") : Exception(message);

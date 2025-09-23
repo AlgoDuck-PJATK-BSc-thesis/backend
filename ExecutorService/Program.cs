@@ -48,10 +48,12 @@ builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
 
 // eager initialization
 var filesystemPooler = new FilesystemPooler();
-var compilationHandler = await CompilationHandler.CreateAsync(filesystemPooler);
+var cmLaunched = new VmLaunchManager(filesystemPooler);
+var compilationHandler = await CompilationHandler.CreateAsync(filesystemPooler, cmLaunched);
 
 builder.Services.AddSingleton<ICompilationHandler>(compilationHandler);
 builder.Services.AddSingleton<IFilesystemPooler>(filesystemPooler);
+builder.Services.AddSingleton(cmLaunched);
 
 var app = builder.Build();
 

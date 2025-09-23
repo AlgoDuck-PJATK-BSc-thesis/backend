@@ -13,13 +13,15 @@ public interface ICodeExecutorService
 }
 
 
-public class CodeExecutorService(
+internal class CodeExecutorService(
     IExecutorRepository executorRepository,
-    ICompilationHandler compilationHandler
+    ICompilationHandler compilationHandler,
+    VmLaunchManager launchManager
     ) : ICodeExecutorService
 {
     private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
     private ExecutorFileOperationHandler? _executorFileOperationHandler;
+    private VmLaunchManager _launchManager = launchManager;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
@@ -84,10 +86,10 @@ public class CodeExecutorService(
 
     private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
-        ExecutorScriptHandler.LaunchExecutor(userSolutionData);
-        await CompileCode(userSolutionData);
-        await ExecutorScriptHandler.SendExecutionData(userSolutionData);
-        return await _executorFileOperationHandler!.ParseVmOutput();
+        var vmId = await _launchManager.DispatchVm(FilesystemType.Executor);
+        var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
+        var result = await _launchManager.QueryVm<VmExecutionQuery, VmExecutionResponse>(vmId, new VmExecutionQuery(compilationResult));
+        return _executorFileOperationHandler!.ParseVmOutput(result);
     }
     
     
