@@ -17,6 +17,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             await HandleExceptionAsync(context, ex);
         }
+        
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)

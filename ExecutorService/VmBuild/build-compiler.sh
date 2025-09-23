@@ -134,6 +134,8 @@ chroot /tmp/compiler-rootfs /bin/sh << 'EOF'
 apk update
 apk add openjdk17-jdk coreutils openrc mdevd curl socat jq netcat-openbsd net-tools
 
+echo 'ttyS0 root:root 660' > /etc/mdevd.conf
+
 cat > "/etc/init.d/entrypoint" << 'INNER_EOF'
 #!/sbin/openrc-run
 description="main process to start micronaut http server"
@@ -167,6 +169,11 @@ depend(){
     need mdevd
     after entrypoint
     after lo
+}
+
+start_post(){
+    echo "READY" > /dev/ttyS0
+    exit 0
 }
 
 INNER_EOF

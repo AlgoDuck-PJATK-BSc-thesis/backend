@@ -70,6 +70,8 @@ internal sealed class CompilationHandler : ICompilationHandler
         {
             var task = await GetCompilationTask();
             var chosenCompiler = await GetAvailableCompilerId();
+
+            Console.WriteLine(BuildWrappedRequestJson(task.UserSolutionData));
             
             var process = new Process
             {

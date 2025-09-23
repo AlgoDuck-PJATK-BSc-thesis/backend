@@ -35,5 +35,5 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
-firecracker --no-api --config-file "$CONFIG_FILE" >/dev/null 2>&1 & disown
+firecracker --no-api --config-file "$CONFIG_FILE" >/tmp/test.log 2>&1 & disown
 echo "$!"

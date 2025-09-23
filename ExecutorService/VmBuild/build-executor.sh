@@ -74,8 +74,6 @@ chmod +x "/tmp/rootfs-alp/sandbox/vsock-handler.sh"
 touch "/tmp/rootfs-alp/tmp/exec.log"
 cat > "/tmp/rootfs-alp/sandbox/run.sh" << 'EOF'
 #!/bin/sh 
-echo
-echo "starting socat"
 socat VSOCK-LISTEN:5050 SYSTEM:"/sandbox/vsock-handler.sh"
 EOF
 

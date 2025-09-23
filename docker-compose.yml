@@ -23,6 +23,9 @@ services:
       - app_network
     group_add:
       - ${KVM_GID}
+        
+    # only for development, not necessary but makes debugging easier
+    privileged: true
     
   algoduck:
     image: algoduck

@@ -1,17 +1,26 @@
 #!/bin/bash
 
-EXEC_ID=$1
+VM_ID=$1
 GUEST_CID=$2
-#FILESYSTEM_ID=$3
+FILESYSTEM_ID=$3
+VCPU_COUNT=$4
+MEM=$5
+SMT=$6
 
-EXEC_ROOTFS="/app/firecracker/executor-fs.ext4"
+ALGODUCK="/var/algoduck"
 KERNEL_PATH="/app/firecracker/vmlinux.bin"
 
-CONFIG_FILE="/tmp/vm-config-$EXEC_ID.json"
-VSOCK_PATH="/tmp/exec-firecracker-$EXEC_ID.vsock"
-PID_PATH="/tmp/$EXEC_ID-pid.pid"
+FILESYSTEMS_PATH="$ALGODUCK/filesystems"
+VSOCKS_PATH="$ALGODUCK/vsocks"
+CONFIGS_PATH="$ALGODUCK/configs"
 
-cat > "$CONFIG_FILE" << EOF
+mkdir -p $FILESYSTEMS_PATH $VSOCKS_PATH $CONFIGS_PATH
+
+ROOTFS_PATH="$FILESYSTEMS_PATH/$FILESYSTEM_ID.ext4"
+VSOCK_PATH="$VSOCKS_PATH/$VM_ID.vsock"
+CONFIG_PATH="$CONFIGS_PATH/$VM_ID.json"
+
+cat > "$CONFIG_PATH" << EOF
 {
   "boot-source": {
     "kernel_image_path": "$KERNEL_PATH",
@@ -20,15 +29,15 @@ cat > "$CONFIG_FILE" << EOF
   "drives": [
     {
       "drive_id": "rootfs",
-      "path_on_host": "$EXEC_ROOTFS",
+      "path_on_host": "$ROOTFS_PATH",
       "is_root_device": true,
       "is_read_only": false
     }
   ],
   "machine-config": {
-    "vcpu_count": 1,
-    "mem_size_mib": 256,
-    "smt": false
+    "vcpu_count": $VCPU_COUNT,
+    "mem_size_mib": $MEM,
+    "smt": $SMT
   },
   "vsock": {
     "guest_cid": $GUEST_CID,
@@ -37,10 +46,10 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
-FC_STDOUT_FILE="/tmp/vm-stdout-$EXEC_ID.log"
+FC_STDOUT_FILE="/tmp/vm-stdout-$VM_ID.log"
 touch "$FC_STDOUT_FILE"
 
-timeout 15s firecracker --no-api --config-file "$CONFIG_FILE" > "$FC_STDOUT_FILE" 2>&1 &
+firecracker --no-api --config-file "$CONFIG_PATH" > "$FC_STDOUT_FILE" 2>&1 & disown
 FIRECRACKER_PID=$!
 
 ( tail -f -n +1 "$FC_STDOUT_FILE" & ) | while read -r line; do
@@ -50,6 +59,6 @@ FIRECRACKER_PID=$!
     fi
 done
 
-echo "executor ready"
+rm -rf $FC_STDOUT_FILE
 
-echo "$FIRECRACKER_PID" > "$PID_PATH"
+echo $FIRECRACKER_PID
