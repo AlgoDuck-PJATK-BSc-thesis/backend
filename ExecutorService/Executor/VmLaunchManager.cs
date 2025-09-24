@@ -131,7 +131,6 @@ internal class VmLaunchManager
     {
         var queryString = JsonSerializer.Serialize(queryContents);
         var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));
-        Console.WriteLine(queryStringEncoded);
         var queryProcess = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/query-vm.sh", vmId.ToString(), queryStringEncoded);
         queryProcess.Start();
         await queryProcess.WaitForExitAsync();
