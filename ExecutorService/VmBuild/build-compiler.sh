@@ -67,6 +67,86 @@ while true; do
 done
 EOF
 
+cat > "/tmp/compiler-rootfs/app/RequestHandler.java" << 'EOF'
+import com.google.gson.*;
+import java.io.*;
+import java.net.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+class RequestData {
+    String Endpoint = "health";
+    Method Method = new Method();
+    VmCompilationQueryContent Content;
+    String Ctype = "application/json";
+}
+
+class VmCompilationQueryContent
+{
+    String SrcCodeB64;
+    String ClassName;
+    String ExecutionId;
+}
+
+class Method {
+    String Method = "GET";
+}
+
+public class RequestHandler {
+    private static final Gson gson = new Gson();
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) return;
+        String input = args[0];
+
+        String jsonString = new String(Base64.getDecoder().decode(input), StandardCharsets.UTF_8);
+        RequestData request = gson.fromJson(jsonString, RequestData.class);
+
+        makeHttpRequest(request);
+    }
+
+    private static void makeHttpRequest(RequestData request) throws Exception {
+
+        var builder = HttpRequest.newBuilder(new URI((String.format("http://127.0.0.1:5137/%s", request.Endpoint))))
+                .timeout(Duration.of(10, ChronoUnit.SECONDS));
+
+        addHeaders(builder, new HashMap<>());
+        setMethod(builder, request);
+
+        HttpResponse<String> response = HttpClient.newBuilder()
+                .build()
+                .send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+        System.out.printf("%s %s%n", response.version(), response.statusCode());
+
+        response.headers().map().forEach((key, value) -> System.out.printf("%s: %s\n", key, value));
+
+        System.out.printf("\n%s\n", response.body());
+    }
+
+    private static void addHeaders(HttpRequest.Builder builder, Map<String, String> headers) {
+        headers.forEach(builder::header);
+    }
+
+    private static void setMethod(HttpRequest.Builder builder, RequestData request) {
+            String method = request.Method.Method.toUpperCase();
+            if (method.equals("POST") && request.Content != null) {
+                builder.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(request.Content), StandardCharsets.UTF_8))
+                        .header("Content-Type", request.Ctype);
+            } else {
+                builder.method(method, HttpRequest.BodyPublishers.noBody());
+            }
+        }
+}
+EOF
+
 cat > "/tmp/compiler-rootfs/app/process-input.sh" << 'EOF'
 #!/bin/sh
 
@@ -74,10 +154,10 @@ read_until_eot() {
   local input=""
   local char=""
   while IFS= read -r -n1 char; do
-  if [ "$(printf '%d' "'$char")" = "4" ]; then
-    break
-  fi
-  input="$input$char"
+    if [ "$(printf '%d' "'$char")" = "4" ]; then
+      break
+    fi
+    input="$input$char"
   done
   echo "$input"
 }
@@ -85,24 +165,8 @@ read_until_eot() {
 while true; do
   payload=$(read_until_eot)
   [ -z "$payload" ] && continue
-  payload_decoded=$(echo "$payload" | base64 -d)
-  endpoint=$(echo $payload_decoded | jq -r '.Endpoint // "health"')
-  method=$(echo $payload_decoded | jq -r '.Method.Method // "GET"')
-  content=$(echo $payload_decoded | jq -r '.Content // "{}"')
-  ctype=$(echo $payload_decoded | jq -r '.Ctype // ""')
-  exec_id=$(echo $content | jq -r '.ExecutionId // ""')
   
-  #TODO this could use cleaning up however using printf to do a quasi string builder resulted in newlines being interpreted literally and not in compliance with http standard 
-  if [ "$content" != "{}" ]; then
-    clen=${#content}
-    if [ "$ctype" != "" ]; then 
-      response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Type: %s\r\nContent-Length: %s\r\n\r\n%s" "$method" "$endpoint" "$ctype" "$clen" "$content" | nc 127.0.0.1 5137)
-    else
-      response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Length: %s\r\n\r\n%s" "$method" "$endpoint" "$clen" "$content" | nc 127.0.0.1 5137)
-    fi
-  else
-    response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n" "$method" "$endpoint" | nc 127.0.0.1 5137)
-  fi
+  response=$(cd /app && java -cp ".:lib/gson-2.13.1.jar" RequestHandler "$payload")
   
   printf "%s" "$response"
   printf '\004'
@@ -200,6 +264,9 @@ rc-update add entrypoint default
 
 chmod +x /etc/init.d/proxy
 rc-update add proxy default
+
+javac -cp "/app/lib/gson-2.13.1.jar" /app/RequestHandler.java -d /app/
+
 EOF
 
 cd ~/
