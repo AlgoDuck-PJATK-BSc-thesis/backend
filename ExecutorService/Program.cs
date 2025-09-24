@@ -12,6 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:8080")
+            .AllowCredentials()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Configuration.AddEnvironmentVariables();
 
@@ -37,18 +47,21 @@ builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
 
 // eager initialization
-var compilationHandler = new CompilationHandler();
+var filesystemPooler = new FilesystemPooler();
+var cmLaunched = new VmLaunchManager(filesystemPooler);
+var compilationHandler = await CompilationHandler.CreateAsync(filesystemPooler, cmLaunched);
+
 builder.Services.AddSingleton<ICompilationHandler>(compilationHandler);
+builder.Services.AddSingleton<IFilesystemPooler>(filesystemPooler);
+builder.Services.AddSingleton(cmLaunched);
 
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseCors("AllowWebApp");
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
-// TODO temporary, change this
-app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
 app.MapControllers();
 

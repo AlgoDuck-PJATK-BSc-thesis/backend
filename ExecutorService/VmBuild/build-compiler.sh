@@ -48,30 +48,12 @@ CLASS_NAME="$1"
 CODE_B64="$2"
 EXEC_ID="$3"
 
-echo $CLASS_NAME
-echo $CODE_B64
-echo $EXEC_ID
-
 mkdir -p "/app/client-src/$EXEC_ID"
 mkdir -p "/app/error-log/$EXEC_ID"
 echo "$CODE_B64" | base64 -d > "/app/client-src/$EXEC_ID/$CLASS_NAME.java"
 
 javac -cp "/app/lib/gson-2.13.1.jar" -proc:none -d "/app/client-bytecode/$EXEC_ID" "/app/client-src/$EXEC_ID/$CLASS_NAME.java" 2>"/app/error-log/$EXEC_ID/err.log"
 EOF
-
-cat > "/tmp/compiler-rootfs/app/sanity-check.sh" << 'EOF'
-#!/bin/sh
-
-sleep 5s
-ping -c 1 127.0.0.1 || echo "Ping failed"
-
-JSON='{"SrcCodeB64": "cHVibGljIGNsYXNzIE1haW57CiAgICBwdWJsaWMgc3RhdGljIHZvaWQgbWFpbihTdHJpbmdbXSBhcmdzKXsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIkhlbGxvIHByb3h5Iik7CiAgICB9Cn0=","ClassName": "Main","ExecutionId": "123e4567-e89b-12d3-a456-426614174000"}'
-LEN=${#JSON}
-
-printf "POST /compile HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: %s\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s" "$LEN" "$JSON" | nc 127.0.0.1 5137
-
-EOF
-
 
 cat > "/tmp/compiler-rootfs/app/proxy.sh" << 'EOF'
 #!/bin/sh
@@ -85,6 +67,86 @@ while true; do
 done
 EOF
 
+cat > "/tmp/compiler-rootfs/app/RequestHandler.java" << 'EOF'
+import com.google.gson.*;
+import java.io.*;
+import java.net.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+class RequestData {
+    String Endpoint = "health";
+    Method Method = new Method();
+    VmCompilationQueryContent Content;
+    String Ctype = "application/json";
+}
+
+class VmCompilationQueryContent
+{
+    String SrcCodeB64;
+    String ClassName;
+    String ExecutionId;
+}
+
+class Method {
+    String Method = "GET";
+}
+
+public class RequestHandler {
+    private static final Gson gson = new Gson();
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) return;
+        String input = args[0];
+
+        String jsonString = new String(Base64.getDecoder().decode(input), StandardCharsets.UTF_8);
+        RequestData request = gson.fromJson(jsonString, RequestData.class);
+
+        makeHttpRequest(request);
+    }
+
+    private static void makeHttpRequest(RequestData request) throws Exception {
+
+        var builder = HttpRequest.newBuilder(new URI((String.format("http://127.0.0.1:5137/%s", request.Endpoint))))
+                .timeout(Duration.of(10, ChronoUnit.SECONDS));
+
+        addHeaders(builder, new HashMap<>());
+        setMethod(builder, request);
+
+        HttpResponse<String> response = HttpClient.newBuilder()
+                .build()
+                .send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+        System.out.printf("%s %s%n", response.version(), response.statusCode());
+
+        response.headers().map().forEach((key, value) -> System.out.printf("%s: %s\n", key, value));
+
+        System.out.printf("\n%s\n", response.body());
+    }
+
+    private static void addHeaders(HttpRequest.Builder builder, Map<String, String> headers) {
+        headers.forEach(builder::header);
+    }
+
+    private static void setMethod(HttpRequest.Builder builder, RequestData request) {
+            String method = request.Method.Method.toUpperCase();
+            if (method.equals("POST") && request.Content != null) {
+                builder.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(request.Content), StandardCharsets.UTF_8))
+                        .header("Content-Type", request.Ctype);
+            } else {
+                builder.method(method, HttpRequest.BodyPublishers.noBody());
+            }
+        }
+}
+EOF
+
 cat > "/tmp/compiler-rootfs/app/process-input.sh" << 'EOF'
 #!/bin/sh
 
@@ -92,10 +154,10 @@ read_until_eot() {
   local input=""
   local char=""
   while IFS= read -r -n1 char; do
-  if [ "$(printf '%d' "'$char")" = "4" ]; then
-    break
-  fi
-  input="$input$char"
+    if [ "$(printf '%d' "'$char")" = "4" ]; then
+      break
+    fi
+    input="$input$char"
   done
   echo "$input"
 }
@@ -103,29 +165,14 @@ read_until_eot() {
 while true; do
   payload=$(read_until_eot)
   [ -z "$payload" ] && continue
-  endpoint=$(echo $payload | jq -r '.endpoint // "health"')
-  method=$(echo $payload | jq -r '.method // "GET"')
-  content=$(echo $payload | jq -r '.content // "{}"')
-  ctype=$(echo $payload | jq -r '.ctype // ""')
-  exec_id=$(echo $content | jq -r '.ExecutionId // ""')
   
-  #TODO this could use cleaning up however using printf to do a quasi string builder resulted in newlines being interpreted literally and not in compliance with http standard 
-  if [ "$content" != "{}" ]; then
-    clen=${#content}
-    if [ "$ctype" != "" ]; then 
-      response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Type: %s\r\nContent-Length: %s\r\n\r\n%s" "$method" "$endpoint" "$ctype" "$clen" "$content" | nc 127.0.0.1 5137)
-    else
-      response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Length: %s\r\n\r\n%s" "$method" "$endpoint" "$clen" "$content" | nc 127.0.0.1 5137)
-    fi
-  else
-    response=$(printf "%s /%s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n" "$method" "$endpoint" | nc 127.0.0.1 5137)
-  fi
+  response=$(cd /app && java -cp ".:lib/gson-2.13.1.jar" RequestHandler "$payload")
+  
   printf "%s" "$response"
   printf '\004'
 done
 EOF
 
-chmod +x /tmp/compiler-rootfs/app/sanity-check.sh
 chmod +x /tmp/compiler-rootfs/app/proxy.sh
 chmod +x /tmp/compiler-rootfs/app/process-input.sh
 
@@ -137,6 +184,8 @@ mount -o bind /dev/pts dev/pts/
 chroot /tmp/compiler-rootfs /bin/sh << 'EOF'
 apk update
 apk add openjdk17-jdk coreutils openrc mdevd curl socat jq netcat-openbsd net-tools
+
+echo 'ttyS0 root:root 660' > /etc/mdevd.conf
 
 cat > "/etc/init.d/entrypoint" << 'INNER_EOF'
 #!/sbin/openrc-run
@@ -173,6 +222,11 @@ depend(){
     after lo
 }
 
+start_post(){
+    echo "READY" > /dev/ttyS0
+    exit 0
+}
+
 INNER_EOF
 
 cat > "/etc/init.d/lo" << 'INNER_EOF'
@@ -202,34 +256,17 @@ stop() {
 }
 INNER_EOF
 
-cat > "/etc/init.d/sanity_check" << 'INNER_EOF'
-#!/sbin/openrc-run
-
-description="sanity check"
-command="/app/sanity-check.sh"
-command_background=false
-pidfile="/run/sanity-check.pid"
-start_stop_daemon_args="--make-pidfile"
-
-depend(){
-    need localmount
-    need mdevd
-    after proxy
-}
-
-INNER_EOF
-
 chmod +x /etc/init.d/lo
 rc-update add lo boot
 
 chmod +x /etc/init.d/entrypoint
 rc-update add entrypoint default
 
-#chmod +x /etc/init.d/sanity_check
-#rc-update add sanity_check default
-
 chmod +x /etc/init.d/proxy
 rc-update add proxy default
+
+javac -cp "/app/lib/gson-2.13.1.jar" /app/RequestHandler.java -d /app/
+
 EOF
 
 cd ~/

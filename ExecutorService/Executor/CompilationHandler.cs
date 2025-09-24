@@ -13,28 +13,28 @@ namespace ExecutorService.Executor;
 
 public interface ICompilationHandler
 {
-    public Task CompileAsync(UserSolutionData userSolutionData);
+    internal Task<VmCompilationResponse> CompileAsync(UserSolutionData userSolutionData);
 }
 
 public class CompilerData
 {
-    internal int Pid { get; set; }
-    internal int GuestCid { get; set; }
     internal Guid CompilerId { get; set; }
-    internal DateTime CreatedAt { get; set; }
-    internal string Status { get; set; } = "NOMINAL";
 }
 
-public sealed class CompilationHandler : ICompilationHandler
+internal sealed class CompilationHandler : ICompilationHandler
 {
     private readonly ChannelWriter<CompileTask> _taskWriter;
     private readonly ChannelReader<CompileTask> _taskReader;
 
     private readonly ChannelWriter<CompilerData> _compilerDataWriter;
     private readonly ChannelReader<CompilerData> _compilerDataReader;
+
+    private readonly VmLaunchManager _launchManager;
     
-    public CompilationHandler()
+    private CompilationHandler(VmLaunchManager launchManager)
     {
+        _launchManager = launchManager;
+        
         var tasksToDispatch = Channel.CreateBounded<CompileTask>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -50,20 +50,13 @@ public sealed class CompilationHandler : ICompilationHandler
         {
             Task.Run(DispatchCompilationHandlers);
         }
-
-        for (var i = 0; i < 1; i++)
-        {
-            var compilerData = DeployCompilerVmAsync(3 + i);
-
-            _compilerDataWriter.TryWrite(compilerData);
-        }
     }
 
-    public async Task CompileAsync(UserSolutionData userSolutionData)
+    public async Task<VmCompilationResponse> CompileAsync(UserSolutionData userSolutionData)
     {
-        var compileTask = new TaskCompletionSource();
+        var compileTask = new TaskCompletionSource<VmCompilationResponse>();
         await _taskWriter.WriteAsync(new CompileTask(userSolutionData, compileTask));
-        await compileTask.Task;
+        return await compileTask.Task;
     }
 
     private async Task DispatchCompilationHandlers()
@@ -72,30 +65,37 @@ public sealed class CompilationHandler : ICompilationHandler
         {
             var task = await GetCompilationTask();
             var chosenCompiler = await GetAvailableCompilerId();
-
-            var process = new Process
+            
+            var result = await _launchManager.QueryVm<VmCompilationQuery, VmCompilationResponse>(chosenCompiler.CompilerId, new VmCompilationQuery()
             {
-                StartInfo = new ProcessStartInfo
+                Endpoint = "compile",
+                Method = HttpMethod.Post,
+                Content = new VmCompilationQueryContent
                 {
-                    FileName = "/bin/bash",
-                    ArgumentList =
-                    {
-                        "/app/firecracker/send-compilation.sh",
-                        BuildWrappedRequestJson(task.UserSolutionData),
-                        chosenCompiler.CompilerId.ToString()
-                    },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
+                    ClassName = task.UserSolutionData.MainClassName,
+                    ExecutionId = task.UserSolutionData.ExecutionId,
+                    SrcCodeB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(task.UserSolutionData.FileContents.ToString()))
                 }
-            };
-            process.Start();
-            await process.WaitForExitAsync();
-
-            
-            task.Tcs.SetResult();
-            
-            _compilerDataWriter.TryWrite(chosenCompiler);
+            });
+            await ReturnCompilerToPool(chosenCompiler);
+            task.Tcs.SetResult(result);
         }
+    }
+    public static async Task<CompilationHandler> CreateAsync(FilesystemPooler pooler, VmLaunchManager launchManager)
+    {
+        var handler = new CompilationHandler(launchManager);
+        
+        for (var i = 0; i < 1; i++)
+        {
+            var compilerGuid = await launchManager.DispatchVm(FilesystemType.Compiler);
+            
+            handler._compilerDataWriter.TryWrite(new CompilerData()
+            {
+                CompilerId = compilerGuid,
+            });
+        }
+        
+        return handler;
     }
 
     private async Task<CompileTask> GetCompilationTask()
@@ -123,32 +123,18 @@ public sealed class CompilationHandler : ICompilationHandler
         }
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
-    
-    private static CompilerData DeployCompilerVmAsync(int guestCid) 
-    {
-        var compilerData = new CompilerData
-        {
-            CompilerId =  Guid.NewGuid(),
-            GuestCid = guestCid,
-            CreatedAt = DateTime.Now,
-        };
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "/bin/bash",
-                Arguments = $"/app/firecracker/launch-compiler.sh \"{compilerData.CompilerId}\" \"{compilerData.GuestCid}\""
-            }
-        };
-        process.Start();
-        return compilerData;
-    }
 
-    private static string BuildWrappedRequestJson(UserSolutionData userSolutionData)
+    private async Task ReturnCompilerToPool(CompilerData data)
     {
-        var plainTextBytes = Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString());
-        var userCodeB64 = Convert.ToBase64String(plainTextBytes);
-        return $"{{\"endpoint\":\"compile\",\"method\":\"POST\",\"content\":\"{{\\\"SrcCodeB64\\\":\\\"{userCodeB64}\\\",\\\"ClassName\\\":\\\"{userSolutionData.MainClassName}\\\",\\\"ExecutionId\\\":\\\"{userSolutionData.ExecutionId}\\\"}}\",\"ctype\":\"application/json\"}}";
-        
+        while (await _compilerDataWriter.WaitToWriteAsync())
+        {
+            if (_compilerDataWriter.TryWrite(data))
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+        throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
 }
