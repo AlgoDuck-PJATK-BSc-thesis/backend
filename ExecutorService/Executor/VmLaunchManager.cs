@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
+using ExecutorService.Errors.Exceptions;
 
 namespace ExecutorService.Executor;
 
@@ -56,7 +58,10 @@ internal sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
 
     public void Dispose()
     {
-        manager.TerminateVm(vmId, false);
+        if (!manager.TryAddToOrphanPool(vmId))
+        {
+            manager.TerminateVm(vmId, false);
+        }
     }
 }
 
@@ -78,6 +83,7 @@ internal class VmLaunchManager
         internal int GuestCid { get; set; }
         internal string? VsockPath { get; set; }
         internal int Pid { get; set; }
+        internal int ServicedRequests { get; set; }
     }
     
     private readonly FilesystemPooler _pooler;
@@ -87,7 +93,8 @@ internal class VmLaunchManager
 
     private int _nextGuestCid = 3; // 4 byte uint. (0 - loopback, 1 - general vsock, 2 - hypervisor) reserved so start at 3 and go from there
 
-
+    private readonly Dictionary<FilesystemType, Channel<VmConfig>> _orphanPool;
+    
     public VmLaunchManager(FilesystemPooler pooler)
     {
         _pooler = pooler;
@@ -104,10 +111,22 @@ internal class VmLaunchManager
                 MemMB = 2048,
             }
         };
+        _orphanPool = new Dictionary<FilesystemType, Channel<VmConfig>>
+        {
+            [FilesystemType.Executor] = Channel.CreateBounded<VmConfig>(new BoundedChannelOptions(5)
+            {
+                FullMode = BoundedChannelFullMode.DropOldest,
+            })
+        };
     }
 
     private async Task<Guid> DispatchVm(FilesystemType filesystemType, string? vmName = null)
     {
+        if (_orphanPool.TryGetValue(filesystemType, out var value) && value.Reader.TryRead(out var config))
+        {
+            return config.VmId;
+        }
+        
         var vmId = Guid.NewGuid();
         var createdVmConfig = new VmConfig
         {
@@ -131,12 +150,13 @@ internal class VmLaunchManager
             createdVmConfig.AllocatedResources.MemMB.ToString(),
             createdVmConfig.AllocatedResources.Smt.ToString().ToLowerInvariant()
             );
+        
 
         launchProcess.Start();
         await launchProcess.WaitForExitAsync();
 
         var output = await launchProcess.StandardOutput.ReadToEndAsync();
-        createdVmConfig.Pid = int.Parse(output.Trim());
+        createdVmConfig.Pid = int.Parse(output.Split('\n').Last().Trim());
 
         _activeVms[vmId] = createdVmConfig;
 
@@ -145,13 +165,18 @@ internal class VmLaunchManager
 
     internal async Task<TResult> QueryVm<T, TResult>(Guid vmId, T queryContents) where T: VmInputQuery where TResult: VmInputResponse
     {
+        _activeVms[vmId].ServicedRequests++;
         var queryString = JsonSerializer.Serialize(queryContents);
         var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));
         var queryProcess = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/query-vm.sh", vmId.ToString(), queryStringEncoded);
         queryProcess.Start();
         await queryProcess.WaitForExitAsync();
-
-        var vmOutRaw = await File.ReadAllTextAsync($"/tmp/{vmId}-out.json");
+        
+        var path = $"/tmp/{vmId}-out.json";
+        if (!File.Exists(path)) throw new ExecutionOutputNotFoundException();
+        
+        var vmOutRaw = await File.ReadAllTextAsync(path);
+        File.Delete(path);
         
         var vmOut = JsonSerializer.Deserialize<TResult>(vmOutRaw, new JsonSerializerOptions // TODO: Move this to like shared.core defaultJsonSerializer.Deserialize()
         {
@@ -160,9 +185,16 @@ internal class VmLaunchManager
         return vmOut!;
     }
 
+    internal bool TryAddToOrphanPool(Guid vmId)
+    {
+        var vmConfig = _activeVms[vmId];
+        if (vmConfig.ServicedRequests != 0 || !_orphanPool.TryGetValue(vmConfig.VmType, out var value)) return false;
+        return value.Writer.TryWrite(vmConfig);
+    }
+
     internal bool TerminateVm(Guid vmId, bool withFreeze)
     {
-        if (!_activeVms.TryGetValue(vmId, out var vmData)) return false;
+        if (!_activeVms.Remove(vmId, out var vmData)) return false;
         try
         {
             var fcProcess = Process.GetProcessById(vmData.Pid);
