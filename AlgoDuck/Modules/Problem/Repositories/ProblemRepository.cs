@@ -30,14 +30,15 @@ public class ProblemRepository(
         var testCases = GetTestCasesAsync(problemId);
 
         var problemDto = await dbContext.Problems
+            .AsNoTracking()
             .Where(p => p.ProblemId == problemId)
             .Select(p => new ProblemDto(
                 p.ProblemId,
                 p.ProblemTitle,
                 p.Description,
-                new DifficultyDto(p.Difficulty.DifficultyName),
-                new CategoryDto(p.Category.CategoryName),
-                new TypeDto(p.ProblemType.Name)))
+                new DifficultyDto(p.Difficulty!.DifficultyName),
+                new CategoryDto(p.Category!.CategoryName),
+                new TypeDto(p.ProblemType!.Name)))
             .FirstAsync();
         
         problemDto.TemplateContents = await problemTemplate;

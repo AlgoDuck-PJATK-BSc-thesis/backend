@@ -101,7 +101,7 @@ internal class VmLaunchManager
             FilesystemId = await _pooler.EnqueueFilesystemRequestAsync(filesystemType),
             GuestCid = 17,
             VmType = filesystemType,
-            VsockPath = $"/tmp/{vmId}.vsock",
+            VsockPath = $"/var/algoduck/vsocks/{vmId}.vsock",
         };
 
         const string launchScriptPath = "/app/firecracker/launch-vm.sh";
