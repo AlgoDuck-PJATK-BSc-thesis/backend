@@ -64,6 +64,9 @@ internal class CodeExecutorService(
              * in turn returning a ExceptionResponseDto
              *
              * We do it this way as we want the client to receive a javac error but cannot proceed with the regular pipeline
+             *
+             *
+             * EDIT: with the new vm orchestration scheme this no longer works. Figure something else out
              */
             await CompileCode(fileData);
             throw;
@@ -86,9 +89,11 @@ internal class CodeExecutorService(
 
     private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
-        var vmId = await _launchManager.DispatchVm(FilesystemType.Executor);
-        var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
-        var result = await _launchManager.QueryVm<VmExecutionQuery, VmExecutionResponse>(vmId, new VmExecutionQuery(compilationResult));
+        var vmLeaseTask = _launchManager.AcquireVmAsync(FilesystemType.Executor); 
+        var compilationResult = await compilationHandler.CompileAsync(userSolutionData); 
+    
+        using var vmLease = await vmLeaseTask; 
+        var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery(compilationResult));
         return _executorFileOperationHandler!.ParseVmOutput(result);
     }
     

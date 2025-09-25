@@ -205,5 +205,13 @@ internal sealed class FilesystemPooler : IFilesystemPooler
         var output = await fsCopyProcess.StandardOutput.ReadToEndAsync();
         return Guid.Parse(output.Trim());
     }
+
+    internal static bool RemoveFilesystemById(Guid fsId)
+    {
+        var fsPath = $"/var/algoduck/filesystems/{fsId}.ext4";
+        if (!File.Exists(fsPath)) return true;
+        File.Delete(fsPath);
+        return !File.Exists(fsPath);
+    }
     
 }

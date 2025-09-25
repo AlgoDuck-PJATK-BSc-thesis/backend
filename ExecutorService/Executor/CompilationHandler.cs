@@ -16,25 +16,16 @@ public interface ICompilationHandler
     internal Task<VmCompilationResponse> CompileAsync(UserSolutionData userSolutionData);
 }
 
-public class CompilerData
-{
-    internal Guid CompilerId { get; set; }
-}
-
 internal sealed class CompilationHandler : ICompilationHandler
 {
     private readonly ChannelWriter<CompileTask> _taskWriter;
     private readonly ChannelReader<CompileTask> _taskReader;
 
-    private readonly ChannelWriter<CompilerData> _compilerDataWriter;
-    private readonly ChannelReader<CompilerData> _compilerDataReader;
+    private readonly ChannelWriter<VmLease> _compilerDataWriter;
+    private readonly ChannelReader<VmLease> _compilerDataReader;
 
-    private readonly VmLaunchManager _launchManager;
-    
-    private CompilationHandler(VmLaunchManager launchManager)
+    private CompilationHandler()
     {
-        _launchManager = launchManager;
-        
         var tasksToDispatch = Channel.CreateBounded<CompileTask>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -42,7 +33,7 @@ internal sealed class CompilationHandler : ICompilationHandler
         _taskWriter = tasksToDispatch.Writer;
         _taskReader = tasksToDispatch.Reader;
         
-        var availableCompilerChannel = Channel.CreateUnbounded<CompilerData>();
+        var availableCompilerChannel = Channel.CreateUnbounded<VmLease>();
         _compilerDataWriter = availableCompilerChannel.Writer;
         _compilerDataReader = availableCompilerChannel.Reader;
         
@@ -64,9 +55,9 @@ internal sealed class CompilationHandler : ICompilationHandler
         while (true)
         {
             var task = await GetCompilationTask();
-            var chosenCompiler = await GetAvailableCompilerId();
-            
-            var result = await _launchManager.QueryVm<VmCompilationQuery, VmCompilationResponse>(chosenCompiler.CompilerId, new VmCompilationQuery()
+            var compilerLease = await GetAvailableCompilerId();
+
+            var result = await compilerLease.QueryAsync<VmCompilationQuery, VmCompilationResponse>(new VmCompilationQuery
             {
                 Endpoint = "compile",
                 Method = HttpMethod.Post,
@@ -77,22 +68,18 @@ internal sealed class CompilationHandler : ICompilationHandler
                     SrcCodeB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(task.UserSolutionData.FileContents.ToString()))
                 }
             });
-            await ReturnCompilerToPool(chosenCompiler);
+            
+            await ReturnCompilerToPool(compilerLease);
             task.Tcs.SetResult(result);
         }
     }
-    public static async Task<CompilationHandler> CreateAsync(FilesystemPooler pooler, VmLaunchManager launchManager)
+    public static async Task<CompilationHandler> CreateAsync(VmLaunchManager launchManager)
     {
-        var handler = new CompilationHandler(launchManager);
+        var handler = new CompilationHandler();
         
         for (var i = 0; i < 1; i++)
         {
-            var compilerGuid = await launchManager.DispatchVm(FilesystemType.Compiler);
-            
-            handler._compilerDataWriter.TryWrite(new CompilerData()
-            {
-                CompilerId = compilerGuid,
-            });
+            handler._compilerDataWriter.TryWrite(await launchManager.AcquireVmAsync(FilesystemType.Compiler));
         }
         
         return handler;
@@ -111,7 +98,7 @@ internal sealed class CompilationHandler : ICompilationHandler
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
 
-    private async Task<CompilerData> GetAvailableCompilerId()
+    private async Task<VmLease> GetAvailableCompilerId()
     {
         while (await _compilerDataReader.WaitToReadAsync())
         {
@@ -124,7 +111,7 @@ internal sealed class CompilationHandler : ICompilationHandler
         throw new CompilationHandlerChannelReadException("Could not fetch task");
     }
 
-    private async Task ReturnCompilerToPool(CompilerData data)
+    private async Task ReturnCompilerToPool(VmLease data)
     {
         while (await _compilerDataWriter.WaitToWriteAsync())
         {

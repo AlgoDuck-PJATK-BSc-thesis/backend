@@ -1,7 +1,6 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.OpenApi.Extensions;
 
 namespace ExecutorService.Executor;
 
@@ -46,6 +45,21 @@ public class VmExecutionResponse : VmInputResponse
     public string Err { get; set; } = string.Empty;
 }
 
+internal sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
+{
+    public async Task<TResult> QueryAsync<T, TResult>(T query) 
+        where T : VmInputQuery 
+        where TResult : VmInputResponse
+    {
+        return await manager.QueryVm<T, TResult>(vmId, query);
+    }
+
+    public void Dispose()
+    {
+        manager.TerminateVm(vmId, false);
+    }
+}
+
 internal class VmLaunchManager
 {
     private class VmResourceAllocation
@@ -71,6 +85,8 @@ internal class VmLaunchManager
 
     private readonly Dictionary<FilesystemType, VmResourceAllocation> _defaultResourceAllocations;
 
+    private int _nextGuestCid = 3; // 4 byte uint. (0 - loopback, 1 - general vsock, 2 - hypervisor) reserved so start at 3 and go from there
+
 
     public VmLaunchManager(FilesystemPooler pooler)
     {
@@ -90,7 +106,7 @@ internal class VmLaunchManager
         };
     }
 
-    internal async Task<Guid> DispatchVm(FilesystemType filesystemType, string? vmName = null)
+    private async Task<Guid> DispatchVm(FilesystemType filesystemType, string? vmName = null)
     {
         var vmId = Guid.NewGuid();
         var createdVmConfig = new VmConfig
@@ -99,7 +115,7 @@ internal class VmLaunchManager
             VmName = vmName ?? GenerateName(),
             AllocatedResources = _defaultResourceAllocations[filesystemType],
             FilesystemId = await _pooler.EnqueueFilesystemRequestAsync(filesystemType),
-            GuestCid = 17,
+            GuestCid = _nextGuestCid++,
             VmType = filesystemType,
             VsockPath = $"/var/algoduck/vsocks/{vmId}.vsock",
         };
@@ -142,6 +158,32 @@ internal class VmLaunchManager
             PropertyNameCaseInsensitive = true,
         });
         return vmOut!;
+    }
+
+    internal bool TerminateVm(Guid vmId, bool withFreeze)
+    {
+        if (!_activeVms.TryGetValue(vmId, out var vmData)) return false;
+        try
+        {
+            var fcProcess = Process.GetProcessById(vmData.Pid);
+            fcProcess.Kill();
+            var vmFilesystemRemoved = true;
+            if (!withFreeze)
+            {
+                 vmFilesystemRemoved = FilesystemPooler.RemoveFilesystemById(vmData.FilesystemId);
+            }
+            return fcProcess.HasExited && vmFilesystemRemoved;
+        }
+        catch (ArgumentException)
+        {
+            return !withFreeze || FilesystemPooler.RemoveFilesystemById(vmData.FilesystemId);
+        }
+    }
+    
+    internal async Task<VmLease> AcquireVmAsync(FilesystemType filesystemType, string? vmName = null)
+    {
+        var vmId = await DispatchVm(filesystemType, vmName);
+        return new VmLease(this, vmId);
     }
 
     private static string GenerateName()
