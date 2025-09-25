@@ -61,7 +61,7 @@ public class AuthService : IAuthService
             throw new ValidationException(string.Join("; ", result.Errors.Select(e => e.Description)));
     }
 
-    public async Task LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
+    public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
     {
         var user = await _userManager.Users
             .Include(u => u.UserRole)
@@ -102,6 +102,8 @@ public class AuthService : IAuthService
             SameSite = SameSiteMode.None,
             Expires = DateTimeOffset.UtcNow.AddDays(7)
         });
+        
+        return (accessToken, refreshToken);
     }
 
     public async Task RefreshTokenAsync(RefreshDto dto, HttpResponse response, CancellationToken cancellationToken)
