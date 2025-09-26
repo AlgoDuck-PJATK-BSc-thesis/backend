@@ -23,6 +23,8 @@ services:
       - app_network
     group_add:
       - ${KVM_GID}
+        
+    privileged: true
     
   algoduck:
     image: algoduck

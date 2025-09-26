@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
 
@@ -24,15 +25,27 @@ public class VmCompilationQuery : VmInputQuery
     public string Ctype { get; set; } = "application/json";
 }
 
-public class VmCompilationResponse : VmInputResponse
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(VmCompilationSuccess), "success")]
+[JsonDerivedType(typeof(VmCompilationFailure), "error")]
+public abstract class VmCompilationResponse : VmInputResponse
+{
+}
+
+public class VmCompilationSuccess : VmCompilationResponse
 {
     public string Entrypoint { get; set; } = string.Empty;
     public Dictionary<string, string> GeneratedClassFiles { get; set; } = [];
 }
 
+public class VmCompilationFailure : VmCompilationResponse
+{
+    public string ErrorMsg { get; set; } = string.Empty;
+}
+
 public class VmExecutionQuery : VmInputQuery
 {
-    public VmExecutionQuery(VmCompilationResponse compilationResponse)
+    public VmExecutionQuery(VmCompilationSuccess compilationResponse)
     {
         Entrypoint = compilationResponse.Entrypoint;
         GeneratedClassFiles = compilationResponse.GeneratedClassFiles;
@@ -156,7 +169,7 @@ internal class VmLaunchManager
         await launchProcess.WaitForExitAsync();
 
         var output = await launchProcess.StandardOutput.ReadToEndAsync();
-        createdVmConfig.Pid = int.Parse(output.Split('\n').Last().Trim());
+        createdVmConfig.Pid = int.Parse(output.Trim());
 
         _activeVms[vmId] = createdVmConfig;
 
@@ -173,10 +186,11 @@ internal class VmLaunchManager
         await queryProcess.WaitForExitAsync();
         
         var path = $"/tmp/{vmId}-out.json";
+        Console.WriteLine($"Vm exit at {path}");
         if (!File.Exists(path)) throw new ExecutionOutputNotFoundException();
         
         var vmOutRaw = await File.ReadAllTextAsync(path);
-        File.Delete(path);
+        // File.Delete(path);
         
         var vmOut = JsonSerializer.Deserialize<TResult>(vmOutRaw, new JsonSerializerOptions // TODO: Move this to like shared.core defaultJsonSerializer.Deserialize()
         {

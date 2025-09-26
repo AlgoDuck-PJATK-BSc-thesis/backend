@@ -90,10 +90,13 @@ internal class CodeExecutorService(
     private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
         var vmLeaseTask = _launchManager.AcquireVmAsync(FilesystemType.Executor); 
-        var compilationResult = await compilationHandler.CompileAsync(userSolutionData); 
-    
+        var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
+        if (compilationResult is VmCompilationFailure failure)
+        {
+            throw new CompilationException(failure.ErrorMsg);
+        }
         using var vmLease = await vmLeaseTask; 
-        var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery(compilationResult));
+        var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery((compilationResult as VmCompilationSuccess)!));
         return _executorFileOperationHandler!.ParseVmOutput(result);
     }
     
