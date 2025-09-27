@@ -197,7 +197,7 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private static async Task<Guid> CreateFilesystem(FilesystemType fsType)
     {
         var filesystemTypeName = fsType.GetDisplayName().ToLowerInvariant();
-        var fsCopyProcess = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/make-copy-image.sh", filesystemTypeName);
+        var fsCopyProcess = ExecutorScriptHelper.CreateBashExecutionProcess("/app/firecracker/make-copy-image.sh", filesystemTypeName);
 
         fsCopyProcess.Start();
         await fsCopyProcess.WaitForExitAsync();

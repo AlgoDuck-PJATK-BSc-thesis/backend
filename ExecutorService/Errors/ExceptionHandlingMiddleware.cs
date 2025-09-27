@@ -39,6 +39,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             CompilationException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, err.Message),
             MangledControlSymbolException err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, ""),
             AmazonS3Exception err => new ExceptionReponseDto(HttpStatusCode.InternalServerError, err.Message),
+            VmQueryTimedOutException err => new ExceptionReponseDto(HttpStatusCode.BadRequest, "query timed out"),
             _ => new ExceptionReponseDto(HttpStatusCode.InternalServerError, "Internal server error"),
         };
 

@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
+using Polly;
+using Polly.Timeout;
 
 namespace ExecutorService.Executor;
 
@@ -17,20 +19,21 @@ public class VmCompilationQueryContent
     public string ClassName { get; set; } = string.Empty;
     public Guid ExecutionId { get; set; }
 }
-public class VmCompilationQuery : VmInputQuery
+
+public class VmHealthCheckContent;
+
+public class VmCompilationQuery<T> : VmInputQuery
 {
-    public string Endpoint { get; set; } = "HealthCheck";
+    public string Endpoint { get; set; } = "health_check";
     public HttpMethod Method { get; set; } = HttpMethod.Get;
-    public VmCompilationQueryContent? Content { get; set; }
+    public T? Content { get; set; }
     public string Ctype { get; set; } = "application/json";
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(VmCompilationSuccess), "success")]
 [JsonDerivedType(typeof(VmCompilationFailure), "error")]
-public abstract class VmCompilationResponse : VmInputResponse
-{
-}
+public abstract class VmCompilationResponse : VmInputResponse;
 
 public class VmCompilationSuccess : VmCompilationResponse
 {
@@ -60,13 +63,27 @@ public class VmExecutionResponse : VmInputResponse
     public string Err { get; set; } = string.Empty;
 }
 
+public class VmCompilerHealthCheckResponse : VmInputResponse
+{
+    public Dictionary<string, string> FileHashes { get; set; } = [];
+}
+
 internal sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
 {
+    internal Guid VmId => vmId;
     public async Task<TResult> QueryAsync<T, TResult>(T query) 
         where T : VmInputQuery 
         where TResult : VmInputResponse
     {
-        return await manager.QueryVm<T, TResult>(vmId, query);
+        try
+        {
+            return await manager.QueryVm<T, TResult>(vmId, query);
+        }
+        catch (VmQueryTimedOutException ex)
+        {
+            ex.WatchDogDecision = manager.InspectVmByWatchdog(this);
+            throw;
+        } 
     }
 
     public void Dispose()
@@ -86,6 +103,7 @@ internal class VmLaunchManager
         internal int MemMB { get; set; }
         internal bool Smt { get; set; } = false;
     }
+    
     private class VmConfig
     {
         internal Guid VmId { get; set; }
@@ -97,7 +115,13 @@ internal class VmLaunchManager
         internal string? VsockPath { get; set; }
         internal int Pid { get; set; }
         internal int ServicedRequests { get; set; }
+        internal Dictionary<string, string> FileHashes { get; set; } = [];
     }
+    
+    private readonly JsonSerializerOptions _defaultSerializerOptions = new() 
+    {
+        PropertyNameCaseInsensitive = true,
+    };
     
     private readonly FilesystemPooler _pooler;
     private readonly Dictionary<Guid, VmConfig> _activeVms = [];
@@ -107,9 +131,11 @@ internal class VmLaunchManager
     private int _nextGuestCid = 3; // 4 byte uint. (0 - loopback, 1 - general vsock, 2 - hypervisor) reserved so start at 3 and go from there
 
     private readonly Dictionary<FilesystemType, Channel<VmConfig>> _orphanPool;
+    private readonly VmWatchdog _watchdog;
     
     public VmLaunchManager(FilesystemPooler pooler)
     {
+        _watchdog = new VmWatchdog(this);
         _pooler = pooler;
         _defaultResourceAllocations = new Dictionary<FilesystemType, VmResourceAllocation>()
         {
@@ -133,6 +159,11 @@ internal class VmLaunchManager
         };
     }
 
+    internal async Task<VmLease> InspectVmByWatchdog(VmLease lease)
+    {
+        return await _watchdog.InspectVm(lease, _activeVms[lease.VmId].FileHashes);
+    }
+
     private async Task<Guid> DispatchVm(FilesystemType filesystemType, string? vmName = null)
     {
         if (_orphanPool.TryGetValue(filesystemType, out var value) && value.Reader.TryRead(out var config))
@@ -154,7 +185,7 @@ internal class VmLaunchManager
 
         const string launchScriptPath = "/app/firecracker/launch-vm.sh";
         
-        var launchProcess = ExecutorScriptHandler.CreateBashExecutionProcess(
+        var launchProcess = ExecutorScriptHelper.CreateBashExecutionProcess(
             launchScriptPath,
             createdVmConfig.VmId.ToString(),
             createdVmConfig.GuestCid.ToString(), 
@@ -164,7 +195,6 @@ internal class VmLaunchManager
             createdVmConfig.AllocatedResources.Smt.ToString().ToLowerInvariant()
             );
         
-
         launchProcess.Start();
         await launchProcess.WaitForExitAsync();
 
@@ -172,6 +202,15 @@ internal class VmLaunchManager
         createdVmConfig.Pid = int.Parse(output.Trim());
 
         _activeVms[vmId] = createdVmConfig;
+        if (filesystemType != FilesystemType.Compiler) return vmId;
+        Console.WriteLine($"Compiler {vmId}: READY{Environment.NewLine}Extracting file hashes");
+        var res = await QueryVm<VmCompilationQuery<VmHealthCheckContent>, VmCompilerHealthCheckResponse>(vmId,
+            new VmCompilationQuery<VmHealthCheckContent>
+            {
+                Content = new VmHealthCheckContent()
+            });
+        _activeVms[vmId].FileHashes = res.FileHashes;
+        Console.WriteLine($"Compiler {vmId}: File hashes ready");
 
         return vmId;
     }
@@ -181,22 +220,25 @@ internal class VmLaunchManager
         _activeVms[vmId].ServicedRequests++;
         var queryString = JsonSerializer.Serialize(queryContents);
         var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));
-        var queryProcess = ExecutorScriptHandler.CreateBashExecutionProcess("/app/firecracker/query-vm.sh", vmId.ToString(), queryStringEncoded);
+        var queryProcess = ExecutorScriptHelper.CreateBashExecutionProcess("/app/firecracker/query-vm.sh", vmId.ToString(), queryStringEncoded);
         queryProcess.Start();
-        await queryProcess.WaitForExitAsync();
+
+        var vmQueryTimeoutPolicy = Policy.TimeoutAsync(TimeSpan.FromSeconds(15));
+        try
+        {
+            await vmQueryTimeoutPolicy.ExecuteAsync(async () => await queryProcess.WaitForExitAsync());
+        }
+        catch (TimeoutRejectedException)
+        {
+            throw new VmQueryTimedOutException();
+        }
         
         var path = $"/tmp/{vmId}-out.json";
-        Console.WriteLine($"Vm exit at {path}");
         if (!File.Exists(path)) throw new ExecutionOutputNotFoundException();
         
         var vmOutRaw = await File.ReadAllTextAsync(path);
-        // File.Delete(path);
-        
-        var vmOut = JsonSerializer.Deserialize<TResult>(vmOutRaw, new JsonSerializerOptions // TODO: Move this to like shared.core defaultJsonSerializer.Deserialize()
-        {
-            PropertyNameCaseInsensitive = true,
-        });
-        return vmOut!;
+        File.Delete(path);
+        return JsonSerializer.Deserialize<TResult>(vmOutRaw, _defaultSerializerOptions)!;
     }
 
     internal bool TryAddToOrphanPool(Guid vmId)
@@ -236,5 +278,4 @@ internal class VmLaunchManager
     {
         return $"vm-{new Random().Next(1, 1_000_000)}"; // TODO: make this more imaginative
     }
-
 }

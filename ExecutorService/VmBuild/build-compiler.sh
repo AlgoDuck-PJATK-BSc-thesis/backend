@@ -55,6 +55,20 @@ echo "$CODE_B64" | base64 -d > "/app/client-src/$EXEC_ID/$CLASS_NAME.java"
 javac -cp "/app/lib/gson-2.13.1.jar" -proc:none -d "/app/client-bytecode/$EXEC_ID" "/app/client-src/$EXEC_ID/$CLASS_NAME.java" 2>"/app/error-log/$EXEC_ID/err.log"
 EOF
 
+
+cat > "/tmp/compiler-rootfs/app/scripts/get-file-hash.sh" << 'EOF'
+#!/bin/sh
+
+FILE_PATH=$1
+
+if [ -f $FILE_PATH ]; then
+  sha256sum $FILE_PATH
+else
+  exit 1
+fi
+EOF
+
+
 cat > "/tmp/compiler-rootfs/app/proxy.sh" << 'EOF'
 #!/bin/sh
 
@@ -62,9 +76,14 @@ while ! nc -z 127.0.0.1 5137; do
   sleep 1s
 done
 
-while true; do
-  socat VSOCK-LISTEN:5050,fork EXEC:"/bin/sh -c /app/process-input.sh"
-done
+socat VSOCK-LISTEN:5050,fork EXEC:"/bin/sh -c /app/process-input.sh" &
+
+# TODO: hardcoded sleeps are highly problematic. Due to the nature of health-checks however 
+# (we need to get file hashes before the machine is passed into an active pool).
+# It is queried immediately which tends to cause race conditions.
+sleep 0.5
+
+echo "READY" > /dev/ttyS0
 EOF
 
 cat > "/tmp/compiler-rootfs/app/RequestHandler.java" << 'EOF'
@@ -84,15 +103,8 @@ import java.util.Map;
 class RequestData {
     String Endpoint = "health";
     Method Method = new Method();
-    VmCompilationQueryContent Content;
+    JsonObject Content;
     String Ctype = "application/json";
-}
-
-class VmCompilationQueryContent
-{
-    String SrcCodeB64;
-    String ClassName;
-    String ExecutionId;
 }
 
 class Method {
@@ -113,7 +125,6 @@ public class RequestHandler {
     }
 
     private static void makeHttpRequest(RequestData request) throws Exception {
-
         var builder = HttpRequest.newBuilder(new URI((String.format("http://127.0.0.1:5137/%s", request.Endpoint))))
                 .timeout(Duration.of(10, ChronoUnit.SECONDS));
 
@@ -136,14 +147,14 @@ public class RequestHandler {
     }
 
     private static void setMethod(HttpRequest.Builder builder, RequestData request) {
-            String method = request.Method.Method.toUpperCase();
-            if (method.equals("POST") && request.Content != null) {
-                builder.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(request.Content), StandardCharsets.UTF_8))
-                        .header("Content-Type", request.Ctype);
-            } else {
-                builder.method(method, HttpRequest.BodyPublishers.noBody());
-            }
+        String method = request.Method.Method.toUpperCase();
+        if (method.equals("POST") && request.Content != null) {
+            builder.POST(HttpRequest.BodyPublishers.ofString(gson.toJson(request.Content), StandardCharsets.UTF_8))
+                    .header("Content-Type", request.Ctype);
+        } else {
+            builder.method(method, HttpRequest.BodyPublishers.noBody());
         }
+    }
 }
 EOF
 
@@ -175,6 +186,8 @@ EOF
 
 chmod +x /tmp/compiler-rootfs/app/proxy.sh
 chmod +x /tmp/compiler-rootfs/app/process-input.sh
+chmod +x /tmp/compiler-rootfs/app/scripts/compiler-src.sh
+chmod +x /tmp/compiler-rootfs/app/scripts/get-file-hash.sh
 
 mount -t proc proc proc/
 mount -t sysfs sys sys/
@@ -183,7 +196,7 @@ mount -o bind /dev/pts dev/pts/
 
 chroot /tmp/compiler-rootfs /bin/sh << 'EOF'
 apk update
-apk add openjdk17-jdk coreutils openrc mdevd curl socat jq netcat-openbsd net-tools
+apk add openjdk17-jdk coreutils openrc mdevd socat netcat-openbsd
 
 echo 'ttyS0 root:root 660' > /etc/mdevd.conf
 
@@ -203,7 +216,6 @@ depend(){
     after lo
     after net
 }
-
 INNER_EOF
 
 cat > "/etc/init.d/proxy" << 'INNER_EOF'
@@ -223,7 +235,6 @@ depend(){
 }
 
 start_post(){
-    echo "READY" > /dev/ttyS0
     exit 0
 }
 
@@ -239,21 +250,10 @@ depend() {
 }
 
 start() {
-    ebegin "Setting up loopback interface"
     ip link set lo up
     ip addr add 127.0.0.1/8 dev lo 2>/dev/null || true
-    
-    sleep 1
-    
-    ping -c 1 127.0.0.1 >/dev/null 2>&1
-    eend $?
 }
 
-stop() {
-    ebegin "Shutting down loopback interface"
-    ip link set lo down
-    eend $?
-}
 INNER_EOF
 
 chmod +x /etc/init.d/lo
@@ -266,6 +266,7 @@ chmod +x /etc/init.d/proxy
 rc-update add proxy default
 
 javac -cp "/app/lib/gson-2.13.1.jar" /app/RequestHandler.java -d /app/
+rm -rf /app/RequestHandler.java
 
 EOF
 

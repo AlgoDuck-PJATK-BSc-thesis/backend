@@ -10,7 +10,7 @@ public class VmOutput
     public string? Err { get; init; }
 }
 
-internal static class ExecutorScriptHandler
+internal static class ExecutorScriptHelper
 {
     internal static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)
     {

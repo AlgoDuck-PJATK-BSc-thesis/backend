@@ -20,7 +20,7 @@ internal class CodeExecutorService(
     ) : ICodeExecutorService
 {
     private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
-    private ExecutorFileOperationHandler? _executorFileOperationHandler;
+    private ExecutorFileOperationHelper? _executorFileOperationHandler;
     private VmLaunchManager _launchManager = launchManager;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
@@ -51,10 +51,9 @@ internal class CodeExecutorService(
         {
             var analyzer = new AnalyzerSimple(fileData.FileContents, template);
             var codeAnalysisResult = analyzer.AnalyzeUserCode(executionStyle);
+            if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
 
             fileData.IngestCodeAnalysisResult(codeAnalysisResult);
-
-            if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
         }
         catch (JavaSyntaxException)
         {
@@ -72,7 +71,7 @@ internal class CodeExecutorService(
             throw;
         }
 
-        _executorFileOperationHandler = new ExecutorFileOperationHandler(fileData);
+        _executorFileOperationHandler = new ExecutorFileOperationHelper(fileData);
         return fileData;
     }
 

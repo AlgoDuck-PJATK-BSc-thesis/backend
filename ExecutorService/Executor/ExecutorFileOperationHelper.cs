@@ -12,15 +12,13 @@ internal enum SigningType
 {
     Time, Answer
 }
-public class ExecutorFileOperationHandler(UserSolutionData userSolutionData)
+public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
 {
     private const string TestCaseIdStartFlag = "tc_id:";
     private const string AnswerControlSymbol = "-answ:";
     private const string TimeControlSymbol = "-time:";
     private const int UuidLength = 36;
     private const int SigningKeyStringLen = UuidLength + 4; // "ctr-70fcae06-b1ac-453b-b0a0-57812ba86cf4". 4 chars for "ctr-" + uuid length
-    private static JsonSerializerOptions _serializerOptions = new(){PropertyNameCaseInsensitive = true};
-
 
     internal ExecuteResultDto ParseVmOutput(VmExecutionResponse vmOutput)
     {

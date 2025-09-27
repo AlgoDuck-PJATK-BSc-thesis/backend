@@ -56,21 +56,32 @@ internal sealed class CompilationHandler : ICompilationHandler
         {
             var task = await GetCompilationTask();
             var compilerLease = await GetAvailableCompilerId();
-
-            var result = await compilerLease.QueryAsync<VmCompilationQuery, VmCompilationResponse>(new VmCompilationQuery
+            try
             {
-                Endpoint = "compile",
-                Method = HttpMethod.Post,
-                Content = new VmCompilationQueryContent
-                {
-                    ClassName = task.UserSolutionData.MainClassName,
-                    ExecutionId = task.UserSolutionData.ExecutionId,
-                    SrcCodeB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(task.UserSolutionData.FileContents.ToString()))
-                }
-            });
-            
-            await ReturnCompilerToPool(compilerLease);
-            task.Tcs.SetResult(result);
+                var result = await compilerLease.QueryAsync<VmCompilationQuery<VmCompilationQueryContent>, VmCompilationResponse>(
+                    new VmCompilationQuery<VmCompilationQueryContent>
+                    {
+                        Endpoint = "compile",
+                        Method = HttpMethod.Post,
+                        Content = new VmCompilationQueryContent
+                        {
+                            ClassName = task.UserSolutionData.MainClassName,
+                            ExecutionId = task.UserSolutionData.ExecutionId,
+                            SrcCodeB64 =
+                                Convert.ToBase64String(
+                                    Encoding.UTF8.GetBytes(task.UserSolutionData.FileContents.ToString()))
+                        }
+                    });
+                task.Tcs.SetResult(result);
+            }
+            catch (VmQueryTimedOutException ex)
+            {
+                compilerLease = await ex.WatchDogDecision;
+            }
+            finally
+            {
+                await ReturnCompilerToPool(compilerLease);
+            }
         }
     }
     public static async Task<CompilationHandler> CreateAsync(VmLaunchManager launchManager)
@@ -79,7 +90,8 @@ internal sealed class CompilationHandler : ICompilationHandler
         
         for (var i = 0; i < 1; i++)
         {
-            handler._compilerDataWriter.TryWrite(await launchManager.AcquireVmAsync(FilesystemType.Compiler));
+            var lease = await launchManager.AcquireVmAsync(FilesystemType.Compiler);
+            handler._compilerDataWriter.TryWrite(lease);
         }
         
         return handler;
