@@ -2,7 +2,10 @@ using System.Text;
 using ExecutorService.Analyzer.AstAnalyzer;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Dtos;
+using ExecutorService.Executor.ResourceHandlers;
 using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.VmLaunchTypes;
+using ExecutorService.Executor.VmLaunchSystem;
 
 namespace ExecutorService.Executor;
 
@@ -90,11 +93,13 @@ internal class CodeExecutorService(
     {
         var vmLeaseTask = _launchManager.AcquireVmAsync(FilesystemType.Executor); 
         var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
+        Console.WriteLine($"compilation finished {DateTime.UtcNow}");
+        using var vmLease = await vmLeaseTask;
+        Console.WriteLine($"lease acquired {DateTime.UtcNow}");
         if (compilationResult is VmCompilationFailure failure)
         {
             throw new CompilationException(failure.ErrorMsg);
         }
-        using var vmLease = await vmLeaseTask; 
         var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery((compilationResult as VmCompilationSuccess)!));
         return _executorFileOperationHandler!.ParseVmOutput(result);
     }

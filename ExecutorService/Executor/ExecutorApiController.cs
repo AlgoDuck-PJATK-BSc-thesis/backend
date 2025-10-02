@@ -15,6 +15,9 @@ public class ExecutorApiController(ICodeExecutorService codeExecutorService) : C
     [HttpPost("dry")]
     public async Task<IActionResult> DryExecuteCode([FromBody] DryExecuteRequestDto executeRequest)
     {
-        return Ok(await codeExecutorService.DryExecute(executeRequest));
+        Console.WriteLine($"start :{DateTime.UtcNow}");
+        var res = await codeExecutorService.DryExecute(executeRequest);
+        Console.WriteLine($"done :{DateTime.UtcNow}");
+        return Ok(res);
     }
 }

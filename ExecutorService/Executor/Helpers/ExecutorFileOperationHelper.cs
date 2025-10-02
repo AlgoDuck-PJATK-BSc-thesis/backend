@@ -4,6 +4,9 @@ using System.Text.Json;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.VmLaunchTypes;
+using ExecutorService.Executor.VmLaunchSystem;
+
 // ReSharper disable ReplaceSubstringWithRangeIndexer
 
 namespace ExecutorService.Executor;

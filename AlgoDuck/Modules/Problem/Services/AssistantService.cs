@@ -26,7 +26,6 @@ public class AssistantService : IAssistantService
     {
         var problemDetails = await _problemRepository.GetProblemDetailsAsync(request.ExerciseId);
         var query = ConstructAssistantQuery(request, problemDetails);
-        Console.WriteLine(query);
         ChatCompletion completion = await _chatClient.CompleteChatAsync(query);
         return new AssistantResponseDto
         {

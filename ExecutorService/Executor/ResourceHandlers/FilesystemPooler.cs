@@ -92,6 +92,7 @@ internal sealed class FilesystemPooler : IFilesystemPooler
             [FilesystemType.Executor] = new(),
         };
         Task.Run(ServiceFsRequests);
+        
         Task.Run(MonitorCacheState);
         
     }
@@ -110,11 +111,9 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private async Task MonitorCacheState()
     {
         var periodicTimer = new PeriodicTimer(_pollingFrequency);
-        while (true)
+        while (await periodicTimer.WaitForNextTickAsync())
         {
             await MaintainCacheAsync();
-            
-            await periodicTimer.WaitForNextTickAsync();
         }
     }
 
@@ -165,11 +164,16 @@ internal sealed class FilesystemPooler : IFilesystemPooler
 
     public async Task<Guid> EnqueueFilesystemRequestAsync(FilesystemType fsType)
     {
+        Console.WriteLine($"Placing fs request: {DateTime.UtcNow}");
         var requestCreationTime = DateTime.UtcNow;
         var fsTask = new TaskCompletionSource<RequestProcessingData>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Console.WriteLine($"Writing fs request: {DateTime.UtcNow}");
         await _requestWriter.WriteAsync(new FilesystemRequest(fsType, fsTask));
+        Console.WriteLine($"Writiten fs request: {DateTime.UtcNow}");
         var result = await fsTask.Task;
+        Console.WriteLine($"Awaited fs request: {DateTime.UtcNow}");
         _requestHistory[fsType].Enqueue(new FilesystemRequestData(requestCreationTime, result.IsCached));
+        Console.WriteLine($"Got fs: {DateTime.UtcNow}");
         return result.FilesystemId;
     }
 
@@ -178,7 +182,9 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     {
         while (true)
         {
+            Console.WriteLine("reading requests");
             var request = await _requestReader.ReadAsync();
+            Console.WriteLine("read request");
             var (resultId, isCached) = await ReadOrCreateFilesystemAsync(request.Filesystem, CreateFilesystem);
             request.Tcs.SetResult(new RequestProcessingData(resultId, isCached));
         }
@@ -188,19 +194,22 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private async Task<(Guid item, bool isCached)> ReadOrCreateFilesystemAsync(FilesystemType fsType, Func<FilesystemType, Task<Guid>>? create = null)
     {
         var reader = _channels[fsType].Reader;
+        Console.WriteLine("reading fs");
         if (reader.TryRead(out var item))
             return (item, true);
-
+        Console.WriteLine("creating fs");
         return create == null ? (await reader.ReadAsync(), true) : (await create(fsType), false);
     }
 
     private static async Task<Guid> CreateFilesystem(FilesystemType fsType)
     {
+        Console.WriteLine($"Creating new fs {DateTime.UtcNow}");
         var filesystemTypeName = fsType.GetDisplayName().ToLowerInvariant();
         var fsCopyProcess = ExecutorScriptHelper.CreateBashExecutionProcess("/app/firecracker/make-copy-image.sh", filesystemTypeName);
 
         fsCopyProcess.Start();
         await fsCopyProcess.WaitForExitAsync();
+        Console.WriteLine($"Creating new fs end {DateTime.UtcNow}");
 
         var output = await fsCopyProcess.StandardOutput.ReadToEndAsync();
         return Guid.Parse(output.Trim());

@@ -3,8 +3,10 @@ using Amazon.S3;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
 using ExecutorService.Executor.Configs;
+using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.VmLaunchSystem;
 using Microsoft.Extensions.Options;
-using CompilationHandler = ExecutorService.Executor.CompilationHandler;
+using CompilationHandler = ExecutorService.Executor.ResourceHandlers.CompilationHandler;
 
 
 var builder = WebApplication.CreateBuilder(args);
