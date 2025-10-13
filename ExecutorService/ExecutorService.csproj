@@ -24,4 +24,8 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
+    </ItemGroup>
+
 </Project>

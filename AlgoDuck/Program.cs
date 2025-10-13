@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,12 +17,12 @@ using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Services;
 using AlgoDuck.Modules.Item.Repositories;
 using AlgoDuck.Modules.Item.Services;
-using AlgoDuck.Modules.Problem.Interfaces;
-using AlgoDuck.Modules.Problem.Repositories;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using AlgoDuck.Modules.Cohort.Services;
 using AlgoDuck.Modules.Cohort;
-using AlgoDuck.Modules.Problem.Services;
+using AlgoDuck.Modules.Problem.ExecutorShared;
+using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById;
+using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
 using AlgoDuck.Shared.Configs;
 using AlgoDuck.Shared.Utilities;
 using OpenAI.Chat;
@@ -90,35 +91,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<IAmazonS3>(sp =>
-{
-    var s3 = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3.Region) };
-    return new AmazonS3Client(config);
-});
-
-builder.Services.AddSingleton<ChatClient>(sp =>
-{
-    var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-    const string model = "gpt-5-nano";
-    return new ChatClient(model, apiKey);
-});
-
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<IItemService, ItemService>();
-builder.Services.AddScoped<IProblemService, ProblemService>();
-builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
-builder.Services.AddScoped<IAssistantService, AssistantService>();
+
 builder.Services.AddScoped<DataSeedingService>();
 
 builder.Services.AddCors(options =>
@@ -144,6 +128,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; });
+
+ExecutorDependencyInitializer.InitializeExecutorDependencies(builder);
 
 var app = builder.Build();
 

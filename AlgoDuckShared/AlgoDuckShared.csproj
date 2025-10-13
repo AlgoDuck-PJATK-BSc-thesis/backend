@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>AlgoDuckShared</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
+      <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0-preview.4.25258.110" />
+    </ItemGroup>
+
+</Project>

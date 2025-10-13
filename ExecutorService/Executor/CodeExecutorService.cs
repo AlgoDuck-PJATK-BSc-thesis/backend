@@ -24,7 +24,6 @@ internal class CodeExecutorService(
 {
     private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
     private ExecutorFileOperationHelper? _executorFileOperationHandler;
-    private VmLaunchManager _launchManager = launchManager;
 
     public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
     {
@@ -91,7 +90,7 @@ internal class CodeExecutorService(
 
     private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
     {
-        var vmLeaseTask = _launchManager.AcquireVmAsync(FilesystemType.Executor); 
+        var vmLeaseTask = launchManager.AcquireVmAsync(FilesystemType.Executor); 
         var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
         Console.WriteLine($"compilation finished {DateTime.UtcNow}");
         using var vmLease = await vmLeaseTask;

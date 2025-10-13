@@ -62,8 +62,16 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private readonly ConcurrentDictionary<FilesystemType, FilesystemChannel<Guid>> _channels;
     private readonly ConcurrentDictionary<FilesystemType, CacheTargetData> _cacheTargets;
     private readonly ConcurrentDictionary<FilesystemType, ConcurrentQueue<FilesystemRequestData>> _requestHistory;
+
+
+    internal static async Task<FilesystemPooler> CreateFileSystemPoolerAsync()
+    {
+        var fsPooler = new FilesystemPooler();
+        await fsPooler.MaintainCacheAsync();
+        return fsPooler;
+    }
     
-    internal FilesystemPooler()
+    private FilesystemPooler()
     {
         var fsRequests = Channel.CreateUnbounded<FilesystemRequest>();
         _requestReader = fsRequests.Reader;

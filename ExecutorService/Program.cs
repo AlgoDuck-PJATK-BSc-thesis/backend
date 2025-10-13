@@ -1,8 +1,8 @@
 using Amazon;
 using Amazon.S3;
+using AlgoDuckShared;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
-using ExecutorService.Executor.Configs;
 using ExecutorService.Executor.ResourceHandlers;
 using ExecutorService.Executor.VmLaunchSystem;
 using Microsoft.Extensions.Options;
@@ -49,7 +49,7 @@ builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
 
 // eager initialization
-var filesystemPooler = new FilesystemPooler();
+var filesystemPooler = await FilesystemPooler.CreateFileSystemPoolerAsync();
 var vmLauncher = new VmLaunchManager(filesystemPooler);
 var compilationHandler = await CompilationHandler.CreateAsync(vmLauncher);
 

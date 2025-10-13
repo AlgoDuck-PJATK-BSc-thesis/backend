@@ -19,5 +19,11 @@ RUN dotnet publish "AlgoDuck.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "AlgoDuck.dll"]
+
+USER root
+RUN apt-get update && apt-get install -y netcat-openbsd
+USER $APP_UID 
+
+COPY --from=publish --chown=app:app /app/publish .
+# should have better race condition guarding
+CMD /bin/bash -c 'sleep 60s && dotnet AlgoDuck.dll'

@@ -41,15 +41,19 @@
         <Folder Include="Modules\Duel\DTOs\" />
         <Folder Include="Modules\Duel\Repositories\" />
         <Folder Include="Modules\Duel\Services\" />
-        <Folder Include="Modules\Problem\DTOs\" />
-        <Folder Include="Modules\Problem\Repositories\" />
         <Folder Include="Modules\Item\Controllers\" />
         <Folder Include="Modules\Item\DTOs\" />
         <Folder Include="Modules\Item\Repositories\" />
         <Folder Include="Modules\Item\Services\" />
+        <Folder Include="Modules\Problem\Commands\CreateProblem\" />
+        <Folder Include="Modules\Problem\Queries\GetProblemsByCategory\" />
         <Folder Include="Modules\User\Controllers\" />
         <Folder Include="Modules\User\DTOs\" />
         <Folder Include="Modules\User\Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
     </ItemGroup>
 
 </Project>
