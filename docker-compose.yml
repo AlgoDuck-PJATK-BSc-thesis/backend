@@ -6,23 +6,23 @@ volumes:
   postgres_data:
 
 services:      
-  executor:
-    build:
-      context: .
-      dockerfile: ExecutorService/Dockerfile
-    ports:
-      - "${EXECUTOR_PORT:-1337}:1337"
-    extra_hosts:
-      - "postgres-host:host-gateway"
-      - "host.docker.internal:host-gateway"
-    devices:
-      - /dev/kvm:/dev/kvm
-    env_file:
-      - .env
-    networks:
-      - app_network
-    group_add:
-      - ${KVM_GID}
+#  executor:
+#    build:
+#      context: .
+#      dockerfile: ExecutorService/Dockerfile
+#    ports:
+#      - "${EXECUTOR_PORT:-1337}:1337"
+#    extra_hosts:
+#      - "postgres-host:host-gateway"
+#      - "host.docker.internal:host-gateway"
+#    devices:
+#      - /dev/kvm:/dev/kvm
+#    env_file:
+#      - .env
+#    networks:
+#      - app_network
+#    group_add:
+#      - ${KVM_GID}
     
   algoduck:
     image: algoduck

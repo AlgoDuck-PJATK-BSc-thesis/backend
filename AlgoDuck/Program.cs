@@ -21,9 +21,11 @@ using AlgoDuck.Modules.Problem.Repositories;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using AlgoDuck.Modules.Cohort.Services;
 using AlgoDuck.Modules.Cohort;
+using AlgoDuck.Modules.Cohort.CohortManagement;
 using AlgoDuck.Modules.Problem.Services;
 using AlgoDuck.Shared.Configs;
 using AlgoDuck.Shared.Utilities;
+using AlgoDuck.Modules.Cohort.CohortManagement.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,7 +103,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-
 builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
@@ -111,6 +112,7 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<IProblemService, ProblemService>();
 builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
 builder.Services.AddScoped<DataSeedingService>();
+builder.Services.AddScoped<ICohortRepository, CohortRepository>();
 
 builder.Services.AddCors(options =>
 {
@@ -177,6 +179,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
+app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
