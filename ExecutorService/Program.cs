@@ -47,6 +47,7 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 
 builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
+builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
 
 // eager initialization
 var filesystemPooler = await FilesystemPooler.CreateFileSystemPoolerAsync();

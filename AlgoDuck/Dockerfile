@@ -8,8 +8,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["AlgoDuck/AlgoDuck.csproj", "AlgoDuck/"]
+COPY ["AlgoDuckShared/AlgoDuckShared.csproj", "AlgoDuckShared/"]
 RUN dotnet restore "AlgoDuck/AlgoDuck.csproj"
-COPY . .
+
+COPY AlgoDuckShared/ AlgoDuckShared/
+COPY AlgoDuck/ AlgoDuck/
+
 WORKDIR "/src/AlgoDuck"
 RUN dotnet build "AlgoDuck.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
@@ -26,4 +30,4 @@ USER $APP_UID
 
 COPY --from=publish --chown=app:app /app/publish .
 # should have better race condition guarding
-CMD /bin/bash -c 'sleep 60s && dotnet AlgoDuck.dll'
+ENTRYPOINT ["dotnet", "AlgoDuck.dll"]

@@ -7,8 +7,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ExecutorService/ExecutorService.csproj", "ExecutorService/"]
+COPY ["AlgoDuckShared/AlgoDuckShared.csproj", "AlgoDuckShared/"]
 RUN dotnet restore "ExecutorService/ExecutorService.csproj"
+
 COPY ExecutorService/ ExecutorService/ 
+COPY AlgoDuckShared/ AlgoDuckShared/ 
+
 WORKDIR "/src/ExecutorService"
 RUN dotnet build "ExecutorService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

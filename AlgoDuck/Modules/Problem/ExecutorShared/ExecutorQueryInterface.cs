@@ -10,9 +10,9 @@ internal interface IExecutorQueryInterface
     internal Task<ExecuteResponse> ExecuteAsync(ExecuteRequest executeRequest);
 }
 
-internal class ExecutorQueryInterface(IHttpClientFactory httpClientFactory)
+internal class ExecutorQueryInterface(IHttpClientFactory httpClientFactory) : IExecutorQueryInterface
 {
-    internal async Task<ExecuteResponse> ExecuteAsync(ExecuteRequest executeRequest)
+    public async Task<ExecuteResponse> ExecuteAsync(ExecuteRequest executeRequest)
     {
         var request = new HttpRequestMessage
         {

@@ -9,7 +9,7 @@
   </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AWSSDK.S3" Version="4.0.6.6" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.Json" Version="10.0.0-preview.4.25258.110" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />

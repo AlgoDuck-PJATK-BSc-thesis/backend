@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.OpenApi.Extensions;
 
-namespace ExecutorService.Executor;
+namespace ExecutorService.Executor.ResourceHandlers;
 
 internal enum FilesystemType
 {
@@ -51,8 +51,8 @@ internal sealed class FilesystemPooler : IFilesystemPooler
     private readonly TimeSpan _trackingPeriod = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _pollingFrequency = TimeSpan.FromSeconds(15);
 
-    private const int DEFAULT_COMPILER_CACHE_TARGET = 3;
-    private const int DEFAULT_EXECUTOR_CACHE_TARGET = 15;
+    private const int DEFAULT_COMPILER_CACHE_TARGET = 1;
+    private const int DEFAULT_EXECUTOR_CACHE_TARGET = 5;
     
     private double _safetyBuffer = 1.5;
     
