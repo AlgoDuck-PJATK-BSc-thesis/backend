@@ -18,11 +18,6 @@ public class CohortController : ControllerBase
         _service = service;
     }
 
-    [HttpGet]
-    [Authorize(Roles = "admin")]
-    public async Task<IActionResult> GetAll() =>
-        Ok(await _service.GetAllAsync());
-
     [HttpGet("{id:guid}")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> Get(Guid id)
@@ -73,4 +68,4 @@ public class CohortController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetUsers(Guid id) =>
         Ok(await _service.GetUsersAsync(id));
-}
+} 
