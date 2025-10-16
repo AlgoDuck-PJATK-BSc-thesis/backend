@@ -55,18 +55,15 @@ public class AnalyzerSimple
     public CodeAnalysisResult AnalyzeUserCode(ExecutionStyle executionStyle)
     {
         var mainClass = GetMainClass();
-        if (executionStyle == ExecutionStyle.Execution && mainClass == null) throw new EmptyProgramException();
-        var main = mainClass == null ? InsertEntrypointMethod() : FindAndGetFunc<AstNodeClass>(_baselineMainSignature, mainClass);
+        var main = FindAndGetFunc(_baselineMainSignature, mainClass) ?? InsertEntrypointMethod(mainClass);
 
-        var mainClassName = main.GetMemberType()!.Identifier!.Value!;
         var validatedTemplateFunctions = executionStyle == ExecutionStyle.Submission ? ValidateTemplateFunctions() : true;
         
-        return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClassName, validatedTemplateFunctions);
+        return new CodeAnalysisResult(MainMethod.MakeFromAstNodeMain(main), mainClass.Identifier!.Value!, validatedTemplateFunctions);
     }
 
-    private AstNodeMemberFunc<AstNodeClass> InsertEntrypointMethod()
+    private AstNodeMemberFunc<AstNodeClass> InsertEntrypointMethod(AstNodeClass astNodeClass)
     {
-        var astNodeClass = _userProgramRoot.ProgramCompilationUnits.SelectMany(cu => cu.CompilationUnitTopLevelStatements).First(tls => tls.IsT0 && tls.AsT0.ClassAccessModifier == AccessModifier.Public).AsT0;
         var endOfEntrypointClassOffset = astNodeClass.ClassScope!.ScopeEndOffset;
         _userCode!.Insert(endOfEntrypointClassOffset, BaselineMainCode);
         astNodeClass.ClassScope!.ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length;
@@ -151,11 +148,11 @@ public class AnalyzerSimple
             .Any(func => ValidateFunctionSignature(baselineFunc, func));
     }
     
-    private static AstNodeMemberFunc<T> FindAndGetFunc<T>(AstNodeMemberFunc<T> baselineFunc, T typeToBeSearched) where T : IType<T>
+    private static AstNodeMemberFunc<T>? FindAndGetFunc<T>(AstNodeMemberFunc<T> baselineFunc, T typeToBeSearched) where T : IType<T>
     {
         return typeToBeSearched.GetMembers().Where(func => func.ClassMember.IsT0)
             .Select(func => func.ClassMember.AsT0)
-            .First(func => ValidateFunctionSignature<T>(baselineFunc, func));
+            .FirstOrDefault(func => ValidateFunctionSignature<T>(baselineFunc, func));
     }
 
     private static bool FindAndCompareVariable<T>(AstNodeMemberVar<T> baseline, T toBeSearched) where T : IType<T>
@@ -181,12 +178,11 @@ public class AnalyzerSimple
         return true;
     }
 
-    private AstNodeClass? GetMainClass()
+    private AstNodeClass GetMainClass()
     {
-        var foundClasses = _userProgramRoot.ProgramCompilationUnits .SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0).Select(tls => tls.AsT0);
-        var foundPublicClasses = foundClasses.Where(clazz => clazz.ClassAccessModifier == AccessModifier.Public).ToList();
-        if (foundPublicClasses.Count == 0) throw new EntrypointNotFoundException("No public class found. Exiting.");
-        return foundPublicClasses.FirstOrDefault(clazz => FindAndCompareFunc(_baselineMainSignature, clazz));
+        var foundClasses = _userProgramRoot.ProgramCompilationUnits .SelectMany(cu => cu.CompilationUnitTopLevelStatements).Where(tls => tls.IsT0).Select(tls => tls.AsT0).Where(clazz => clazz.ClassAccessModifier == AccessModifier.Public).ToList();
+        if (foundClasses.Count == 0) throw new EntrypointNotFoundException("No public class found. Exiting.");
+        return foundClasses.FirstOrDefault(clazz => FindAndCompareFunc(_baselineMainSignature, clazz), foundClasses.First());
     }
 
     

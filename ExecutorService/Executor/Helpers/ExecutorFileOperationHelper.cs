@@ -1,15 +1,13 @@
-using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
+using AlgoDuckShared.Executor.SharedTypes;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Dtos;
 using ExecutorService.Executor.Types;
 using ExecutorService.Executor.Types.VmLaunchTypes;
-using ExecutorService.Executor.VmLaunchSystem;
 
 // ReSharper disable ReplaceSubstringWithRangeIndexer
 
-namespace ExecutorService.Executor;
+namespace ExecutorService.Executor.Helpers;
 
 internal enum SigningType
 {
@@ -22,27 +20,26 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
     private const string TimeControlSymbol = "-time:";
     private const int UuidLength = 36;
     private const int SigningKeyStringLen = UuidLength + 4; // "ctr-70fcae06-b1ac-453b-b0a0-57812ba86cf4". 4 chars for "ctr-" + uuid length
+    private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
 
-    internal ExecuteResultDto ParseVmOutput(VmExecutionResponse vmOutput)
+
+    internal ExecuteResponse ParseVmOutput(VmExecutionResponse vmOutput)
     {
-        var executeResultDto = new ExecuteResultDto
-        {
-            StdError = vmOutput.Err!,
-        };
-
+        List<TestResultDto> testResults = [];
+        var executionTime = 0;
         var javaStdOut = new StringBuilder();
         
-        foreach (var line in vmOutput.Out!.ReplaceLineEndings().Split(Environment.NewLine))
+        foreach (var line in vmOutput.Out.ReplaceLineEndings().Split(Environment.NewLine))
         {
             if (line.Contains($"ctr-{userSolutionData.SigningKey}"))
             {
                 switch (line.Substring(SigningKeyStringLen, AnswerControlSymbol.Length))
                 {
-                    case "-answ:":
-                        executeResultDto.TestResults.Add(ParseTestCaseResult(line));
+                    case AnswerControlSymbol:
+                        testResults.Add(ParseTestCaseResult(line));
                         break;
-                    case "-time:":
-                        executeResultDto.ExecutionTime = ParseTimingOutput(line);
+                    case TimeControlSymbol:
+                        executionTime = ParseTimingOutput(line);
                         break;
                     default:
                         throw new MangledControlSymbolException();
@@ -54,8 +51,23 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
             }
         }
 
-        executeResultDto.StdOutput = javaStdOut.ToString();
-        return executeResultDto;
+        return userSolutionData.ExecutionStyle switch
+        {
+            ExecutionStyle.Execution => new DryExecuteResponse
+            {
+                ExecutionTime = executionTime,
+                StdError = vmOutput.Err,
+                StdOutput = javaStdOut.ToString()
+            },
+            ExecutionStyle.Submission => new SubmitExecuteResponse
+            {
+                ExecutionTime = executionTime,
+                StdError = vmOutput.Err,
+                StdOutput = javaStdOut.ToString(),
+                TestResults = testResults
+            },
+            _ => throw new ArgumentOutOfRangeException()
+        };
     }
     
     private TestResultDto ParseTestCaseResult(string line)
@@ -99,11 +111,22 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
         InsertAtEndOfMainMethod(GetTimingVariable(timingEndVariableName));
         InsertAtEndOfMainMethod(CreateSignedPrintStatement($"({timingEndVariableName} - {timingStartVariableName})", SigningType.Time));
     }
+
+    internal void InsertGsonImport()
+    {
+        InsertAtStartOfFile(JavaGsonImport);
+    }
+
+    private void InsertAtStartOfFile(string codeToBeInserted)
+    {
+        userSolutionData.FileContents.Insert(0, codeToBeInserted);
+        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+    }
     
     private string GetHelperVariableNamePrefix()
     {
         var gsonInstanceName = new StringBuilder("a"); // sometimes guids start with numbers, java variables names on the other hand cannot
-        gsonInstanceName.Append(userSolutionData.ExerciseId.ToString().Replace("-", ""));
+        gsonInstanceName.Append(userSolutionData.ExerciseId.ToString()!.Replace("-", ""));
         return gsonInstanceName.ToString();
     }
 

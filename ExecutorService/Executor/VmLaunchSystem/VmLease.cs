@@ -13,7 +13,6 @@ internal sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
         try
         {
             var res = await manager.QueryVm<T, TResult>(vmId, query);
-            Console.WriteLine("Got res");
             return res;
         }
         catch (VmQueryTimedOutException ex)

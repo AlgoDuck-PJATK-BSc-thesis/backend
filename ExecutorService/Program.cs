@@ -1,6 +1,7 @@
-using Amazon;
-using Amazon.S3;
 using AlgoDuckShared;
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
 using ExecutorService.Executor.ResourceHandlers;
@@ -12,6 +13,7 @@ using CompilationHandler = ExecutorService.Executor.ResourceHandlers.Compilation
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
@@ -32,7 +34,7 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
 
-    var credentials = new Amazon.Runtime.BasicAWSCredentials(
+    var credentials = new BasicAWSCredentials(
         Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
         Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
     );

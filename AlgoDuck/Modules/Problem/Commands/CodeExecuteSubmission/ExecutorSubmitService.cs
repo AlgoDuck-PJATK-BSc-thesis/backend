@@ -4,7 +4,7 @@ using AlgoDuckShared.Executor.SharedTypes;
 namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 
-internal interface IExecutorSubmitService
+public interface IExecutorSubmitService
 {
     internal Task<ExecuteResponse> SubmitUserCode(SubmitExecuteRequest submission);
 }

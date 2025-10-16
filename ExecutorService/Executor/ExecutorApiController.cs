@@ -1,4 +1,4 @@
-using ExecutorService.Executor.Dtos;
+using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExecutorService.Executor;
@@ -7,17 +7,9 @@ namespace ExecutorService.Executor;
 [Route("/api/execute")]
 public class ExecutorApiController(ICodeExecutorService codeExecutorService) : ControllerBase
 {
-    [HttpPost("full")]
-    public async Task<IActionResult> ExecuteCode([FromBody] ExecuteRequestDto executeRequest)
+    [HttpPost]
+    public async Task<IActionResult> Execute([FromBody] ExecuteRequest request)
     {
-        return Ok(await codeExecutorService.FullExecute(executeRequest));
-    }
-    [HttpPost("dry")]
-    public async Task<IActionResult> DryExecuteCode([FromBody] DryExecuteRequestDto executeRequest)
-    {
-        Console.WriteLine($"start :{DateTime.UtcNow}");
-        var res = await codeExecutorService.DryExecute(executeRequest);
-        Console.WriteLine($"done :{DateTime.UtcNow}");
-        return Ok(res);
+        return Ok(await codeExecutorService.ExecuteAgnostic(request));
     }
 }

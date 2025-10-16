@@ -137,7 +137,7 @@ builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; })
 builder.Services.AddHttpClient("executor", client =>
 {
     client.BaseAddress =
-        new Uri($"http://executor:{Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"}");
+        new Uri($"http://executor:{Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"}/api/execute");
     client.Timeout = TimeSpan.FromSeconds(15);
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 });

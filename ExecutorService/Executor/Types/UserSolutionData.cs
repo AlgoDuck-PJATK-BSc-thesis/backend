@@ -3,16 +3,14 @@ using ExecutorService.Analyzer._AnalyzerUtils;
 
 namespace ExecutorService.Executor.Types;
 
-public class UserSolutionData(string lang, StringBuilder fileContents, string? exerciseId)
+public class UserSolutionData
 {
     public Guid ExecutionId { get; } = Guid.NewGuid();
-
     public Guid SigningKey { get; } = Guid.NewGuid(); // maybe could just use ExecutionId? Edit: Could be, but I'll keep it separate to mitigate the human risk of someone confusing the 2
-    public Guid ExerciseId { get; } = exerciseId != null ? Guid.Parse(exerciseId) : Guid.Empty;
-    public string Lang => lang;
-
-    public StringBuilder FileContents => fileContents;
-
+    public required StringBuilder FileContents { get; init; }
+    public required string Lang { get; set; }
+    public required ExecutionStyle ExecutionStyle { get; init; }
+    public Guid? ExerciseId { get; init; }
     public string MainClassName { get; set; } = string.Empty;
     public bool PassedValidation { get; set; } = false;
     public MainMethod? MainMethod { get; set; }

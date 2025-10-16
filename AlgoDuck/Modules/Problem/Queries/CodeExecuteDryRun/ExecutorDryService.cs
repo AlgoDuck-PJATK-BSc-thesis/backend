@@ -4,7 +4,7 @@ using AlgoDuckShared.Executor.SharedTypes;
 namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
 
-internal interface IExecutorDryService
+public interface IExecutorDryService
 {
     internal Task<ExecuteResponse> DryRunUserCode(DryExecuteRequest submission);
 }

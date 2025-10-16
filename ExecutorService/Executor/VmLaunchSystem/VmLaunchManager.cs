@@ -131,7 +131,6 @@ internal class VmLaunchManager
     {
         if (!await _oversubManager.EnqueueResourceRequest(ResourceRequestType.Query, _activeVms[vmId].VmType))
             throw new VmClusterOverloadedException(); // TODO: should probably be something else
-        Console.WriteLine("got through query");
         _activeVms[vmId].ServicedRequests++;
         var queryString = JsonSerializer.Serialize(queryContents);
         var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));

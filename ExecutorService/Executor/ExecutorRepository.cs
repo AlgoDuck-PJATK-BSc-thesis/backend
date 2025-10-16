@@ -9,19 +9,17 @@ public interface IExecutorRepository
 {
     public Task<List<Language>> GetSupportedLanguagesAsync();
     public Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName);
-    public Task<string> GetTemplateAsync(string exerciseId);
+    public Task<string?> GetTemplateAsync(Guid? exerciseId);
 }
 
 public class ExecutorRepository : IExecutorRepository
 {
-    private readonly IConfiguration _configuration;
     private readonly string _connectionString;
     private readonly IAwsS3Client _awsS3Client;
 
-    public ExecutorRepository(IAwsS3Client awsS3Client, IConfiguration configuration)
+    public ExecutorRepository(IAwsS3Client awsS3Client)
     {
         _awsS3Client = awsS3Client;
-        _configuration = configuration;
         var host = Environment.GetEnvironmentVariable("DB_HOST");
         var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
         var database = Environment.GetEnvironmentVariable("POSTGRES_DB");
@@ -48,9 +46,9 @@ public class ExecutorRepository : IExecutorRepository
         return TestCase.ParseTestCases(testCasesRaw, entrypointClassName);
     }
 
-    public async Task<string> GetTemplateAsync(string exerciseId)
+    public async Task<string?> GetTemplateAsync(Guid? exerciseId)
     {
-        
+        if (exerciseId == null) return null;
         return await _awsS3Client.GetDocumentStringByPathAsync($"{exerciseId}/template/work.txt");
     }
     

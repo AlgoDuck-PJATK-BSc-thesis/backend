@@ -6,10 +6,10 @@ namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 [ApiController]
 [Route("/api/[controller]")]
-internal class ExecuteSubmitController(IExecutorSubmitService executorService) : ControllerBase
+public class ExecuteSubmitController(IExecutorSubmitService executorService) : ControllerBase
 {
     [HttpPost]
-    internal async Task<IActionResult> SubmitCode([FromBody] SubmitExecuteRequest executeRequest)
+    public async Task<IActionResult> SubmitCode([FromBody] SubmitExecuteRequest executeRequest)
     {
         return Ok(await executorService.SubmitUserCode(executeRequest));
     }
