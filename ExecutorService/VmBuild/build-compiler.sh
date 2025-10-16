@@ -79,9 +79,9 @@ done
 socat VSOCK-LISTEN:5050,fork EXEC:"/bin/sh -c /app/process-input.sh" &
 
 # TODO: hardcoded sleeps are highly problematic. Due to the nature of health-checks however 
-# (we need to get file hashes before the machine is passed into an active pool).
+# (we need to get file hashes before the machine is passed into an active pool). EDIT: No, machine is built base on static image. We can precompute hashes
 # It is queried immediately which tends to cause race conditions.
-sleep 0.5
+sleep 5s
 
 echo "READY" > /dev/ttyS0
 EOF
