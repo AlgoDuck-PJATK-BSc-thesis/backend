@@ -1,11 +1,6 @@
-using System.Net;
-using System.Text;
+using AlgoDuckShared;
 using Dapper;
-using Amazon.S3;
-using Amazon.S3.Model;
-using ExecutorService.Executor.Configs;
 using ExecutorService.Executor.Types;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace ExecutorService.Executor;
@@ -14,21 +9,17 @@ public interface IExecutorRepository
 {
     public Task<List<Language>> GetSupportedLanguagesAsync();
     public Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName);
-    public Task<string> GetTemplateAsync(string exerciseId);
+    public Task<string?> GetTemplateAsync(Guid? exerciseId);
 }
 
 public class ExecutorRepository : IExecutorRepository
 {
-    private readonly IAmazonS3 _s3Client;
-    private readonly IOptions<S3Settings> _s3Settings;
-    private readonly IConfiguration _configuration;
     private readonly string _connectionString;
+    private readonly IAwsS3Client _awsS3Client;
 
-    public ExecutorRepository(IAmazonS3 s3Client, IOptions<S3Settings> options, IConfiguration configuration)
+    public ExecutorRepository(IAwsS3Client awsS3Client)
     {
-        _s3Client = s3Client;
-        _s3Settings = options;
-        _configuration = configuration;
+        _awsS3Client = awsS3Client;
         var host = Environment.GetEnvironmentVariable("DB_HOST");
         var port = Environment.GetEnvironmentVariable("POSTGRES_PORT");
         var database = Environment.GetEnvironmentVariable("POSTGRES_DB");
@@ -50,58 +41,15 @@ public class ExecutorRepository : IExecutorRepository
 
     public async Task<List<TestCase>> GetTestCasesAsync(Guid exerciseId, string entrypointClassName)
     {
-        var getRequest = new GetObjectRequest
-        {
-            BucketName = _s3Settings.Value.BucketName,
-            Key = $"{exerciseId}/test-cases.txt"
-        };
-        var response = await _s3Client.GetObjectAsync(getRequest);
-
-        if (response.HttpStatusCode != HttpStatusCode.OK)
-        {
-            throw new AmazonS3Exception($"Could not get test cases for {exerciseId}");
-        }
+        var testCasesRaw = await _awsS3Client.GetDocumentStringByPathAsync($"{exerciseId}/test-cases.txt");
         
-        var buffer = new byte[response.ContentLength];
-        var totalBytesRead = 0;
-
-        while (totalBytesRead < response.ContentLength)
-        {
-            var bytesRead = await response.ResponseStream.ReadAsync(buffer);
-            if (bytesRead == 0) break;
-            totalBytesRead += bytesRead;
-        }
-
-        var testCasesString = Encoding.UTF8.GetString(buffer);
-        
-        return TestCase.ParseTestCases(testCasesString, entrypointClassName);
+        return TestCase.ParseTestCases(testCasesRaw, entrypointClassName);
     }
 
-    public async Task<string> GetTemplateAsync(string exerciseId)
+    public async Task<string?> GetTemplateAsync(Guid? exerciseId)
     {
-        var getRequest = new GetObjectRequest
-        {
-            BucketName = _s3Settings.Value.BucketName,
-            Key = $"{exerciseId}/template/work.txt"
-        };
-
-        var response = await _s3Client.GetObjectAsync(getRequest);
-
-        if (response.HttpStatusCode != HttpStatusCode.OK)
-        {
-            throw new AmazonS3Exception($"Could not get template for {exerciseId}");
-        }
-        
-        var buffer = new byte[response.ContentLength];
-        var totalBytesRead = 0;
-
-        while (totalBytesRead < response.ContentLength)
-        {
-            var bytesRead = await response.ResponseStream.ReadAsync(buffer);
-            if (bytesRead == 0) break;
-            totalBytesRead += bytesRead;
-        }
-        return Encoding.UTF8.GetString(buffer);
+        if (exerciseId == null) return null;
+        return await _awsS3Client.GetDocumentStringByPathAsync($"{exerciseId}/template/work.txt");
     }
     
 }

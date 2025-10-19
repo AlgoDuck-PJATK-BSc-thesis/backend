@@ -1,15 +1,19 @@
+using AlgoDuckShared;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
-using ExecutorService.Executor.Configs;
+using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.VmLaunchSystem;
 using Microsoft.Extensions.Options;
-using CompilationHandler = ExecutorService.Executor.CompilationHandler;
+using CompilationHandler = ExecutorService.Executor.ResourceHandlers.CompilationHandler;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
@@ -30,7 +34,7 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
 
-    var credentials = new Amazon.Runtime.BasicAWSCredentials(
+    var credentials = new BasicAWSCredentials(
         Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
         Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
     );
@@ -45,15 +49,16 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 
 builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
+builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
 
 // eager initialization
-var filesystemPooler = new FilesystemPooler();
-var cmLaunched = new VmLaunchManager(filesystemPooler);
-var compilationHandler = await CompilationHandler.CreateAsync(filesystemPooler, cmLaunched);
+var filesystemPooler = await FilesystemPooler.CreateFileSystemPoolerAsync();
+var vmLauncher = new VmLaunchManager(filesystemPooler);
+var compilationHandler = await CompilationHandler.CreateAsync(vmLauncher);
 
 builder.Services.AddSingleton<ICompilationHandler>(compilationHandler);
 builder.Services.AddSingleton<IFilesystemPooler>(filesystemPooler);
-builder.Services.AddSingleton(cmLaunched);
+builder.Services.AddSingleton(vmLauncher);
 
 var app = builder.Build();
 

@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +17,18 @@ using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Services;
 using AlgoDuck.Modules.Item.Repositories;
 using AlgoDuck.Modules.Item.Services;
-using AlgoDuck.Modules.Problem.Interfaces;
-using AlgoDuck.Modules.Problem.Repositories;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using AlgoDuck.Modules.Cohort.Services;
 using AlgoDuck.Modules.Cohort;
+using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.ExecutorShared;
+using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById;
+using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
+using AlgoDuck.Shared.Utilities;
+using AlgoDuckShared;
+using OpenAI.Chat;
+using S3Settings = AlgoDuck.Shared.Configs.S3Settings;
 using AlgoDuck.Modules.Cohort.CohortManagement;
 using AlgoDuck.Modules.Problem.Services;
 using AlgoDuck.Shared.Configs;
@@ -91,26 +99,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<IAmazonS3>(sp =>
-{
-    var s3 = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3.Region) };
-    return new AmazonS3Client(config);
-});
-
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+
 builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<IItemService, ItemService>();
-builder.Services.AddScoped<IProblemService, ProblemService>();
-builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
+
 builder.Services.AddScoped<DataSeedingService>();
 builder.Services.AddScoped<ICohortRepository, CohortRepository>();
 
@@ -163,6 +164,39 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; });
 
+// ExecutorDependencyInitializer.InitializeExecutorDependencies(builder);
+
+builder.Services.AddHttpClient("executor", client =>
+{
+    client.BaseAddress =
+        new Uri($"http://executor:{Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"}/api/execute");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+});
+        
+builder.Services.AddSingleton<ChatClient>(sp =>
+{
+    var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+    const string model = "gpt-5-nano";
+    return new ChatClient(model, apiKey);
+});
+        
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var s3 = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3.Region) };
+    return new AmazonS3Client(config);
+});
+
+builder.Services.AddScoped<IExecutorQueryInterface, ExecutorQueryInterface>();
+builder.Services.AddScoped<IExecutorSubmitService, ExecutorSubmitService>();
+builder.Services.AddScoped<IExecutorDryService, ExecutorDryService>();
+builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
+builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
+builder.Services.AddScoped<IProblemService, ProblemService>();
+builder.Services.AddScoped<IAssistantService, AssistantService>();
+
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -172,7 +206,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseMiddleware<AlgoDuck.Shared.Middleware.ErrorHandler>();
+// app.UseMiddleware<AlgoDuck.Shared.Middleware.ErrorHandler>();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

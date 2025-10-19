@@ -6,24 +6,21 @@ volumes:
   postgres_data:
 
 services:      
-#  executor:
-#    build:
-#      context: .
-#      dockerfile: ExecutorService/Dockerfile
-#    ports:
-#      - "${EXECUTOR_PORT:-1337}:1337"
-#    extra_hosts:
-#      - "postgres-host:host-gateway"
-#      - "host.docker.internal:host-gateway"
-#    devices:
-#      - /dev/kvm:/dev/kvm
-#    env_file:
-#      - .env
-#    networks:
-#      - app_network
-#    group_add:
-#      - ${KVM_GID}
-    
+  executor:
+    build:
+      context: .
+      dockerfile: ExecutorService/Dockerfile
+    ports:
+      - "${EXECUTOR_PORT:-1337}:1337"
+    devices:
+      - /dev/kvm:/dev/kvm
+    env_file:
+      - .env
+    networks:
+      - app_network
+    group_add:
+      - ${KVM_GID}
+      
   algoduck:
     image: algoduck
     build:
@@ -46,6 +43,7 @@ services:
       S3Settings__BucketName: ${S3_BUCKET}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     networks:
       - app_network 
 

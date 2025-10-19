@@ -1,15 +1,19 @@
 using System.Text;
+using AlgoDuckShared.Executor.SharedTypes;
 using ExecutorService.Analyzer.AstAnalyzer;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Dtos;
+using ExecutorService.Executor.Helpers;
+using ExecutorService.Executor.ResourceHandlers;
 using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.VmLaunchTypes;
+using ExecutorService.Executor.VmLaunchSystem;
 
 namespace ExecutorService.Executor;
 
 public interface ICodeExecutorService
 {
-    public Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto);
-    public Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto);
+    public Task<ExecuteResponse> ExecuteAgnostic(ExecuteRequest request);
 }
 
 
@@ -19,42 +23,30 @@ internal class CodeExecutorService(
     VmLaunchManager launchManager
     ) : ICodeExecutorService
 {
-    private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
-    private ExecutorFileOperationHandler? _executorFileOperationHandler;
-    private VmLaunchManager _launchManager = launchManager;
-
-    public async Task<ExecuteResultDto> FullExecute(ExecuteRequestDto executeRequestDto)
+    private ExecutorFileOperationHelper? _executorFileOperationHandler;
+    
+    public async Task<ExecuteResponse> ExecuteAgnostic(ExecuteRequest request)
     {
-        var fileData = await ExecutePreCompileTasks(ExecutionStyle.Submission, executeRequestDto, executeRequestDto.ExerciseId);
-        
-        var testCases = await executorRepository.GetTestCasesAsync(fileData.ExerciseId, fileData.MainClassName);
-
-        _executorFileOperationHandler!.InsertTestCases(testCases);
-        
-        return await InsertTimingAndProceedToExecution(fileData);
+        var fileData = await ExecutePreCompileTasksAgnostic(request);
+        _executorFileOperationHandler!.InsertTiming();
+        await ApplyRequestSpecificLogic(fileData);
+        return await Execute(fileData);
     }
-
-    public async Task<ExecuteResultDto> DryExecute(DryExecuteRequestDto executeRequestDto)
+    
+    private async Task<UserSolutionData> ExecutePreCompileTasksAgnostic(ExecuteRequest executeRequest)
     {
-        var fileData = await ExecutePreCompileTasks(ExecutionStyle.Execution, executeRequestDto);
-        return await InsertTimingAndProceedToExecution(fileData);
-    }
-
-    private async Task<UserSolutionData> ExecutePreCompileTasks(ExecutionStyle executionStyle, IExecutionRequestBase executeRequest, string? exerciseId = null)
-    {
-        await CheckLanguageSupported(executeRequest.GetLang());
+        await CheckLanguageSupported(executeRequest.Lang);
         
-        var fileData = CreateSolutionCodeData(executeRequest, executionStyle, exerciseId);
+        var fileData = CreateSolutionCodeData(executeRequest);
+        var template = await executorRepository.GetTemplateAsync(fileData.ExerciseId);
 
-        var template = exerciseId != null ? await executorRepository.GetTemplateAsync(exerciseId) : null;
         try
         {
             var analyzer = new AnalyzerSimple(fileData.FileContents, template);
-            var codeAnalysisResult = analyzer.AnalyzeUserCode(executionStyle);
+            var codeAnalysisResult = analyzer.AnalyzeUserCode(fileData.ExecutionStyle);
+            if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
 
             fileData.IngestCodeAnalysisResult(codeAnalysisResult);
-
-            if (!codeAnalysisResult.PassedValidation) throw new TemplateModifiedException("Critical template fragment modified. Cannot proceed with testing. Exiting");
         }
         catch (JavaSyntaxException)
         {
@@ -64,48 +56,74 @@ internal class CodeExecutorService(
              * in turn returning a ExceptionResponseDto
              *
              * We do it this way as we want the client to receive a javac error but cannot proceed with the regular pipeline
+             *
+             *
+             * EDIT: with the new vm orchestration scheme this no longer works. Figure something else out
              */
-            await CompileCode(fileData);
-            throw;
+            await compilationHandler.CompileAsync(fileData);
         }
 
-        _executorFileOperationHandler = new ExecutorFileOperationHandler(fileData);
+        _executorFileOperationHandler = new ExecutorFileOperationHelper(fileData);
         return fileData;
     }
-
-    private async Task<ExecuteResultDto> InsertTimingAndProceedToExecution(UserSolutionData userSolutionData)
+    
+    private async Task ApplyRequestSpecificLogic(UserSolutionData fileData)
     {
-        _executorFileOperationHandler!.InsertTiming();
-        return await Execute(userSolutionData);
+        if (fileData.ExecutionStyle == ExecutionStyle.Submission)
+        {
+            var testCases = await executorRepository.GetTestCasesAsync((Guid) fileData.ExerciseId!, fileData.MainClassName);
+            _executorFileOperationHandler!.InsertGsonImport();
+            _executorFileOperationHandler!.InsertTestCases(testCases);
+        }
     }
 
-    private Task CompileCode(UserSolutionData userSolutionData)
-    {
-        return compilationHandler.CompileAsync(userSolutionData);
-    }
 
-    private async Task<ExecuteResultDto> Execute(UserSolutionData userSolutionData)
+    private async Task<ExecuteResponse> Execute(UserSolutionData userSolutionData)
     {
-        var vmId = await _launchManager.DispatchVm(FilesystemType.Executor);
+        var vmLeaseTask = launchManager.AcquireVmAsync(FilesystemType.Executor); 
         var compilationResult = await compilationHandler.CompileAsync(userSolutionData);
-        var result = await _launchManager.QueryVm<VmExecutionQuery, VmExecutionResponse>(vmId, new VmExecutionQuery(compilationResult));
+        using var vmLease = await vmLeaseTask;
+        if (compilationResult is VmCompilationFailure failure)
+        {
+            throw new CompilationException(failure.ErrorMsg);
+        }
+        var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery((compilationResult as VmCompilationSuccess)!));
         return _executorFileOperationHandler!.ParseVmOutput(result);
     }
     
     
-    private static UserSolutionData CreateSolutionCodeData(IExecutionRequestBase executionRequest, ExecutionStyle executionStyle, string? exerciseId = null)
+    private static UserSolutionData CreateSolutionCodeData(ExecuteRequest executionRequest)
     {
-        var codeBytes = Convert.FromBase64String(executionRequest.GetCodeB64());
+        var codeBytes = Convert.FromBase64String(executionRequest.CodeB64);
         var codeString = Encoding.UTF8.GetString(codeBytes);
 
-        var code = new StringBuilder(codeString);
-
-        if (executionStyle == ExecutionStyle.Submission)
+        return new UserSolutionData
         {
-            code.Insert(0, JavaGsonImport); // TODO move this to fileOperationsHandler
-        }
-
-        return new UserSolutionData(executionRequest.GetLang(), code, exerciseId);
+            Lang = executionRequest.Lang,
+            ExecutionStyle = ExtractRequestExecutionStyle(executionRequest),
+            ExerciseId = ExtractRequestExerciseId(executionRequest),
+            FileContents = new StringBuilder(codeString),
+        };
+    }
+    
+    private static ExecutionStyle ExtractRequestExecutionStyle(ExecuteRequest request)
+    {
+        return request switch
+        {
+            SubmitExecuteRequest => ExecutionStyle.Submission,
+            DryExecuteRequest => ExecutionStyle.Execution,
+            _ => throw new NotSupportedException($"Request type {request.GetType().Name} not supported")
+        };
+    }    
+    
+    private static Guid? ExtractRequestExerciseId(ExecuteRequest request)
+    {
+        return request switch
+        {
+            SubmitExecuteRequest executeRequest => executeRequest.ExerciseId,
+            DryExecuteRequest => null,
+            _ => throw new NotSupportedException($"Request type {request.GetType().Name} not supported")
+        };
     }
     
     private async Task CheckLanguageSupported(string lang)

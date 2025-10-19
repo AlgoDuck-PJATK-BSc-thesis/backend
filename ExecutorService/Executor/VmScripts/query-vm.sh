@@ -14,7 +14,7 @@ mkfifo $VM_IN_FIFO
 mkfifo $VM_OUT_FIFO
 
 socat - UNIX-CONNECT:$VM_VSOCK_PATH < $VM_IN_FIFO > $VM_OUT_FIFO &
-SOCAT_PID=$1
+SOCAT_PID=$!
 
 exec 3>$VM_IN_FIFO
 exec 4<$VM_OUT_FIFO
@@ -34,7 +34,7 @@ exec 3>&-
 exec 4<&-
 kill $SOCAT_PID 2>/dev/null
 wait $SOCAT_PID 2>/dev/null
-rm -f $COMPILER_IN_FIFO $COMPILER_OUT_FIFO
+rm -f $VM_IN_FIFO $VM_OUT_FIFO
 
 pos=$(expr index "$response" '{')
 echo "${response:$((pos-1))}" > "/tmp/$VM_ID-out.json"
