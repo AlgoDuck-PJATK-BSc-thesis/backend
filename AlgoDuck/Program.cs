@@ -29,6 +29,11 @@ using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using OpenAI.Chat;
 using S3Settings = AlgoDuck.Shared.Configs.S3Settings;
+using AlgoDuck.Modules.Cohort.CohortManagement;
+using AlgoDuck.Modules.Problem.Services;
+using AlgoDuck.Shared.Configs;
+using AlgoDuck.Shared.Utilities;
+using AlgoDuck.Modules.Cohort.CohortManagement.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +105,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();
@@ -107,6 +113,7 @@ builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<IItemService, ItemService>();
 
 builder.Services.AddScoped<DataSeedingService>();
+builder.Services.AddScoped<ICohortRepository, CohortRepository>();
 
 builder.Services.AddCors(options =>
 {
@@ -128,6 +135,31 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AlgoDuck API", Version = "v1" });
+    
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Please provide JWT token in 'Bearer {token}' format"    
+    });
+    
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; });
@@ -181,6 +213,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
+app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {

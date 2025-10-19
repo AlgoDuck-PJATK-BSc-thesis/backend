@@ -28,8 +28,13 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken cancellationToken)
     {
-        await _authService.LoginAsync(dto, Response, cancellationToken);
-        return Ok(new { Message = "Logged in successfully." });
+        var (accessToken, refreshToken) = await _authService.LoginAsync(dto, Response, cancellationToken);
+        return Ok(new
+        {
+            Message = $"Logged in successfully.",
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        });
     }
 
     [HttpPost("refresh")]

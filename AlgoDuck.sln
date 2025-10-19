@@ -13,6 +13,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExecutorServiceTests", "ExecutorServiceTests\ExecutorServiceTests.csproj", "{E8603A9E-AD74-4AB4-B168-84873D717CAC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoDuckShared", "AlgoDuckShared\AlgoDuckShared.csproj", "{E1524188-360D-42F8-B535-188F8E9390E1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlgoDuck.Tests", "AlgoDuck.Tests\AlgoDuck.Tests.csproj", "{E7AC4EE9-2731-42DC-A215-48F046BA10BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

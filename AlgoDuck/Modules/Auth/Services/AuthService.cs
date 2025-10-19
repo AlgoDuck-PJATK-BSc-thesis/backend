@@ -4,8 +4,10 @@ using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Models;
 using AlgoDuck.Modules.User.Models;
 using AlgoDuck.Shared.Exceptions;
+using AlgoDuck.Modules.Auth.Jwt;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Modules.Auth.Services;
 
@@ -14,15 +16,18 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
-        ApplicationDbContext dbContext)
+        ApplicationDbContext dbContext,
+        IOptions<JwtSettings> options)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _dbContext = dbContext;
+        _jwtSettings = options.Value;
     }
 
     public async Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -30,7 +35,7 @@ public class AuthService : IAuthService
         if (await _userManager.FindByNameAsync(dto.Username) != null)
             throw new UsernameAlreadyExistsException();
 
-        if (await _userManager.Users.AnyAsync(u => u.Email == dto.Email, cancellationToken))
+        if (await _userManager.FindByEmailAsync(dto.Email) is not null)
             throw new EmailAlreadyExistsException();
 
         var defaultRole = await _dbContext.UserRoles
@@ -43,7 +48,7 @@ public class AuthService : IAuthService
         {
             UserName = dto.Username,
             Email = dto.Email,
-            CohortId = dto.CohortId,
+            CohortId = null,
             Coins = 0,
             Experience = 0,
             AmountSolved = 0,
@@ -56,7 +61,7 @@ public class AuthService : IAuthService
             throw new ValidationException(string.Join("; ", result.Errors.Select(e => e.Description)));
     }
 
-    public async Task LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
+    public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
     {
         var user = await _userManager.Users
             .Include(u => u.UserRole)
@@ -87,7 +92,7 @@ public class AuthService : IAuthService
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.None,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(120)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes)
         });
 
         response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
@@ -97,6 +102,8 @@ public class AuthService : IAuthService
             SameSite = SameSiteMode.None,
             Expires = DateTimeOffset.UtcNow.AddDays(7)
         });
+        
+        return (accessToken, refreshToken);
     }
 
     public async Task RefreshTokenAsync(RefreshDto dto, HttpResponse response, CancellationToken cancellationToken)
@@ -106,8 +113,8 @@ public class AuthService : IAuthService
             .ThenInclude(u => u.UserRole)
             .FirstOrDefaultAsync(s => s.RefreshToken == dto.RefreshToken, cancellationToken);
 
-        if (session == null)
-            throw new InvalidTokenException("Refresh token not found.");
+        if (session == null || session.Revoked)
+            throw new InvalidTokenException("Refresh token not found or revoked.");
 
         if (session.RefreshTokenExpiresAt < DateTime.UtcNow)
             throw new TokenExpiredException("Refresh token has expired.");
@@ -119,18 +126,24 @@ public class AuthService : IAuthService
             HttpOnly = true,
             Secure = false, // TO DO : Set to true in production
             SameSite = SameSiteMode.None,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(120)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes)
         });
     }
 
     public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var sessions = _dbContext.Sessions.Where(s => s.UserId == userId);
+        var sessions = await _dbContext.Sessions
+            .Where(s => s.UserId == userId && !s.Revoked)
+            .ToListAsync(cancellationToken);
+        
+        if (sessions.Count == 0)
+            throw new NotFoundException("No active sessions found for the user.");
+        
+        foreach (var session in sessions)
+        {
+            session.Revoked = true;
+        }
 
-        if (!await sessions.AnyAsync(cancellationToken))
-            throw new NotFoundException("No sessions found for user.");
-
-        _dbContext.Sessions.RemoveRange(sessions);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
