@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace AlgoDuck.Modules.Item.Models
+namespace AlgoDuck.Models.Item
 {
     public class Rarity
     {

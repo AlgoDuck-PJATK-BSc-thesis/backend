@@ -1,8 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using ApplicationUser = AlgoDuck.Modules.User.Models.ApplicationUser;
-using UserNamespace = AlgoDuck.Modules.User.Models;
+using ApplicationUser = AlgoDuck.Models.User.ApplicationUser;
 
-namespace AlgoDuck.Modules.Cohort.Models
+namespace AlgoDuck.Models.Cohort
 {
     public class Cohort
     {

@@ -1,9 +1,11 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models.Auth;
+using AlgoDuck.Modules.Auth.DTOs;
+using AlgoDuck.Models.User;
+using AlgoDuck.Shared.Exceptions;
+using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Modules.Auth.Interfaces;
-using AlgoDuck.Modules.Auth.Models;
-using AlgoDuck.Modules.User.Models;
-using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Jwt;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -78,7 +80,7 @@ public class AuthService : IAuthService
 
         var session = new Session
         {
-            RefreshToken = refreshToken,
+            RefreshTokenHash = refreshToken,
             RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(7),
             UserId = user.Id,
             User = user
@@ -111,7 +113,7 @@ public class AuthService : IAuthService
         var session = await _dbContext.Sessions
             .Include(s => s.User)
             .ThenInclude(u => u.UserRole)
-            .FirstOrDefaultAsync(s => s.RefreshToken == dto.RefreshToken, cancellationToken);
+            .FirstOrDefaultAsync(s => s.RefreshTokenHash == dto.RefreshToken, cancellationToken);
 
         if (session == null || session.Revoked)
             throw new InvalidTokenException("Refresh token not found or revoked.");

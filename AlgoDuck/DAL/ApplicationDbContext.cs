@@ -1,10 +1,10 @@
-using AlgoDuck.Modules.Auth.Models;
-using AlgoDuck.Modules.Cohort.Models;
-using AlgoDuck.Modules.Contest.Models;
-using AlgoDuck.Modules.Duel.Models;
-using AlgoDuck.Modules.Item.Models;
-using AlgoDuck.Modules.Problem.Models;
-using AlgoDuck.Modules.User.Models;
+using AlgoDuck.Models.Auth;
+using AlgoDuck.Models.Cohort;
+using AlgoDuck.Models.Contest;
+using AlgoDuck.Models.Duel;
+using AlgoDuck.Models.Item;
+using AlgoDuck.Models.Problem;
+using AlgoDuck.Models.User;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -82,12 +82,20 @@ namespace AlgoDuck.DAL
             modelBuilder.Entity<Session>(entity =>
             {
                 entity.ToTable("session");
+                
                 entity.HasKey(s => s.SessionId);
+                
                 entity.Property(s => s.SessionId).HasColumnName("session_id");
-                entity.Property(s => s.RefreshToken).HasColumnName("refresh_token");
-                entity.Property(s => s.RefreshTokenExpiresAt).HasColumnName("refresh_token_expires_at");
-                entity.Property(s => s.Revoked).HasColumnName("revoked");
+                entity.Property(s => s.RefreshTokenHash).HasColumnName("refresh_token_hash");
+                entity.Property(s => s.RefreshTokenSalt).HasColumnName("refresh_token_salt");
+                entity.Property(s => s.CreatedAtUtc).HasColumnName("created_at_utc");
+                entity.Property(s => s.ExpiresAtUtc).HasColumnName("expires_at_utc");
+                entity.Property(s => s.RevokedAtUtc).HasColumnName("revoked_at_utc");
+                entity.Property(s => s.ReplacedByTokenHash).HasColumnName("replaced_by_token_hash");
                 entity.Property(s => s.UserId).HasColumnName("user_id");
+
+                entity.HasIndex(s => s.UserId).HasDatabaseName("ix_session_user_id");
+                entity.HasIndex(s => s.RefreshTokenHash).HasDatabaseName("ix_session_refresh_token_hash");
 
                 entity.HasOne(s => s.User)
                       .WithMany(u => u.Sessions)

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using ProblemModel = AlgoDuck.Modules.Problem.Models.Problem;
+using ProblemModel = AlgoDuck.Models.Problem.Problem;
 
-namespace AlgoDuck.Modules.Contest.Models
+namespace AlgoDuck.Models.Contest
 {
     public class ContestProblem
     {

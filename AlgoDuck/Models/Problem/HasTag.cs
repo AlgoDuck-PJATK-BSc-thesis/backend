@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AlgoDuck.Modules.Problem.Models
+namespace AlgoDuck.Models.Problem
 {
     public class HasTag
     {

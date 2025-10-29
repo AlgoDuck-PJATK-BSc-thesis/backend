@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Identity;
-using CohortModel = AlgoDuck.Modules.Cohort.Models.Cohort;
-using UserRoleModel = AlgoDuck.Modules.User.Models.UserRole;
-using SessionModel = AlgoDuck.Modules.Auth.Models.Session;
-using DuelParticipantModel = AlgoDuck.Modules.Duel.Models.DuelParticipant;
-using PurchaseModel = AlgoDuck.Modules.Item.Models.Purchase;
-using PersonalizedProblemModel = AlgoDuck.Modules.Problem.Models.PersonalizedProblem;
-using UserSolutionModel = AlgoDuck.Modules.Problem.Models.UserSolution;
+using CohortModel = AlgoDuck.Models.Cohort.Cohort;
+using UserRoleModel = AlgoDuck.Models.User.UserRole;
+using SessionModel = AlgoDuck.Models.Auth.Session;
+using DuelParticipantModel = AlgoDuck.Models.Duel.DuelParticipant;
+using PurchaseModel = AlgoDuck.Models.Item.Purchase;
+using PersonalizedProblemModel = AlgoDuck.Models.Problem.PersonalizedProblem;
+using UserSolutionModel = AlgoDuck.Models.Problem.UserSolution;
 
-namespace AlgoDuck.Modules.User.Models;
+namespace AlgoDuck.Models.User;
 
 public class ApplicationUser : IdentityUser<Guid>
 {

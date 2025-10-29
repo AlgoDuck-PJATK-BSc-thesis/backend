@@ -1,6 +1,5 @@
 using System.Security.Claims;
-using AlgoDuck.Modules.User.Models;
-
+using AlgoDuck.Models.User;
 
 namespace AlgoDuck.Modules.Auth.Interfaces;
 

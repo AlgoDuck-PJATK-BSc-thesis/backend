@@ -1,8 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using ApplicationUser = AlgoDuck.Modules.User.Models.ApplicationUser;
-using UserNamespace = AlgoDuck.Modules.User.Models;
+using ApplicationUser = AlgoDuck.Models.User.ApplicationUser;
 
-namespace AlgoDuck.Modules.Problem.Models
+namespace AlgoDuck.Models.Problem
 {
     public class PersonalizedProblem
     {

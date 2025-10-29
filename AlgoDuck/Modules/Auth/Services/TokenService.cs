@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
-using AlgoDuck.Modules.User.Models;
+using AlgoDuck.Models.User;
 using AlgoDuck.Shared.Exceptions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

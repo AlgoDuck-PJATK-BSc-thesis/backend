@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AlgoDuck.Modules.Item.Models
+namespace AlgoDuck.Models.Item
 {
     public class Item
     {

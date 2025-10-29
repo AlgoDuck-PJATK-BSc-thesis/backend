@@ -1,7 +1,6 @@
 ﻿using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
-using AlgoDuck.Modules.Contest.Models;
-using ContestEntity = AlgoDuck.Modules.Contest.Models.Contest;
+using ContestEntity = AlgoDuck.Models.Contest;
 
 namespace AlgoDuck.Modules.Contest.Repositories;
 
@@ -10,7 +9,7 @@ public class ContestRepository : IContestRepository
     private readonly ApplicationDbContext _db;
     public ContestRepository(ApplicationDbContext db) => _db = db;
 
-    public async Task<IEnumerable<Modules.Contest.Models.Contest>> GetAllAsync()
+    public async Task<IEnumerable<ContestEntity.Contest>> GetAllAsync()
     {
         return await _db.Contests
             .Include(c => c.ContestProblems)
@@ -19,7 +18,7 @@ public class ContestRepository : IContestRepository
     }
        
 
-    public async Task<Modules.Contest.Models.Contest?> GetByIdAsync(Guid id)
+    public async Task<ContestEntity.Contest?> GetByIdAsync(Guid id)
     {
         return await _db.Contests
             .Include(c => c.ContestProblems)
@@ -27,12 +26,12 @@ public class ContestRepository : IContestRepository
             .FirstOrDefaultAsync(c => c.ContestId == id);
     }
 
-    public async Task AddAsync(Modules.Contest.Models.Contest contest)
+    public async Task AddAsync(ContestEntity.Contest contest)
     {
         await _db.Contests.AddAsync(contest);
     }
 
-    public async Task DeleteAsync(Modules.Contest.Models.Contest contest)
+    public async Task DeleteAsync(ContestEntity.Contest contest)
     {
         _db.ContestProblems.RemoveRange(contest.ContestProblems);
         _db.Contests.Remove(contest);
@@ -42,7 +41,5 @@ public class ContestRepository : IContestRepository
     {
         await _db.SaveChangesAsync();
     }
-    
-
     
 }

@@ -1,5 +1,5 @@
 ﻿using AlgoDuck.Modules.Contest.DTOs;
-using ContestEntity = AlgoDuck.Modules.Contest.Models.Contest;
+using ContestEntity = AlgoDuck.Models.Contest.Contest;
 namespace AlgoDuck.Modules.Contest.Services;
 
 public interface IContestService
@@ -8,5 +8,5 @@ public interface IContestService
     Task<bool> DeleteContestAsync(Guid id);
     Task AddProblemToContest(Guid contestId, Guid problemId);
     Task RemoveProblemFromContest(Guid contestId, Guid problemId);
-    Task<Modules.Contest.Models.Contest?> GetContestByIdAsync(Guid id);
+    Task<ContestEntity?> GetContestByIdAsync(Guid id);
 }

@@ -1,9 +1,8 @@
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
-using ApplicationUser = AlgoDuck.Modules.User.Models.ApplicationUser;
-using UserNamescape = AlgoDuck.Modules.User.Models;
+using ApplicationUser = AlgoDuck.Models.User.ApplicationUser;
 
-namespace AlgoDuck.Modules.Item.Models
+namespace AlgoDuck.Models.Item
 {
     public class Purchase
     {

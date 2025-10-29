@@ -1,11 +1,9 @@
 ﻿using AlgoDuck.DAL;
 using AlgoDuck.Modules.Contest.DTOs;
-using AlgoDuck.Modules.Contest.Models;
+using AlgoDuck.Models.Contest;
 using Microsoft.EntityFrameworkCore;
-using ContestEntity = AlgoDuck.Modules.Contest.Models.Contest;
-using AlgoDuck.Modules.Problem.Models;
-
-
+using ContestEntity = AlgoDuck.Models.Contest;
+using AlgoDuck.Models.Problem;
 
 namespace AlgoDuck.Modules.Contest.Services;
 
@@ -29,7 +27,7 @@ public class ContestService : IContestService
             .Where(p => dto.ProblemIds.Contains(p.ProblemId))
             .ToListAsync();
             
-        var contest = new Modules.Contest.Models.Contest
+        var contest = new ContestEntity.Contest
         {
             ContestName = dto.ContestName,
             ContestDescription = dto.ContestDescription,
@@ -56,7 +54,7 @@ public class ContestService : IContestService
         return contest.ContestId;
     }
 
-    public async Task<Modules.Contest.Models.Contest?> GetContestByIdAsync(Guid id)
+    public async Task<ContestEntity.Contest?> GetContestByIdAsync(Guid id)
     {
         return await _db.Contests
             .Include(c => c.ContestProblems)

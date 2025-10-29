@@ -36,5 +36,29 @@ namespace AlgoDuck.Shared.Utilities
 
             return CryptographicOperations.FixedTimeEquals(hashedPassword, storedPasswordHash);
         }
+
+        public static string GenerateSaltB64(int size = 16)
+        {
+            var salt = new byte[size];
+            RandomNumberGenerator.Fill(salt);
+            return Convert.ToBase64String(salt);
+        }
+
+        public static string HashWithSaltB64(string value, string saltB64)
+        {
+            var combined = System.Text.Encoding.UTF8.GetBytes(value + saltB64);
+            using var sha = SHA256.Create();
+            var hash = sha.ComputeHash(combined);
+            return Convert.ToBase64String(hash);
+        }
+        
+        public static bool VerifyWithSaltB64(string value, string saltB64, string expectedHashB64)
+        {
+            var computed = HashWithSaltB64(value, saltB64);
+            return CryptographicOperations.FixedTimeEquals(
+                Convert.FromBase64String(computed),
+                Convert.FromBase64String(expectedHashB64)
+            );
+        }
     }
 }

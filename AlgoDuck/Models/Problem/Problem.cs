@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using DuelModel = AlgoDuck.Modules.Duel.Models.Duel;
-using ContestProblem = AlgoDuck.Modules.Contest.Models.ContestProblem;
+using DuelModel = AlgoDuck.Models.Duel.Duel;
+using ContestProblem = AlgoDuck.Models.Contest.ContestProblem;
 
-namespace AlgoDuck.Modules.Problem.Models
+namespace AlgoDuck.Models.Problem
 {
     public class Problem
     {

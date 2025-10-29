@@ -1,11 +1,11 @@
-﻿using ContestEntity = AlgoDuck.Modules.Contest.Models.Contest;
+﻿using ContestEntity = AlgoDuck.Models.Contest.Contest;
 namespace AlgoDuck.Modules.Contest.Repositories;
 
 public interface IContestRepository
 {
-    Task<IEnumerable<Modules.Contest.Models.Contest>> GetAllAsync();
-    Task<Modules.Contest.Models.Contest?> GetByIdAsync(Guid id);
-    Task AddAsync(Modules.Contest.Models.Contest contest);
-    Task DeleteAsync(Modules.Contest.Models.Contest contest);
+    Task<IEnumerable<ContestEntity>> GetAllAsync();
+    Task<ContestEntity?> GetByIdAsync(Guid id);
+    Task AddAsync(ContestEntity contest);
+    Task DeleteAsync(ContestEntity contest);
     Task SaveChangesAsync();
 }

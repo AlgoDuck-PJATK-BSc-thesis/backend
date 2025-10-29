@@ -47,7 +47,7 @@ public class CohortService : ICohortService
         if (alreadyCreated || alreadyInCohort)
             throw new AlreadyInCohortException();
 
-        var cohort = new Models.Cohort
+        var cohort = new Models.Cohort.Cohort
         {
             Name = dto.Name,
             ImageUrl = dto.ImageUrl,

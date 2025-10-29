@@ -9,7 +9,7 @@ using System.Text;
 using Amazon;
 using Amazon.S3;
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.User.Models;
+using AlgoDuck.Models.User;
 using AlgoDuck.Modules.User.Interfaces;
 using AlgoDuck.Modules.User.Services;
 using AlgoDuck.Modules.Auth.Jwt;
@@ -30,14 +30,34 @@ using AlgoDuckShared;
 using OpenAI.Chat;
 using S3Settings = AlgoDuck.Shared.Configs.S3Settings;
 using AlgoDuck.Modules.Cohort.CohortManagement;
-using AlgoDuck.Modules.Problem.Services;
-using AlgoDuck.Shared.Configs;
-using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Modules.Cohort.CohortManagement.Shared;
+using System.Security.Claims;
+using AlgoDuck.Shared.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
+
+var env = builder.Environment;
+
+var jwtConfig = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtConfig["Key"] ?? throw new InvalidOperationException("Jwt:Key is missing.");
+var jwtIssuer = jwtConfig["Issuer"] ?? "algoduck";
+var jwtAudience = jwtConfig["Audience"] ?? "algoduck-client";
+
+var validateIssuer = jwtConfig.GetValue<bool>("ValidateIssuer", env.IsProduction());
+var validateAudience = jwtConfig.GetValue<bool>("ValidateAudience", env.IsProduction());
+var validateLifetime = jwtConfig.GetValue<bool>("ValidateLifetime", true);
+var clockSkewSeconds = jwtConfig.GetValue<int>("ClockSkewSeconds", 60);
+
+var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName", "jwt");
+
+var devOrigins = builder.Configuration.GetSection("Cors:DevOrigins").Get<string[]>() 
+                 ?? new[] { "http://localhost:5173", "https://localhost:5173" };
+var prodOrigins = builder.Configuration.GetSection("Cors:ProdOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+if (env.IsProduction() && prodOrigins.Length == 0)
+    throw new InvalidOperationException("Cors:ProdOrigins must be configured in Production.");
 
 builder.Services
     .AddOptions<JwtSettings>()
@@ -55,39 +75,57 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
-{
-    options.Password.RequireDigit = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-    options.User.RequireUniqueEmail = true;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+    {
+        options.User.RequireUniqueEmail = true;
+
+        if (env.IsProduction())
+        {
+            options.Password.RequiredLength = 12;
+            options.Password.RequireDigit = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+        }
+        else
+        {
+            options.Password.RequiredLength = 8;
+            options.Password.RequireDigit = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+        }
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var jwtSection = builder.Configuration.GetSection("Jwt");
-        var key = jwtSection["Key"]!;
-        var issuer = jwtSection["Issuer"]!;
-        var audience = jwtSection["Audience"]!;
-
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = issuer,
-            ValidAudience = audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+            IssuerSigningKey = signingKey,
+
+            ValidateIssuer   = validateIssuer,
+            ValidateAudience = validateAudience,
+            ValidateLifetime = validateLifetime,
+
+            ValidIssuer   = jwtIssuer,
+            ValidAudience = jwtAudience,
+
+            ClockSkew = TimeSpan.FromSeconds(clockSkewSeconds),
+            
+            NameClaimType = ClaimTypes.NameIdentifier,
+            RoleClaimType = ClaimTypes.Role
         };
 
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["jwt"];
+                var token = context.Request.Cookies[jwtCookieName];
                 if (!string.IsNullOrEmpty(token))
                 {
                     context.Token = token;
@@ -105,7 +143,6 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-builder.Services.AddScoped<IExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<ICohortService, CohortService>();
 builder.Services.AddScoped<ICohortChatService, CohortChatService>();
 builder.Services.AddScoped<ICohortLeaderboardService, CohortLeaderboardService>();
@@ -117,9 +154,17 @@ builder.Services.AddScoped<ICohortRepository, CohortRepository>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("DevCors", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(devOrigins)
+            .AllowCredentials()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+
+    options.AddPolicy("ProdCors", policy =>
+    {
+        policy.WithOrigins(prodOrigins)
             .AllowCredentials()
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -162,7 +207,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; });
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = env.IsDevelopment();
+});
 
 // ExecutorDependencyInitializer.InitializeExecutorDependencies(builder);
 
@@ -188,6 +236,19 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
     return new AmazonS3Client(config);
 });
 
+if (env.IsProduction())
+{
+    builder.Services.AddHsts(o =>
+    {
+        o.Preload = true;
+        o.IncludeSubDomains = true;
+        o.MaxAge = TimeSpan.FromDays(365);
+        o.ExcludedHosts.Add("localhost");
+        o.ExcludedHosts.Add("127.0.0.1");
+        o.ExcludedHosts.Add("[::1]");
+    });
+}
+
 builder.Services.AddScoped<IExecutorQueryInterface, ExecutorQueryInterface>();
 builder.Services.AddScoped<IExecutorSubmitService, ExecutorSubmitService>();
 builder.Services.AddScoped<IExecutorDryService, ExecutorDryService>();
@@ -205,9 +266,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+if (env.IsProduction())
+{
+    app.UseHsts();
+}
+
 app.UseHttpsRedirection();
-// app.UseMiddleware<AlgoDuck.Shared.Middleware.ErrorHandler>();
-app.UseCors("AllowFrontend");
+app.UseMiddleware<ErrorHandler>();
+app.UseCors(env.IsDevelopment() ? "DevCors" : "ProdCors");
+
 app.UseAuthentication();
 app.UseAuthorization();
 

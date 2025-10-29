@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using ItemModel = AlgoDuck.Modules.Item.Models.Item;
+using ItemModel = AlgoDuck.Models.Item.Item;
 
-namespace AlgoDuck.Modules.Contest.Models
+namespace AlgoDuck.Models.Contest
 {
     public class Contest
     {

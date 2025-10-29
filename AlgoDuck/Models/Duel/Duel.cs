@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CohortModel = AlgoDuck.Modules.Cohort.Models.Cohort;
+using CohortModel = AlgoDuck.Models.Cohort.Cohort;
 
-namespace AlgoDuck.Modules.Duel.Models
+namespace AlgoDuck.Models.Duel
 {
     public class Duel
     {

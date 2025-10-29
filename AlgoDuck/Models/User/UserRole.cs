@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.User.Models;
+namespace AlgoDuck.Models.User;
 
 public class UserRole
 {

@@ -1,6 +1,5 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Cohort.CohortManagement.Queries.GetAllCohorts;
-using AlgoDuck.Modules.Cohort.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Cohort.CohortManagement.Shared;
@@ -26,7 +25,7 @@ public sealed class CohortRepository : ICohortRepository
     public async Task<Guid> CreateAsync(string name, string imageUrl, Guid createdByUserId, CancellationToken ct)
     {
         var id = Guid.NewGuid();
-        _db.Cohorts.Add(new Models.Cohort
+        _db.Cohorts.Add(new Models.Cohort.Cohort
         {
             CohortId = id,
             Name = name,

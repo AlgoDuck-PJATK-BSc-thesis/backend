@@ -3,7 +3,7 @@ using System.Security.Claims;
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
-using AlgoDuck.Modules.Cohort.Models;
+using AlgoDuck.Models.Cohort;
 using AlgoDuck.Shared.Exceptions;
 
 namespace AlgoDuck.Modules.Cohort.Services;

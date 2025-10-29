@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.Item.Models;
-using AlgoDuck.Modules.Problem.Models;
+using AlgoDuck.Models.Item;
+using AlgoDuck.Models.Problem;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Shared.Utilities;

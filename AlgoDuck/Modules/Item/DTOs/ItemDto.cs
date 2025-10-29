@@ -1,5 +1,3 @@
-using AlgoDuck.Modules.Item.Models;
-
 namespace AlgoDuck.Modules.Item.DTOs;
 
 public class ItemDto(Guid id, string name, string? description, int price, RarityDto rarity)

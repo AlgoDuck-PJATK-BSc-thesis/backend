@@ -1,15 +1,30 @@
-using AlgoDuck.Modules.User.Models;
+using System.ComponentModel.DataAnnotations;
+using AlgoDuck.Models.User;
 
-namespace AlgoDuck.Modules.Auth.Models;
+namespace AlgoDuck.Models.Auth;
 
 public class Session
 {
     public Guid SessionId { get; set; } = Guid.NewGuid();
-    public required string RefreshToken { get; set; }
-    public DateTime RefreshTokenExpiresAt { get; set; }
-    public bool Revoked { get; set; }
-
+    
+    [MaxLength(512)]
+    public required string RefreshTokenHash { get; set; }
+    
+    [MaxLength(512)]
+    public required string RefreshTokenSalt { get; set; }
+    
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresAtUtc { get; set; }
+    
+    public DateTime? RevokedAtUtc { get; set; }
+    [MaxLength(512)]
+    
+    public string? ReplacedByTokenHash { get; set; }
+    
     public Guid UserId { get; set; }
     public required ApplicationUser User { get; set; }
+    
+    public bool IsActive => RevokedAtUtc == null && DateTime.UtcNow < ExpiresAtUtc;
+    
 }
 
