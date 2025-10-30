@@ -7,5 +7,4 @@ public class CohortChatDto
     public required string Content { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? Username { get; set; }
-    public string? UserProfilePicture { get; set; }
 }

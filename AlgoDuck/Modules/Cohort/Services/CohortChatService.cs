@@ -40,7 +40,6 @@ public class CohortChatService : ICohortChatService
                 Content = m.Content,
                 CreatedAt = m.CreatedAt,
                 Username = m.User!.UserName,
-                UserProfilePicture = m.User.ProfilePicture
             })
             .ToListAsync();
     }
@@ -76,7 +75,6 @@ public class CohortChatService : ICohortChatService
             Content = message.Content,
             CreatedAt = message.CreatedAt,
             Username = user.UserName,
-            UserProfilePicture = user.ProfilePicture
         };
     }
 

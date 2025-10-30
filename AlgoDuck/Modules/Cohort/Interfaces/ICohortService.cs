@@ -10,7 +10,7 @@ public interface ICohortService
     Task<CohortDto?> GetMineAsync(Guid currentUserId);    
     Task<bool> UpdateAsync(Guid id, UpdateCohortDto dto);
     Task<bool> DeleteAsync(Guid id);
-    
+    Task<bool> UserBelongsToCohortAsync(Guid userId, Guid cohortId, CancellationToken cancellationToken);
     Task<bool> AddUserAsync(Guid cohortId, Guid userId);
     Task<bool> RemoveUserAsync(Guid cohortId, Guid userId);
     Task<List<UserProfileDto>> GetUsersAsync(Guid cohortId);

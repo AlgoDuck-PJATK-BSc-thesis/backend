@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AlgoDuck.Shared.Exceptions;
 
 namespace AlgoDuck.Shared.Extensions;
 
@@ -8,9 +9,11 @@ public static class ClaimsPrincipalExtensions
     {
         var idValue = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(idValue))
-        {
-            throw new InvalidOperationException(("User ID claim is missing"));
-        }
-        return Guid.Parse(idValue);
+            throw new UnauthorizedException("User ID claim is missing");
+
+        if (!Guid.TryParse(idValue, out var id))
+            throw new UnauthorizedException("User ID claim is invalid");
+
+        return id;
     }
 }

@@ -1,15 +1,20 @@
 using System.Net;
 using AlgoDuck.Shared.Exceptions;
+using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Shared.Middleware;
 
 public class ErrorHandler
 {
     private readonly RequestDelegate _next;
-    public ErrorHandler(RequestDelegate next)
+    private readonly ILogger<ErrorHandler> _logger;
+
+    public ErrorHandler(RequestDelegate next, ILogger<ErrorHandler> logger)
     {
         _next = next;
+        _logger = logger;
     }
+
     public async Task Invoke(HttpContext context)
     {
         try
@@ -21,19 +26,25 @@ public class ErrorHandler
             var response = context.Response;
             response.ContentType = "application/json";
 
-            int statusCode = (int)HttpStatusCode.InternalServerError;
-            string message = "An unexpected error occurred.";
+            var statusCode = (int)HttpStatusCode.InternalServerError;
+            var message = "Unexpected error";
+            var code = "internal_error";
 
             if (error is AppException appEx)
             {
                 statusCode = appEx.StatusCode;
                 message = appEx.Message;
+                code = appEx.GetType().Name.Replace("Exception", "").ToLowerInvariant();
             }
 
-            response.StatusCode = statusCode;
+            _logger.LogError(error, "Unhandled exception: {Code} {Message}", code, message);
 
-            var result = System.Text.Json.JsonSerializer.Serialize(new { error = message });
-            await response.WriteAsync(result);
+            response.StatusCode = statusCode;
+            var payload = statusCode >= 500
+                ? ApiResponse.Error(message, code)
+                : ApiResponse.Fail(message, code);
+
+            await response.WriteAsJsonAsync(payload);
         }
     }
 }

@@ -266,13 +266,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-if (env.IsProduction())
+if (env.IsProduction() && Environment.GetEnvironmentVariable("ENABLE_TLS") == "true")
 {
     app.UseHsts();
     app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(env.IsDevelopment() ? "DevCors" : "ProdCors");
 
@@ -292,7 +291,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 await SeedRoles(app.Services);
-await SeedUserRoles(app.Services.CreateScope().ServiceProvider.GetRequiredService<ApplicationDbContext>());
 
 app.Run();
 
@@ -309,17 +307,4 @@ async Task SeedRoles(IServiceProvider serviceProvider)
             await roleManager.CreateAsync(new IdentityRole<Guid> { Name = role });
         }
     }
-}
-
-async Task SeedUserRoles(ApplicationDbContext db)
-{
-    if (!await db.UserRoles.AnyAsync(r => r.Name == "user"))
-    {
-        db.UserRoles.Add(new UserRole { UserRoleId = Guid.NewGuid(), Name = "user" });
-    }
-    if (!await db.UserRoles.AnyAsync(r => r.Name == "admin"))
-    {
-        db.UserRoles.Add(new UserRole { UserRoleId = Guid.NewGuid(), Name = "admin" });
-    }
-    await db.SaveChangesAsync();
 }

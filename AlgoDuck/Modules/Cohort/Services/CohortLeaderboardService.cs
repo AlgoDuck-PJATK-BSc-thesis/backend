@@ -35,7 +35,6 @@ public class CohortLeaderboardService : ICohortLeaderboardService
             {
                 u.Id,
                 u.UserName,
-                u.ProfilePicture,
                 u.Experience
             })
             .ToListAsync();
@@ -56,7 +55,6 @@ public class CohortLeaderboardService : ICohortLeaderboardService
             {
                 UserId = user.Id,
                 Username = user.UserName!,
-                ProfilePicture = user.ProfilePicture,
                 Experience = user.Experience,
                 Rank = rank
             });

@@ -1,7 +1,9 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models.User;
 using AlgoDuck.Modules.User.DTOs;
 using AlgoDuck.Modules.User.Interfaces;
 using AlgoDuck.Shared.Exceptions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Services
@@ -9,49 +11,67 @@ namespace AlgoDuck.Modules.User.Services
     public class UserService : IUserService
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public UserService(ApplicationDbContext dbContext)
+        public UserService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager)
         {
             _dbContext = dbContext;
+            _userManager = userManager;
         }
 
         public async Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken)
         {
             var user = await _dbContext.Users
-                .Include(u => u.UserRole)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null)
                 throw new UserNotFoundException();
 
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? "user";
+
             return new UserProfileDto
             {
-                Username = user.UserName ?? "",
-                Email = user.Email ?? "",
+                Username = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
                 Coins = user.Coins,
                 Experience = user.Experience,
                 AmountSolved = user.AmountSolved,
-                ProfilePicture = user.ProfilePicture,
-                Role = user.UserRole?.Name ?? "user"
+                Role = role
             };
         }
 
         public async Task UpdateProfileAsync(Guid userId, UpdateUserDto dto, CancellationToken cancellationToken)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-
             if (user == null)
                 throw new UserNotFoundException();
-            
-            bool emailExists = await _dbContext.Users
-                .AnyAsync(u => u.Email == dto.Email && u.Id != userId, cancellationToken);
 
+            var username = dto.Username.Trim();
+            var email = dto.Email.Trim();
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email))
+                throw new ValidationException("Username and Email are required.");
+
+            var normalizedUserName = username.ToUpperInvariant();
+            var normalizedEmail = email.ToUpperInvariant();
+
+            var emailExists = await _dbContext.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.NormalizedEmail == normalizedEmail && u.Id != userId, cancellationToken);
             if (emailExists)
                 throw new EmailAlreadyExistsException();
-            
-            user.UserName = dto.Username;
-            user.Email = dto.Email;
-            user.ProfilePicture = dto.ProfilePicture;
+
+            var usernameExists = await _dbContext.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.NormalizedUserName == normalizedUserName && u.Id != userId, cancellationToken);
+            if (usernameExists)
+                throw new UsernameAlreadyExistsException();
+
+            user.UserName = username;
+            user.NormalizedUserName = normalizedUserName;
+            user.Email = email;
+            user.NormalizedEmail = normalizedEmail;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
         }

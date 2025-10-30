@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
@@ -121,6 +120,13 @@ public class CohortService : ICohortService
         await _db.SaveChangesAsync();
         return true;
     }
+    
+    public async Task<bool> UserBelongsToCohortAsync(Guid userId, Guid cohortId, CancellationToken cancellationToken)
+    {
+        return await _db.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.Id == userId && u.CohortId == cohortId, cancellationToken);
+    }
 
     public async Task<List<UserProfileDto>> GetUsersAsync(Guid cohortId) =>
         await _db.Users
@@ -129,7 +135,6 @@ public class CohortService : ICohortService
             {
                 Id = u.Id,
                 Username = u.UserName!,
-                ProfilePicture = u.ProfilePicture,
                 Experience = u.Experience
             })
             .ToListAsync();

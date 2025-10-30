@@ -17,7 +17,6 @@ namespace AlgoDuck.DAL
 
         public override DbSet<ApplicationUser> Users { get; set; }
         public DbSet<Session> Sessions { get; set; }
-        public new DbSet<UserRole> UserRoles { get; set; }
 
         public DbSet<Cohort> Cohorts { get; set; }
         public DbSet<Category> Categories { get; set; }
@@ -52,18 +51,12 @@ namespace AlgoDuck.DAL
                 entity.Property(u => u.Id).HasColumnName("user_id");
                 entity.Property(u => u.UserName).HasColumnName("username");
                 entity.Property(u => u.Email).HasColumnName("email");
-                entity.Property(u => u.PasswordHash).HasColumnName("password");
-                entity.Property(u => u.SecurityStamp).HasColumnName("salt");
-                entity.Property(u => u.ProfilePicture).HasColumnName("profile_picture");
+                entity.Property(u => u.PasswordHash).HasColumnName("password_hash");
+                entity.Property(u => u.SecurityStamp).HasColumnName("security_stamp");
                 entity.Property(u => u.CohortId).HasColumnName("cohort_id");
                 entity.Property(u => u.Coins).HasColumnName("coins");
                 entity.Property(u => u.Experience).HasColumnName("experience");
                 entity.Property(u => u.AmountSolved).HasColumnName("amount_solved");
-
-                entity.HasOne(u => u.UserRole)
-                      .WithMany()
-                      .HasForeignKey(u => u.UserRoleId)
-                      .HasConstraintName("fk_user_user_role");
 
                 entity.HasOne(u => u.Cohort)
                       .WithMany(c => c.Users)
@@ -71,31 +64,22 @@ namespace AlgoDuck.DAL
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
-            modelBuilder.Entity<UserRole>(entity =>
-            {
-                entity.ToTable("user_role");
-                entity.HasKey(r => r.UserRoleId);
-                entity.Property(r => r.UserRoleId).HasColumnName("user_role_id");
-                entity.Property(r => r.Name).HasColumnName("name");
-            });
-
             modelBuilder.Entity<Session>(entity =>
             {
                 entity.ToTable("session");
-                
                 entity.HasKey(s => s.SessionId);
-                
+
                 entity.Property(s => s.SessionId).HasColumnName("session_id");
-                entity.Property(s => s.RefreshTokenHash).HasColumnName("refresh_token_hash");
-                entity.Property(s => s.RefreshTokenSalt).HasColumnName("refresh_token_salt");
-                entity.Property(s => s.CreatedAtUtc).HasColumnName("created_at_utc");
-                entity.Property(s => s.ExpiresAtUtc).HasColumnName("expires_at_utc");
+                entity.Property(s => s.RefreshTokenHash).HasColumnName("refresh_token_hash").IsRequired();
+                entity.Property(s => s.RefreshTokenSalt).HasColumnName("refresh_token_salt").IsRequired();
+                entity.Property(s => s.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+                entity.Property(s => s.ExpiresAtUtc).HasColumnName("expires_at_utc").IsRequired();
                 entity.Property(s => s.RevokedAtUtc).HasColumnName("revoked_at_utc");
                 entity.Property(s => s.ReplacedByTokenHash).HasColumnName("replaced_by_token_hash");
-                entity.Property(s => s.UserId).HasColumnName("user_id");
+                entity.Property(s => s.UserId).HasColumnName("user_id").IsRequired();
 
                 entity.HasIndex(s => s.UserId).HasDatabaseName("ix_session_user_id");
-                entity.HasIndex(s => s.RefreshTokenHash).HasDatabaseName("ix_session_refresh_token_hash");
+                entity.HasIndex(s => s.RefreshTokenHash).IsUnique().HasDatabaseName("ix_session_refresh_token_hash");
 
                 entity.HasOne(s => s.User)
                       .WithMany(u => u.Sessions)
