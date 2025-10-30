@@ -7,6 +7,5 @@ public class UserProfileDto
     public int Coins { get; set; }
     public int Experience { get; set; }
     public int AmountSolved { get; set; }
-    public string? ProfilePicture { get; set; }
     public required string Role { get; set; }
 }
