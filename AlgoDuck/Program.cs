@@ -269,6 +269,7 @@ if (app.Environment.IsDevelopment())
 if (env.IsProduction())
 {
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseHttpsRedirection();
