@@ -139,9 +139,7 @@ namespace AlgoDuck.Modules.Auth.Services
             var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
             var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
             var newSaltB64 = Convert.ToBase64String(newSaltBytes);
-
-            session.ReplacedByTokenHash = newHashB64;
-
+            
             var newSession = new Session
             {
                 RefreshTokenHash = newHashB64,
@@ -152,7 +150,9 @@ namespace AlgoDuck.Modules.Auth.Services
                 User = session.User
             };
 
-            await _dbContext.Sessions.AddAsync(newSession, cancellationToken);
+            session.ReplacedBySessionId = newSession.SessionId;
+
+            _dbContext.Sessions.Add(newSession);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);

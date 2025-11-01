@@ -17,9 +17,9 @@ public class Session
     public DateTime ExpiresAtUtc { get; set; }
     
     public DateTime? RevokedAtUtc { get; set; }
-    [MaxLength(512)]
     
-    public string? ReplacedByTokenHash { get; set; }
+    public Guid? ReplacedBySessionId { get; set; }
+    public Session? ReplacedBySession { get; set; }
     
     public Guid UserId { get; set; }
     public required ApplicationUser User { get; set; }

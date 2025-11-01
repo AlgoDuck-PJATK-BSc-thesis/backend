@@ -75,16 +75,23 @@ namespace AlgoDuck.DAL
                 entity.Property(s => s.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
                 entity.Property(s => s.ExpiresAtUtc).HasColumnName("expires_at_utc").IsRequired();
                 entity.Property(s => s.RevokedAtUtc).HasColumnName("revoked_at_utc");
-                entity.Property(s => s.ReplacedByTokenHash).HasColumnName("replaced_by_token_hash");
+                entity.Property(s => s.ReplacedBySessionId).HasColumnName("replaced_by_session_id");
                 entity.Property(s => s.UserId).HasColumnName("user_id").IsRequired();
 
                 entity.HasIndex(s => s.UserId).HasDatabaseName("ix_session_user_id");
                 entity.HasIndex(s => s.RefreshTokenHash).IsUnique().HasDatabaseName("ix_session_refresh_token_hash");
+                entity.HasIndex(s => s.ReplacedBySessionId).HasDatabaseName("ix_session_replaced_by_session_id");
 
                 entity.HasOne(s => s.User)
                       .WithMany(u => u.Sessions)
                       .HasForeignKey(s => s.UserId)
                       .HasConstraintName("fk_session_user");
+                
+                entity.HasOne(s => s.ReplacedBySession)
+                    .WithMany()
+                    .HasForeignKey(s => s.ReplacedBySessionId)
+                    .HasConstraintName("fk_session_replaced_by_session")
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Cohort>(entity =>
