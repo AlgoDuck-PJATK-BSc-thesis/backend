@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using AlgoDuck.Modules.User.DTOs;
 using AlgoDuck.Modules.User.Interfaces;
+using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Modules.User.Controllers
 {
@@ -24,10 +25,10 @@ namespace AlgoDuck.Modules.User.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
 
             var profile = await _userService.GetProfileAsync(Guid.Parse(userId), cancellationToken);
-            return Ok(profile);
+            return Ok(ApiResponse.Success(profile));
         }
 
         [HttpPut("me")]
@@ -36,10 +37,10 @@ namespace AlgoDuck.Modules.User.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
 
             await _userService.UpdateProfileAsync(Guid.Parse(userId), dto, cancellationToken);
-            return Ok(new { Message = "Profile updated successfully." });
+            return Ok(ApiResponse.Success(new { message = "Profile updated successfully." }));
         }
     }
 }

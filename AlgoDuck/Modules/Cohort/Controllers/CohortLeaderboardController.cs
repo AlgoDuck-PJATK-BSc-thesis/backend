@@ -1,7 +1,7 @@
-using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Modules.Cohort.Controllers;
 
@@ -18,9 +18,9 @@ public class CohortLeaderboardController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<CohortLeaderboardDto>>> GetLeaderboard(Guid cohortId)
+    public async Task<IActionResult> GetLeaderboard(Guid cohortId)
     {
         var leaderboard = await _leaderboardService.GetLeaderboardAsync(cohortId);
-        return Ok(leaderboard);
+        return Ok(ApiResponse.Success(leaderboard));
     }
 }

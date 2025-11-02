@@ -83,9 +83,7 @@ public class CohortService : ICohortService
     {
         var cohort = await _db.Cohorts.FindAsync(id);
         if (cohort is null) return false;
-
         if (dto.Name is not null) cohort.Name = dto.Name;
-        if (dto.ImageUrl is not null) cohort.ImageUrl = dto.ImageUrl;
 
         await _db.SaveChangesAsync();
         return true;
