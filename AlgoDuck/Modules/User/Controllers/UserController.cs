@@ -20,10 +20,9 @@ namespace AlgoDuck.Modules.User.Controllers
         }
 
         [HttpGet("me")]
-        public async Task<ActionResult<UserProfileDto>> GetMyProfile(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
 
@@ -35,7 +34,6 @@ namespace AlgoDuck.Modules.User.Controllers
         public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateUserDto dto, CancellationToken cancellationToken)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
 

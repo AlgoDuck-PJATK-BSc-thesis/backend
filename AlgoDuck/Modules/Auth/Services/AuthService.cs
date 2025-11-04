@@ -19,6 +19,7 @@ namespace AlgoDuck.Modules.Auth.Services
         private readonly JwtSettings _jwtSettings;
         private readonly IWebHostEnvironment _env;
         private readonly IHttpContextAccessor _http;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -26,7 +27,8 @@ namespace AlgoDuck.Modules.Auth.Services
             ApplicationDbContext dbContext,
             IOptions<JwtSettings> options,
             IWebHostEnvironment env,
-            IHttpContextAccessor http)
+            IHttpContextAccessor http,
+            ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _tokenService = tokenService;
@@ -34,6 +36,7 @@ namespace AlgoDuck.Modules.Auth.Services
             _jwtSettings = options.Value;
             _env = env;
             _http = http;
+            _logger = logger;
         }
 
         public async Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -111,6 +114,36 @@ namespace AlgoDuck.Modules.Auth.Services
             if (!cookies.TryGetValue(_jwtSettings.CsrfCookieName, out var csrfCookie) || csrfCookie != header)
                 throw new ForbiddenException("CSRF validation failed");
 
+            var revoked = await _dbContext.Sessions
+                .AsNoTracking()
+                .Where(s => s.RevokedAtUtc != null)
+                .Select(s => new { s.SessionId, s.UserId, s.RefreshTokenHash, s.RefreshTokenSalt })
+                .ToListAsync(cancellationToken);
+
+            var reused = revoked.FirstOrDefault(s => MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh));
+            if (reused is not null)
+            {
+                _logger.LogWarning("Refresh token reuse detected: user {UserId}, session {SessionId}, ip {IP}",
+                    reused.UserId, reused.SessionId, ctx.Connection.RemoteIpAddress?.ToString());
+
+                var now = DateTime.UtcNow;
+                var activeForUser = await _dbContext.Sessions
+                    .Where(x => x.UserId == reused.UserId && x.RevokedAtUtc == null)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var a in activeForUser)
+                    a.RevokedAtUtc = now;
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
+                response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });
+                response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
+                response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domain });
+
+                throw new UnauthorizedException("Refresh token reuse detected. All sessions revoked.");
+            }
+
             var candidates = await _dbContext.Sessions
                 .Include(s => s.User)
                 .Where(s => s.RevokedAtUtc == null && s.ExpiresAtUtc > DateTime.UtcNow)
@@ -119,11 +152,7 @@ namespace AlgoDuck.Modules.Auth.Services
             Session? session = null;
             foreach (var s in candidates)
             {
-                var salt = Convert.FromBase64String(s.RefreshTokenSalt);
-                var computedB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, salt);
-                if (System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-                        Convert.FromBase64String(computedB64),
-                        Convert.FromBase64String(s.RefreshTokenHash)))
+                if (MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh))
                 {
                     session = s;
                     break;
@@ -139,7 +168,7 @@ namespace AlgoDuck.Modules.Auth.Services
             var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
             var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
             var newSaltB64 = Convert.ToBase64String(newSaltBytes);
-            
+
             var newSession = new Session
             {
                 RefreshTokenHash = newHashB64,
@@ -174,6 +203,15 @@ namespace AlgoDuck.Modules.Auth.Services
                 s.RevokedAtUtc = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private static bool MatchesRefresh(string storedHashB64, string storedSaltB64, string rawRefresh)
+        {
+            var salt = Convert.FromBase64String(storedSaltB64);
+            var computedB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, salt);
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                Convert.FromBase64String(computedB64),
+                Convert.FromBase64String(storedHashB64));
         }
 
         private void SetJwtCookie(HttpResponse response, string accessToken, DateTimeOffset expires)
