@@ -223,11 +223,13 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+var csrfHeaderName = jwtConfig.GetValue<string>("CsrfHeaderName") ?? "X-CSRF-Token";
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "AlgoDuck API", Version = "v1" });
-    
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -235,19 +237,23 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Please provide JWT token in 'Bearer {token}' format"    
+        Description = "Optional: Bearer token (not used by cookie auth)"
     });
-    
+
+    c.AddSecurityDefinition("CsrfToken", new OpenApiSecurityScheme
+    {
+        Name = csrfHeaderName,
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Description = "CSRF token matching the CSRF cookie"
+    });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "CsrfToken" }
             },
             Array.Empty<string>()
         }
@@ -287,7 +293,7 @@ if (env.IsDevelopment())
 {
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
-        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         o.KnownNetworks.Clear();
         o.KnownProxies.Clear();
         o.ForwardLimit = 1;
@@ -298,10 +304,15 @@ else
 {
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
-        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         o.KnownProxies.Add(IPAddress.Loopback);
         o.KnownProxies.Add(IPAddress.IPv6Loopback);
-        o.ForwardLimit = null;
+
+        o.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("172.17.0.0"), 16));
+        o.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("10.0.0.0"), 24));
+        o.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("10.244.0.0"), 16));
+
+        o.ForwardLimit = 1;
     });
 }
 
@@ -346,6 +357,7 @@ if (env.IsProduction() && Environment.GetEnvironmentVariable("ENABLE_TLS") == "t
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(env.IsDevelopment() ? "DevCors" : "ProdCors");
 
+app.UseMiddleware<CsrfGuard>();
 app.UseRateLimiter();
 
 app.UseAuthentication();
