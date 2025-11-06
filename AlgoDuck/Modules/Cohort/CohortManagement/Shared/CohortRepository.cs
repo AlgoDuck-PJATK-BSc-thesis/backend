@@ -13,6 +13,7 @@ public sealed class CohortRepository : ICohortRepository
     {
         return await _db.Cohorts
             .AsNoTracking()
+            .Where(c => c.IsActive)
             .Select(c => new CohortDto
             {
                 CohortId = c.CohortId,

@@ -96,10 +96,24 @@ namespace AlgoDuck.DAL
 
             modelBuilder.Entity<Cohort>(entity =>
             {
+                entity.ToTable("cohort");
+
+                entity.HasKey(c => c.CohortId);
+
+                entity.Property(c => c.CohortId).HasColumnName("cohort_id");
+                entity.Property(c => c.Name).HasColumnName("name");
+                entity.Property(c => c.CreatedByUserId).HasColumnName("created_by_user_id");
+                entity.Property(c => c.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
                 entity.HasOne(c => c.CreatedByUser)
-                      .WithMany()
-                      .HasForeignKey(c => c.CreatedByUserId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                    .WithMany()
+                    .HasForeignKey(c => c.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.CreatedByUserId)
+                    .IsUnique()
+                    .HasDatabaseName("ux_cohort_creator_active")
+                    .HasFilter("\"is_active\" = TRUE");
             });
 
             modelBuilder.Entity<ContestProblem>()

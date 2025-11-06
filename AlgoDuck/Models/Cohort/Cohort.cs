@@ -18,6 +18,7 @@ namespace AlgoDuck.Models.Cohort
         public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
         public ICollection<Message> Messages { get; set; } = new List<Message>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public bool IsActive { get; set; } = true;
 
     }
 }

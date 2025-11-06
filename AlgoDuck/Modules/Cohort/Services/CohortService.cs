@@ -38,7 +38,7 @@ public class CohortService : ICohortService
         if (user == null)
             throw new NotFoundException("User not found.");
 
-        var alreadyCreated = await _db.Cohorts.AnyAsync(c => c.CreatedByUserId == currentUserId);
+        var alreadyCreated = await _db.Cohorts.AnyAsync(c => c.CreatedByUserId == currentUserId && c.IsActive);
         var alreadyInCohort = user.CohortId != null;
 
         if (alreadyCreated || alreadyInCohort)
@@ -89,7 +89,7 @@ public class CohortService : ICohortService
         var cohort = await _db.Cohorts.FindAsync(id);
         if (cohort is null) return false;
 
-        _db.Cohorts.Remove(cohort);
+        cohort.IsActive = false;
         await _db.SaveChangesAsync();
         return true;
     }
