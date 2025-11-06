@@ -10,9 +10,6 @@ namespace AlgoDuck.Models.Cohort
 
         [Required, MaxLength(256)]
         public required string Name { get; set; }
-
-        [Required, MaxLength(256)]
-        public required string ImageUrl { get; set; }
         
         public Guid CreatedByUserId { get; set; }
         

@@ -19,8 +19,7 @@ public class CohortService : ICohortService
         await _db.Cohorts.Select(c => new CohortDto
         {
             CohortId = c.CohortId,
-            Name = c.Name,
-            ImageUrl = c.ImageUrl
+            Name = c.Name
         }).ToListAsync();
 
     public async Task<CohortDto?> GetByIdAsync(Guid id) =>
@@ -28,8 +27,7 @@ public class CohortService : ICohortService
             .Select(c => new CohortDto
             {
                 CohortId = c.CohortId,
-                Name = c.Name,
-                ImageUrl = c.ImageUrl
+                Name = c.Name
             })
             .FirstOrDefaultAsync();
 
@@ -49,7 +47,6 @@ public class CohortService : ICohortService
         var cohort = new Models.Cohort.Cohort
         {
             Name = dto.Name,
-            ImageUrl = dto.ImageUrl,
             CreatedByUserId = currentUserId
         };
 
@@ -62,7 +59,6 @@ public class CohortService : ICohortService
         {
             CohortId = cohort.CohortId,
             Name = cohort.Name,
-            ImageUrl = cohort.ImageUrl
         };
     }
 
@@ -73,8 +69,7 @@ public class CohortService : ICohortService
             .Select(c => new CohortDto
             {
                 CohortId = c.CohortId,
-                Name = c.Name,
-                ImageUrl = c.ImageUrl
+                Name = c.Name
             })
             .FirstOrDefaultAsync();
     }
