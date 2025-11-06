@@ -54,7 +54,8 @@ namespace AlgoDuck.Modules.Auth.Services
                 CohortId = null,
                 Coins = 0,
                 Experience = 0,
-                AmountSolved = 0
+                AmountSolved = 0,
+                LockoutEnabled = true
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);
@@ -72,8 +73,21 @@ namespace AlgoDuck.Modules.Auth.Services
             if (user == null)
                 throw new UserNotFoundException();
 
-            if (!await _userManager.CheckPasswordAsync(user, dto.Password))
+            if (await _userManager.IsLockedOutAsync(user))
+                throw new ForbiddenException("Account is locked. Try again later.");
+
+            var passwordOk = await _userManager.CheckPasswordAsync(user, dto.Password);
+            if (!passwordOk)
+            {
+                await _userManager.AccessFailedAsync(user);
+
+                if (await _userManager.IsLockedOutAsync(user))
+                    throw new ForbiddenException("Account is locked. Try again later.");
+
                 throw new UnauthorizedException("Invalid password.");
+            }
+
+            await _userManager.ResetAccessFailedCountAsync(user);
 
             var accessToken = await _tokenService.CreateAccessTokenAsync(user);
 

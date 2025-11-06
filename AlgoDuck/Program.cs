@@ -89,6 +89,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             options.Password.RequireUppercase = true;
             options.Password.RequireLowercase = true;
             options.Password.RequireNonAlphanumeric = true;
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+            options.Lockout.MaxFailedAccessAttempts = 5;
         }
         else
         {
@@ -97,6 +100,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             options.Password.RequireUppercase = false;
             options.Password.RequireLowercase = false;
             options.Password.RequireNonAlphanumeric = false;
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+            options.Lockout.MaxFailedAccessAttempts = 5;
         }
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
