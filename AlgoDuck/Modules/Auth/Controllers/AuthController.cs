@@ -6,11 +6,13 @@ using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("AuthTight")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;

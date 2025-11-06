@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -33,6 +34,9 @@ using AlgoDuck.Modules.Cohort.CohortManagement;
 using AlgoDuck.Modules.Cohort.CohortManagement.Shared;
 using System.Security.Claims;
 using AlgoDuck.Shared.Middleware;
+using System.Threading.RateLimiting;
+using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,10 +49,10 @@ var jwtKey = jwtConfig["Key"] ?? throw new InvalidOperationException("Jwt:Key is
 var jwtIssuer = jwtConfig["Issuer"] ?? "algoduck";
 var jwtAudience = jwtConfig["Audience"] ?? "algoduck-client";
 
-var validateIssuer = jwtConfig.GetValue<bool>("ValidateIssuer", env.IsProduction());
-var validateAudience = jwtConfig.GetValue<bool>("ValidateAudience", env.IsProduction());
-var validateLifetime = jwtConfig.GetValue<bool>("ValidateLifetime", true);
-var clockSkewSeconds = jwtConfig.GetValue<int>("ClockSkewSeconds", 60);
+var validateIssuer = jwtConfig.GetValue("ValidateIssuer", env.IsProduction());
+var validateAudience = jwtConfig.GetValue("ValidateAudience", env.IsProduction());
+var validateLifetime = jwtConfig.GetValue("ValidateLifetime", true);
+var clockSkewSeconds = jwtConfig.GetValue("ClockSkewSeconds", 60);
 
 var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName", "jwt");
 
@@ -176,6 +180,43 @@ builder.Services.AddControllers(options =>
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (ctx, token) =>
+    {
+        ctx.HttpContext.Response.ContentType = "application/json";
+
+        if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            ctx.HttpContext.Response.Headers["Retry-After"] = 
+                ((int)retryAfter.TotalSeconds).ToString();
+        }
+
+        await ctx.HttpContext.Response.WriteAsJsonAsync(
+            ApiResponse.Fail("Too many requests. Please slow down.", "too_many_requests"),
+            cancellationToken: token
+        );
+    };
+    
+    options.AddPolicy("AuthTight", httpContext =>
+    {
+        var key = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: key,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }
+        );
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -236,6 +277,28 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
     return new AmazonS3Client(config);
 });
 
+if (env.IsDevelopment())
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+        o.ForwardLimit = 1;
+        o.RequireHeaderSymmetry = false;
+    });
+}
+else
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.KnownProxies.Add(IPAddress.Loopback);
+        o.KnownProxies.Add(IPAddress.IPv6Loopback);
+        o.ForwardLimit = null;
+    });
+}
+
 if (env.IsProduction())
 {
     builder.Services.AddHsts(o =>
@@ -260,6 +323,8 @@ builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -274,6 +339,8 @@ if (env.IsProduction() && Environment.GetEnvironmentVariable("ENABLE_TLS") == "t
 
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(env.IsDevelopment() ? "DevCors" : "ProdCors");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
