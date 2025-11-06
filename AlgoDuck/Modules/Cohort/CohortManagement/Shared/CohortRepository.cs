@@ -16,7 +16,10 @@ public sealed class CohortRepository : ICohortRepository
             .Select(c => new CohortDto
             {
                 CohortId = c.CohortId,
-                Name = c.Name
+                Name = c.Name,
+                CreatedByUserId = c.CreatedByUserId,
+                CreatedByUsername = c.CreatedByUser.UserName!,
+                MemberCount = c.Users.Count
             })
             .ToListAsync(ct);
     }

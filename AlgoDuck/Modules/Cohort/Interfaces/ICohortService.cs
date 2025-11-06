@@ -14,4 +14,5 @@ public interface ICohortService
     Task<bool> AddUserAsync(Guid cohortId, Guid userId);
     Task<bool> RemoveUserAsync(Guid cohortId, Guid userId);
     Task<List<UserProfileDto>> GetUsersAsync(Guid cohortId);
+    Task<CohortDetailsDto?> GetDetailsAsync(Guid cohortId, Guid requesterId, bool isAdmin, CancellationToken ct);
 }

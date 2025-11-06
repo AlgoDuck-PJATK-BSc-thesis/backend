@@ -131,4 +131,56 @@ public class CohortService : ICohortService
                 Experience = u.Experience
             })
             .ToListAsync();
+    
+    public async Task<CohortDetailsDto?> GetDetailsAsync(Guid cohortId, Guid requesterId, bool isAdmin, CancellationToken ct)
+    {
+        var baseInfo = await _db.Cohorts
+            .AsNoTracking()
+            .Where(c => c.CohortId == cohortId)
+            .Select(c => new
+            {
+                c.CohortId,
+                c.Name,
+                c.CreatedByUserId,
+                CreatorUsername = c.CreatedByUser.UserName!,
+                MemberCount = c.Users.Count
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (baseInfo is null) return null;
+
+        if (!isAdmin)
+        {
+            var belongs = await _db.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == requesterId && u.CohortId == cohortId, ct);
+
+            if (!belongs)
+                throw new ForbiddenException("You are not a member of this cohort.");
+        }
+
+        var members = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.CohortId == cohortId)
+            .Select(u => new UserProfileDto
+            {
+                Id = u.Id,
+                Username = u.UserName!,
+                Experience = u.Experience
+            })
+            .ToListAsync(ct);
+
+        return new CohortDetailsDto
+        {
+            CohortId = baseInfo.CohortId,
+            Name = baseInfo.Name,
+            CreatedBy = new CohortCreatorDto
+            {
+                UserId = baseInfo.CreatedByUserId,
+                Username = baseInfo.CreatorUsername
+            },
+            MemberCount = baseInfo.MemberCount,
+            Members = members
+        };
+    }
 }

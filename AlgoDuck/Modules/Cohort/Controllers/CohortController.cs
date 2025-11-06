@@ -95,4 +95,20 @@ public class CohortController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetUsers(Guid id)
         => Ok(ApiResponse.Success(await _service.GetUsersAsync(id)));
+    
+    [HttpGet("{id:guid}/details")]
+    public async Task<IActionResult> GetDetails(Guid id, CancellationToken ct)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdStr))
+            return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+
+        var requesterId = Guid.Parse(userIdStr);
+        var isAdmin = User.IsInRole("admin");
+
+        var details = await _service.GetDetailsAsync(id, requesterId, isAdmin, ct);
+        return details is null
+            ? NotFound(ApiResponse.Fail("Cohort not found.", "not_found"))
+            : Ok(ApiResponse.Success(details));
+    }
 } 
