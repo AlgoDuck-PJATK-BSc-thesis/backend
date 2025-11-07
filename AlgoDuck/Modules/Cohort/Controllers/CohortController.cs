@@ -67,7 +67,7 @@ public class CohortController : ControllerBase
     {
         var ok = await _service.DeleteAsync(id);
         return ok
-            ? Ok(ApiResponse.Success(new { message = "Cohort deleted." }))
+            ? Ok(ApiResponse.Success(new { message = "Cohort archived." }))
             : NotFound(ApiResponse.Fail("Cohort not found.", "not_found"));
     }
 

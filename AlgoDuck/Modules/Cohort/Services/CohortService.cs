@@ -86,10 +86,14 @@ public class CohortService : ICohortService
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var cohort = await _db.Cohorts.FindAsync(id);
-        if (cohort is null) return false;
+        var cohort = await _db.Cohorts.FirstOrDefaultAsync(c => c.CohortId == id);
+        if (cohort is null || !cohort.IsActive) return false;
 
         cohort.IsActive = false;
+
+        var members = await _db.Users.Where(u => u.CohortId == id).ToListAsync();
+        foreach (var m in members) m.CohortId = null;
+
         await _db.SaveChangesAsync();
         return true;
     }

@@ -114,6 +114,8 @@ namespace AlgoDuck.DAL
                     .IsUnique()
                     .HasDatabaseName("ux_cohort_creator_active")
                     .HasFilter("\"is_active\" = TRUE");
+
+                entity.HasQueryFilter(c => c.IsActive);
             });
 
             modelBuilder.Entity<ContestProblem>()
