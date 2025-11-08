@@ -8,6 +8,7 @@ using AlgoDuck.Shared.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace AlgoDuck.Modules.Auth.Services
 {
@@ -60,9 +61,27 @@ namespace AlgoDuck.Modules.Auth.Services
 
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
-                throw new ValidationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+            {
+                var msg = string.Join("; ", result.Errors.Select(e => e.Description));
+                var httpCtx = _http.HttpContext;
+                _logger.LogWarning(
+                    "auth_register_failed username={Username} email={Email} ip={IP} ua={UA} reason={Reason}",
+                    dto.Username,
+                    dto.Email,
+                    httpCtx?.Connection.RemoteIpAddress?.ToString(),
+                    httpCtx?.Request.Headers["User-Agent"].ToString(),
+                    msg);
+                throw new ValidationException(msg);
+            }
 
             await _userManager.AddToRoleAsync(user, "user");
+
+            var httpCtx2 = _http.HttpContext;
+            _logger.LogInformation(
+                "auth_register_success user={UserId} ip={IP} ua={UA}",
+                user.Id,
+                httpCtx2?.Connection.RemoteIpAddress?.ToString(),
+                httpCtx2?.Request.Headers["User-Agent"].ToString());
         }
 
         public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
@@ -84,14 +103,31 @@ namespace AlgoDuck.Modules.Auth.Services
                 if (await _userManager.IsLockedOutAsync(user))
                     throw new ForbiddenException("Account is locked. Try again later.");
 
+                var httpCtx = _http.HttpContext;
+                _logger.LogWarning(
+                    "auth_login_failed_bad_password user={UserId} ip={IP} ua={UA}",
+                    user.Id,
+                    httpCtx?.Connection.RemoteIpAddress?.ToString(),
+                    httpCtx?.Request.Headers["User-Agent"].ToString());
+
                 throw new UnauthorizedException("Invalid password.");
+            }
+
+            if (!_env.IsDevelopment() && !await _userManager.IsEmailConfirmedAsync(user))
+            {
+                _logger.LogWarning(
+                    "auth_login_blocked_unconfirmed_email user={UserId} ip={IP} ua={UA}",
+                    user.Id,
+                    _http.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                    _http.HttpContext?.Request.Headers["User-Agent"].ToString());
+                throw new ForbiddenException("Please verify your email before logging in.");
             }
 
             await _userManager.ResetAccessFailedCountAsync(user);
 
             var accessToken = await _tokenService.CreateAccessTokenAsync(user);
 
-            var rawRefresh = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64));
+            var rawRefresh = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
             var saltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
             var hashB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, saltBytes);
             var saltB64 = Convert.ToBase64String(saltBytes);
@@ -112,6 +148,13 @@ namespace AlgoDuck.Modules.Auth.Services
             SetJwtCookie(response, accessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
             SetRefreshCookie(response, rawRefresh, session.ExpiresAtUtc);
             SetCsrfCookie(response);
+
+            var httpCtx2 = _http.HttpContext;
+            _logger.LogInformation(
+                "auth_login_success user={UserId} ip={IP} ua={UA}",
+                user.Id,
+                httpCtx2?.Connection.RemoteIpAddress?.ToString(),
+                httpCtx2?.Request.Headers["User-Agent"].ToString());
 
             return (accessToken, rawRefresh);
         }
@@ -137,8 +180,12 @@ namespace AlgoDuck.Modules.Auth.Services
             var reused = revoked.FirstOrDefault(s => MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh));
             if (reused is not null)
             {
-                _logger.LogWarning("Refresh token reuse detected: user {UserId}, session {SessionId}, ip {IP}",
-                    reused.UserId, reused.SessionId, ctx.Connection.RemoteIpAddress?.ToString());
+                _logger.LogWarning(
+                    "auth_refresh_reuse_detected user={UserId} session={SessionId} ip={IP} ua={UA}",
+                    reused.UserId,
+                    reused.SessionId,
+                    ctx.Connection.RemoteIpAddress?.ToString(),
+                    ctx.Request.Headers["User-Agent"].ToString());
 
                 var now = DateTime.UtcNow;
                 var activeForUser = await _dbContext.Sessions
@@ -150,10 +197,10 @@ namespace AlgoDuck.Modules.Auth.Services
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
-                var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
-                response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });
-                response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
-                response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domain });
+                var domainR = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
+                response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domainR });
+                response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domainR });
+                response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domainR });
 
                 throw new UnauthorizedException("Refresh token reuse detected. All sessions revoked.");
             }
@@ -176,32 +223,52 @@ namespace AlgoDuck.Modules.Auth.Services
             if (session is null)
                 throw new UnauthorizedException("Invalid refresh token");
 
-            session.RevokedAtUtc = DateTime.UtcNow;
-
-            var newRaw = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64));
-            var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
-            var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
-            var newSaltB64 = Convert.ToBase64String(newSaltBytes);
-
-            var newSession = new Session
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                RefreshTokenHash = newHashB64,
-                RefreshTokenSalt = newSaltB64,
-                CreatedAtUtc = DateTime.UtcNow,
-                ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
-                UserId = session.UserId,
-                User = session.User
-            };
+                session.RevokedAtUtc = DateTime.UtcNow;
 
-            session.ReplacedBySessionId = newSession.SessionId;
+                var newRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
+                var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
+                var newSaltB64 = Convert.ToBase64String(newSaltBytes);
 
-            _dbContext.Sessions.Add(newSession);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+                var newId = Guid.NewGuid();
 
-            var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);
-            SetJwtCookie(response, newAccessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
-            SetRefreshCookie(response, newRaw, newSession.ExpiresAtUtc);
-            SetCsrfCookie(response);
+                var newSession = new Session
+                {
+                    SessionId = newId,
+                    RefreshTokenHash = newHashB64,
+                    RefreshTokenSalt = newSaltB64,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
+                    UserId = session.UserId,
+                    User = session.User
+                };
+
+                session.ReplacedBySessionId = newId;
+
+                _dbContext.Sessions.Add(newSession);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
+
+                var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);
+                SetJwtCookie(response, newAccessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
+                SetRefreshCookie(response, newRaw, newSession.ExpiresAtUtc);
+                SetCsrfCookie(response);
+
+                _logger.LogInformation(
+                    "auth_refresh_success user={UserId} session={SessionId} ip={IP} ua={UA}",
+                    session.UserId,
+                    newId,
+                    ctx.Connection.RemoteIpAddress?.ToString(),
+                    ctx.Request.Headers["User-Agent"].ToString());
+            }
+            catch
+            {
+                await tx.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
 
         public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
@@ -217,31 +284,46 @@ namespace AlgoDuck.Modules.Auth.Services
                 s.RevokedAtUtc = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domain });
+
+            var httpCtx = _http.HttpContext;
+            _logger.LogInformation(
+                "auth_logout user={UserId} ip={IP} ua={UA}",
+                userId,
+                httpCtx?.Connection.RemoteIpAddress?.ToString(),
+                httpCtx?.Request.Headers["User-Agent"].ToString());
         }
 
         private static bool MatchesRefresh(string storedHashB64, string storedSaltB64, string rawRefresh)
         {
             var salt = Convert.FromBase64String(storedSaltB64);
             var computedB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, salt);
-            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            return CryptographicOperations.FixedTimeEquals(
                 Convert.FromBase64String(computedB64),
                 Convert.FromBase64String(storedHashB64));
         }
 
         private void SetJwtCookie(HttpResponse response, string accessToken, DateTimeOffset expires)
         {
+            var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
             response.Cookies.Append(_jwtSettings.JwtCookieName, accessToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = !_env.IsDevelopment(),
                 SameSite = _env.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = expires,
-                Domain = _jwtSettings.CookieDomain
+                Path = "/",
+                Domain = domain
             });
         }
 
         private void SetRefreshCookie(HttpResponse response, string rawRefresh, DateTime expiresUtc)
         {
+            var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
             response.Cookies.Append(_jwtSettings.RefreshCookieName, rawRefresh, new CookieOptions
             {
                 HttpOnly = true,
@@ -249,20 +331,21 @@ namespace AlgoDuck.Modules.Auth.Services
                 SameSite = _env.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
                 Expires = new DateTimeOffset(expiresUtc),
                 Path = "/api/auth/refresh",
-                Domain = _jwtSettings.CookieDomain
+                Domain = domain
             });
         }
 
         private void SetCsrfCookie(HttpResponse response)
         {
-            var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+            var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+            var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
             response.Cookies.Append(_jwtSettings.CsrfCookieName, token, new CookieOptions
             {
                 HttpOnly = false,
                 Secure = !_env.IsDevelopment(),
                 SameSite = _env.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
                 Path = "/",
-                Domain = _jwtSettings.CookieDomain
+                Domain = domain
             });
             response.Headers[_jwtSettings.CsrfHeaderName] = token;
         }

@@ -36,6 +36,7 @@ using System.Security.Claims;
 using AlgoDuck.Shared.Middleware;
 using System.Threading.RateLimiting;
 using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -354,6 +355,7 @@ if (env.IsProduction() && Environment.GetEnvironmentVariable("ENABLE_TLS") == "t
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(env.IsDevelopment() ? "DevCors" : "ProdCors");
 
