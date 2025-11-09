@@ -38,7 +38,6 @@ using System.Threading.RateLimiting;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
-using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +55,7 @@ var validateAudience = jwtConfig.GetValue("ValidateAudience", env.IsProduction()
 var validateLifetime = jwtConfig.GetValue("ValidateLifetime", true);
 var clockSkewSeconds = jwtConfig.GetValue("ClockSkewSeconds", 60);
 
-var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName", "jwt");
+var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName") ?? "jwt";
 
 var devOrigins = builder.Configuration.GetSection("Cors:DevOrigins").Get<string[]>() 
                  ?? new[] { "http://localhost:5173", "https://localhost:5173" };
@@ -146,8 +145,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies[jwtCookieName];
-                if (!string.IsNullOrEmpty(token))
+                if (context.Request.Cookies.TryGetValue(jwtCookieName, out var token) &&
+                    !string.IsNullOrWhiteSpace(token))
                 {
                     context.Token = token;
                 }
