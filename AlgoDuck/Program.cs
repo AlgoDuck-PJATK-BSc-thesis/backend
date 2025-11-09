@@ -37,6 +37,8 @@ using AlgoDuck.Shared.Middleware;
 using System.Threading.RateLimiting;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +79,15 @@ builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Setti
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+
+var keysPath = env.IsDevelopment()
+    ? Path.Combine(builder.Environment.ContentRootPath, "keys")
+    : "/var/app-keys";
+Directory.CreateDirectory(keysPath);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+    .SetApplicationName("AlgoDuck");
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     {
