@@ -258,6 +258,11 @@ builder.Services.AddAuthentication(options =>
     o.SignInScheme = IdentityConstants.ExternalScheme;
 });
 
+builder.Services.AddMemoryCache();
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromMinutes(10));
+builder.Services.AddSingleton<AlgoDuck.Modules.Auth.Email.IEmailSender, AlgoDuck.Modules.Auth.Email.PostmarkEmailSender>();
+builder.Services.AddSingleton<AlgoDuck.Modules.Auth.TwoFactor.ITwoFactorService, AlgoDuck.Modules.Auth.TwoFactor.TwoFactorService>();
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddHttpContextAccessor();

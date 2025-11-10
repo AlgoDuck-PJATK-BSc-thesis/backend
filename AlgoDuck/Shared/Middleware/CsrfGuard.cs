@@ -11,6 +11,13 @@ public sealed class CsrfGuard
     private static readonly HashSet<string> Safe = new(StringComparer.OrdinalIgnoreCase)
         { "GET", "HEAD", "OPTIONS", "TRACE" };
 
+    private static readonly string[] AllowUnauthenticatedPosts =
+    {
+        "/api/auth/login-start",
+        "/api/auth/login-verify",
+        "/api/auth/refresh"
+    };
+
     private readonly RequestDelegate _next;
     private readonly JwtSettings _jwt;
     private readonly IHostEnvironment _env;
@@ -38,10 +45,14 @@ public sealed class CsrfGuard
 
         var path = ctx.Request.Path.Value ?? string.Empty;
 
-        if (path.StartsWith("/api/auth/refresh", StringComparison.OrdinalIgnoreCase))
+        if (ctx.Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            await _next(ctx);
-            return;
+            if (AllowUnauthenticatedPosts.Contains(path, StringComparer.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/auth/oauth/", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(ctx);
+                return;
+            }
         }
 
         if (path.Contains("/negotiate", StringComparison.OrdinalIgnoreCase))
@@ -66,17 +77,17 @@ public sealed class CsrfGuard
             return;
         }
 
-        var hasCookie = ctx.Request.Cookies.TryGetValue(_jwt.CsrfCookieName, out var cookieVal);
+        var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
         var headerVal = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
 
-        if (!hasCookie || string.IsNullOrEmpty(headerVal) || !TimeSafeEquals(cookieVal, headerVal))
+        if (!TimeSafeEquals(cookieVal, headerVal))
         {
             _logger.LogWarning(
                 "CSRF validation failed for {Method} {Path} from {IP}. HasCookie={HasCookie} HasHeader={HasHeader}",
                 ctx.Request.Method,
                 path,
                 ctx.Connection.RemoteIpAddress?.ToString(),
-                hasCookie,
+                !string.IsNullOrEmpty(cookieVal),
                 !string.IsNullOrEmpty(headerVal));
 
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -88,8 +99,9 @@ public sealed class CsrfGuard
         await _next(ctx);
     }
 
-    private static bool TimeSafeEquals(string a, string b)
+    private static bool TimeSafeEquals(string? a, string? b)
     {
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
         var ab = Encoding.UTF8.GetBytes(a);
         var bb = Encoding.UTF8.GetBytes(b);
         return CryptographicOperations.FixedTimeEquals(ab, bb);
