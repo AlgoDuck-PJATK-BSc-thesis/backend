@@ -38,6 +38,8 @@ using System.Threading.RateLimiting;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OAuth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -118,42 +120,143 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+static string Req(string? v, string key)
+{
+    if (string.IsNullOrWhiteSpace(v)) throw new InvalidOperationException($"Missing configuration: {key}");
+    return v;
+}
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-        
-        options.TokenValidationParameters = new TokenValidationParameters
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = signingKey,
+        ValidateIssuer = validateIssuer,
+        ValidateAudience = validateAudience,
+        ValidateLifetime = validateLifetime,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        ClockSkew = TimeSpan.FromSeconds(clockSkewSeconds),
+        NameClaimType = ClaimTypes.NameIdentifier,
+        RoleClaimType = ClaimTypes.Role
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
         {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = signingKey,
-
-            ValidateIssuer   = validateIssuer,
-            ValidateAudience = validateAudience,
-            ValidateLifetime = validateLifetime,
-
-            ValidIssuer   = jwtIssuer,
-            ValidAudience = jwtAudience,
-
-            ClockSkew = TimeSpan.FromSeconds(clockSkewSeconds),
-            
-            NameClaimType = ClaimTypes.NameIdentifier,
-            RoleClaimType = ClaimTypes.Role
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
+            if (context.Request.Cookies.TryGetValue(jwtCookieName, out var token) && !string.IsNullOrEmpty(token))
             {
-                if (context.Request.Cookies.TryGetValue(jwtCookieName, out var token) &&
-                    !string.IsNullOrWhiteSpace(token))
-                {
-                    context.Token = token;
-                }
-                return Task.CompletedTask;
+                context.Token = token;
             }
-        };
-    });
+            return Task.CompletedTask;
+        }
+    };
+})
+.AddCookie(IdentityConstants.ExternalScheme, o =>
+{
+    o.Cookie.Name = "ext_auth";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+    o.Cookie.SecurePolicy = env.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+})
+.AddGoogle("Google", o =>
+{
+    var g = builder.Configuration.GetSection("Authentication:Google");
+    o.ClientId = Req(g["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTID"), "Authentication:Google:ClientId or AUTHENTICATION__GOOGLE__CLIENTID");
+    o.ClientSecret = Req(g["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTSECRET"), "Authentication:Google:ClientSecret or AUTHENTICATION__GOOGLE__CLIENTSECRET");
+    o.CallbackPath = g["CallbackPath"] ?? "/api/auth/oauth/google";
+    o.SaveTokens = true;
+    o.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    if (env.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.SignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddOAuth("GitHub", o =>
+{
+    var gh = builder.Configuration.GetSection("Authentication:GitHub");
+    o.ClientId = Req(gh["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTID"), "Authentication:GitHub:ClientId or AUTHENTICATION__GITHUB__CLIENTID");
+    o.ClientSecret = Req(gh["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTSECRET"), "Authentication:GitHub:ClientSecret or AUTHENTICATION__GITHUB__CLIENTSECRET");
+    o.CallbackPath = gh["CallbackPath"] ?? "/api/auth/oauth/github";
+    o.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+    o.TokenEndpoint = "https://github.com/login/oauth/access_token";
+    o.UserInformationEndpoint = "https://api.github.com/user";
+    o.Scope.Add("read:user");
+    o.Scope.Add("user:email");
+    o.SaveTokens = true;
+    o.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    if (env.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.SignInScheme = IdentityConstants.ExternalScheme;
+    o.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+    o.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
+    o.ClaimActions.MapJsonKey("urn:github:login", "login");
+    o.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
+
+    o.Events = new OAuthEvents
+    {
+        OnCreatingTicket = async context =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
+
+            var response = await context.Backchannel.SendAsync(
+                request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+            response.EnsureSuccessStatusCode();
+
+            using var user = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            context.RunClaimActions(user.RootElement);
+
+            var email = context.Identity?.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                var emailsReq = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+                emailsReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                emailsReq.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
+                emailsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
+
+                var emailsRes = await context.Backchannel.SendAsync(
+                    emailsReq, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+                if (emailsRes.IsSuccessStatusCode)
+                {
+                    var json = await emailsRes.Content.ReadAsStringAsync();
+                    var arr = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                    var best = arr.EnumerateArray()
+                        .Where(e => e.GetProperty("verified").GetBoolean())
+                        .OrderByDescending(e => e.GetProperty("primary").GetBoolean())
+                        .Select(e => e.GetProperty("email").GetString())
+                        .FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(best))
+                    {
+                        context.Identity?.AddClaim(new Claim(ClaimTypes.Email, best));
+                    }
+                }
+            }
+        }
+    };
+})
+.AddFacebook("Facebook", o =>
+{
+    var fb = builder.Configuration.GetSection("Authentication:Facebook");
+    var appId = Req(fb["AppId"] ?? fb["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPID"), "Authentication:Facebook:AppId/ClientId or AUTHENTICATION__FACEBOOK__APPID");
+    var appSecret = Req(fb["AppSecret"] ?? fb["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPSECRET"), "Authentication:Facebook:AppSecret/ClientSecret or AUTHENTICATION__FACEBOOK__APPSECRET");
+    o.AppId = appId;
+    o.AppSecret = appSecret;
+    o.CallbackPath = fb["CallbackPath"] ?? "/api/auth/oauth/facebook";
+    o.SaveTokens = true;
+    o.Scope.Add("email");
+    o.Fields.Add("email");
+    o.Fields.Add("name");
+    o.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    if (env.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.SignInScheme = IdentityConstants.ExternalScheme;
+});
 
 builder.Services.AddAuthorization();
 
