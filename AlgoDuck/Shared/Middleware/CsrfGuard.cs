@@ -11,7 +11,7 @@ public sealed class CsrfGuard
     private static readonly HashSet<string> Safe = new(StringComparer.OrdinalIgnoreCase)
         { "GET", "HEAD", "OPTIONS", "TRACE" };
 
-    private static readonly string[] AllowUnauthenticatedPosts =
+    private static readonly HashSet<string> AllowUnauthenticatedPosts = new(StringComparer.OrdinalIgnoreCase)
     {
         "/api/auth/login-start",
         "/api/auth/login-verify",
@@ -44,12 +44,13 @@ public sealed class CsrfGuard
             return;
         }
 
-        var path = ctx.Request.Path.Value ?? string.Empty;
+        var rawPath = ctx.Request.Path.Value ?? string.Empty;
+        var path = rawPath.Length > 1 ? rawPath.TrimEnd('/') : rawPath;
 
         if (ctx.Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            if (AllowUnauthenticatedPosts.Contains(path, StringComparer.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/auth/oauth/", StringComparison.OrdinalIgnoreCase))
+            if (AllowUnauthenticatedPosts.Contains(path) ||
+                path.StartsWith("/api/auth/oauth", StringComparison.OrdinalIgnoreCase))
             {
                 await _next(ctx);
                 return;
