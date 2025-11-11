@@ -15,7 +15,8 @@ public sealed class CsrfGuard
     {
         "/api/auth/login-start",
         "/api/auth/login-verify",
-        "/api/auth/refresh"
+        "/api/auth/refresh",
+        "/api/auth/email/confirm"
     };
 
     private readonly RequestDelegate _next;
