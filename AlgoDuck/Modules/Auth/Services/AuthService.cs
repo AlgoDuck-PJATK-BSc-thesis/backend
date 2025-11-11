@@ -87,7 +87,7 @@ namespace AlgoDuck.Modules.Auth.Services
         public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
         {
             var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.UserName == dto.Username, cancellationToken);
+                .FirstOrDefaultAsync(u => u.UserName == dto.Username || u.Email == dto.Username, cancellationToken);
 
             if (user == null)
                 throw new UserNotFoundException();
