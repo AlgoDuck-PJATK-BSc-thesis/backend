@@ -492,6 +492,29 @@ using (var scope = app.Services.CreateScope())
 
 await SeedRoles(app.Services);
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var attempts = 0;
+    var maxAttempts = 10;
+
+    while (true)
+    {
+        try
+        {
+            db.Database.SetCommandTimeout(60);
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (attempts++ < maxAttempts)
+        {
+            Console.WriteLine($"DB not ready yet, retry {attempts}/{maxAttempts}: {ex.Message}");
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+    }
+}
+
 app.Run();
 
 async Task SeedRoles(IServiceProvider serviceProvider)
