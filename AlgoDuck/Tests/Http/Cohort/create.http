@@ -1,9 +1,0 @@
-### Create cohort (user – only if not already in one or created one)
-POST http://localhost:5082/api/cohorts
-Authorization: Bearer {{access_token}}
-Content-Type: application/json
-
-{
-  "name": "My Cohort",
-  "imageUrl": "https://example.com/cohort.png"
-}

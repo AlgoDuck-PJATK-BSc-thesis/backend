@@ -1,8 +1,0 @@
-### Login 
-POST http://localhost:5082/api/auth/login
-Content-Type: application/json
-
-{
-  "username": "abcd",
-  "password": "SecureP@ssw0rd"
-}

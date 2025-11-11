@@ -1,3 +1,0 @@
-### Add user to cohort (admin only)
-POST http://localhost:5082/api/cohorts/{{cohortId}}/users/{{userId}}
-Authorization: Bearer {{admin_token}}

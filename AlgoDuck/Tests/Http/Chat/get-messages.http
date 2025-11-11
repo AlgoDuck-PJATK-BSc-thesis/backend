@@ -1,3 +1,0 @@
-### Get messages from cohort chat
-GET http://localhost:5082/api/cohorts/{{cohort_id}}/chat/messages
-Authorization: Bearer {{access_token}}

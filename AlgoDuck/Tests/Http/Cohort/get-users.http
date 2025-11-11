@@ -1,3 +1,0 @@
-### Get users from cohort (admin only)
-GET http://localhost:5082/api/cohorts/{{cohortId}}/users
-Authorization: Bearer {{admin_token}}

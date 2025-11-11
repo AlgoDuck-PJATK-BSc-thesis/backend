@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using AlgoDuck.Models.User;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Modules.Auth.Email;
 using AlgoDuck.Shared.Http;
