@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
-using AlgoDuck.Models.Cohort;
 using AlgoDuck.Shared.Exceptions;
 
 namespace AlgoDuck.Modules.Cohort.Services;
@@ -23,7 +22,7 @@ public class CohortChatService : ICohortChatService
     {
         var userId = GetCurrentUserId();
 
-        var belongsToCohort = await _dbContext.Users
+        var belongsToCohort = await _dbContext.ApplicationUsers
             .AnyAsync(u => u.Id == userId && u.CohortId == cohortId);
 
         if (!belongsToCohort)
@@ -37,7 +36,7 @@ public class CohortChatService : ICohortChatService
             {
                 CohortId = m.CohortId,
                 UserId = m.UserId,
-                Content = m.Content,
+                Content = m.Message1,
                 CreatedAt = m.CreatedAt,
                 Username = m.User!.UserName,
             })
@@ -51,7 +50,7 @@ public class CohortChatService : ICohortChatService
         if (userId != dto.UserId)
             throw new ForbiddenException("You can only send messages as yourself.");
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId)
+        var user = await _dbContext.ApplicationUsers.FirstOrDefaultAsync(u => u.Id == userId)
                    ?? throw new Exception("User not found");
 
         if (user.CohortId != dto.CohortId)
@@ -59,7 +58,7 @@ public class CohortChatService : ICohortChatService
 
         var message = new Message
         {
-            Content = dto.Content,
+            Message1 = dto.Content,
             CohortId = dto.CohortId,
             UserId = dto.UserId,
             CreatedAt = DateTime.UtcNow
@@ -72,7 +71,7 @@ public class CohortChatService : ICohortChatService
         {
             CohortId = message.CohortId,
             UserId = message.UserId,
-            Content = message.Content,
+            Content = message.Message1,
             CreatedAt = message.CreatedAt,
             Username = user.UserName,
         };

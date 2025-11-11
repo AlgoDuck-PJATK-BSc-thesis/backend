@@ -1,14 +1,12 @@
-using AlgoDuck.DAL;
-using AlgoDuck.Models.User;
 using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
-using AlgoDuck.Models.Auth;
 using AlgoDuck.Shared.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using AlgoDuck.Models;
 
 namespace AlgoDuck.Modules.Auth.Services
 {

@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using AlgoDuck.Models.User;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Email;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -44,7 +44,6 @@ namespace AlgoDuck.Modules.Auth.TwoFactor
             _log.LogInformation("2FA code sent to user {UserId}", user.Id);
             return (challengeId, expires);
         }
-
         public Task<(bool ok, Guid userId, string? error)> VerifyLoginCodeAsync(string challengeId, string code, CancellationToken ct)
         {
             if (!_cache.TryGetValue<Entry>(Key(challengeId), out var entry) || entry is null)

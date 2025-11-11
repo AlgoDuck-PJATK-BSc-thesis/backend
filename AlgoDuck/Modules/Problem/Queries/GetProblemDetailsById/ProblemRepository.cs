@@ -1,4 +1,4 @@
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById.ProblemDtos;
 using AlgoDuckShared;
 using Microsoft.EntityFrameworkCore;
@@ -27,8 +27,7 @@ public class ProblemRepository(
                 p.ProblemTitle,
                 p.Description,
                 new DifficultyDto(p.Difficulty!.DifficultyName),
-                new CategoryDto(p.Category!.CategoryName),
-                new TypeDto(p.ProblemType!.Name)))
+                new CategoryDto(p.Category!.CategoryName)))
             .FirstAsync();
         
         problemDto.TemplateContents = await problemTemplate;

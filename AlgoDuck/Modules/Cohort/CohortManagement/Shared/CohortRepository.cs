@@ -1,4 +1,4 @@
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.CohortManagement.Queries.GetAllCohorts;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,14 +13,13 @@ public sealed class CohortRepository : ICohortRepository
     {
         return await _db.Cohorts
             .AsNoTracking()
-            .Where(c => c.IsActive)
             .Select(c => new CohortDto
             {
                 CohortId = c.CohortId,
                 Name = c.Name,
                 CreatedByUserId = c.CreatedByUserId,
                 CreatedByUsername = c.CreatedByUser.UserName!,
-                MemberCount = c.Users.Count
+                MemberCount = c.ApplicationUsers.Count
             })
             .ToListAsync(ct);
     }
@@ -28,7 +27,7 @@ public sealed class CohortRepository : ICohortRepository
     public async Task<Guid> CreateAsync(string name, Guid createdByUserId, CancellationToken ct)
     {
         var id = Guid.NewGuid();
-        _db.Cohorts.Add(new Models.Cohort.Cohort
+        _db.Cohorts.Add(new Models.Cohort()
         {
             CohortId = id,
             Name = name,

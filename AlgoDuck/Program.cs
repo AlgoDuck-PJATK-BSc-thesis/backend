@@ -9,8 +9,6 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using Amazon;
 using Amazon.S3;
-using AlgoDuck.DAL;
-using AlgoDuck.Models.User;
 using AlgoDuck.Modules.User.Interfaces;
 using AlgoDuck.Modules.User.Services;
 using AlgoDuck.Modules.Auth.Jwt;
@@ -35,6 +33,7 @@ using AlgoDuck.Modules.Cohort.CohortManagement.Shared;
 using System.Security.Claims;
 using AlgoDuck.Shared.Middleware;
 using System.Threading.RateLimiting;
+using AlgoDuck.Models;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.DataProtection;
@@ -79,6 +78,7 @@ builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Setti
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
+Console.WriteLine(connectionString);
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 var keysPath = env.IsDevelopment()
@@ -158,13 +158,6 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
-})
-.AddCookie(IdentityConstants.ExternalScheme, o =>
-{
-    o.Cookie.Name = "ext_auth";
-    o.Cookie.HttpOnly = true;
-    o.Cookie.SameSite = SameSiteMode.Lax;
-    o.Cookie.SecurePolicy = env.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
 })
 .AddGoogle("Google", o =>
 {

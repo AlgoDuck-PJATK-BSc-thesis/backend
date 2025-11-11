@@ -1,5 +1,4 @@
-using AlgoDuck.DAL;
-using AlgoDuck.Models.User;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.User.DTOs;
 using AlgoDuck.Modules.User.Interfaces;
 using AlgoDuck.Shared.Exceptions;
@@ -21,7 +20,7 @@ namespace AlgoDuck.Modules.User.Services
 
         public async Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken)
         {
-            var user = await _dbContext.Users
+            var user = await _dbContext.ApplicationUsers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
@@ -44,7 +43,7 @@ namespace AlgoDuck.Modules.User.Services
 
         public async Task UpdateProfileAsync(Guid userId, UpdateUserDto dto, CancellationToken cancellationToken)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            var user = await _dbContext.ApplicationUsers.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
             if (user == null)
                 throw new UserNotFoundException();
 
@@ -56,13 +55,13 @@ namespace AlgoDuck.Modules.User.Services
             var normalizedUserName = username.ToUpperInvariant();
             var normalizedEmail = email.ToUpperInvariant();
 
-            var emailExists = await _dbContext.Users
+            var emailExists = await _dbContext.ApplicationUsers
                 .AsNoTracking()
                 .AnyAsync(u => u.NormalizedEmail == normalizedEmail && u.Id != userId, cancellationToken);
             if (emailExists)
                 throw new EmailAlreadyExistsException();
 
-            var usernameExists = await _dbContext.Users
+            var usernameExists = await _dbContext.ApplicationUsers
                 .AsNoTracking()
                 .AnyAsync(u => u.NormalizedUserName == normalizedUserName && u.Id != userId, cancellationToken);
             if (usernameExists)

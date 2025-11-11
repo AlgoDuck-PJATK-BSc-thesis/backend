@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using AlgoDuck.DAL;
-using AlgoDuck.Models.Auth;
-using AlgoDuck.Models.User;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
 

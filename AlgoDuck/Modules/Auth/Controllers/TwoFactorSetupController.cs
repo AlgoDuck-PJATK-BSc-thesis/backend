@@ -1,8 +1,8 @@
 using System.Security.Claims;
+using AlgoDuck.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using AlgoDuck.Models.User;
 using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Modules.Auth.Controllers

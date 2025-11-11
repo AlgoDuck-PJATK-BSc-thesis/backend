@@ -1,4 +1,4 @@
-using AlgoDuck.Models.User;
+using AlgoDuck.Models;
 
 namespace AlgoDuck.Modules.Auth.TwoFactor
 {
