@@ -78,8 +78,16 @@ builder.Services.Configure<S3Settings>(builder.Configuration.GetSection("S3Setti
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
-Console.WriteLine(connectionString);
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+if (env.IsDevelopment())
+    Console.WriteLine(connectionString);
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql =>
+    {
+        npgsql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorCodesToAdd: null);
+    }));
 
 var keysPath = env.IsDevelopment()
     ? Path.Combine(builder.Environment.ContentRootPath, "keys")
