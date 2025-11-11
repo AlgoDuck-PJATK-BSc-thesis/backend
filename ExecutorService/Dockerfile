@@ -25,6 +25,7 @@ USER root
 WORKDIR /app
 
 RUN apt-get update && \
+    if [[ $(uname -a)~="x86_64" ]]; then apt-get install -y --no-install-recommends linux-headers-amd64; fi && \
     apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -33,7 +34,6 @@ RUN apt-get update && \
     gcc \
     make \
     build-essential \
-    linux-headers-amd64 \
     qemu-utils \
     qemu-kvm \
     libvirt-daemon-system \

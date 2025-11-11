@@ -1,4 +1,4 @@
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Item.DTOs;
 using Microsoft.EntityFrameworkCore;
 

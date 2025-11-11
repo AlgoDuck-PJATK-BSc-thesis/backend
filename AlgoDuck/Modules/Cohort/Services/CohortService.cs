@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using AlgoDuck.Shared.Exceptions;
@@ -33,7 +33,7 @@ public class CohortService : ICohortService
 
     public async Task<CohortDto> CreateAsync(CreateCohortDto dto, Guid currentUserId)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == currentUserId);
+        var user = await _db.ApplicationUsers.FirstOrDefaultAsync(u => u.Id == currentUserId);
 
         if (user == null)
             throw new NotFoundException("User not found.");
@@ -44,7 +44,7 @@ public class CohortService : ICohortService
         if (alreadyCreated || alreadyInCohort)
             throw new AlreadyInCohortException();
 
-        var cohort = new Models.Cohort.Cohort
+        var cohort = new Models.Cohort()
         {
             Name = dto.Name,
             CreatedByUserId = currentUserId
@@ -91,7 +91,7 @@ public class CohortService : ICohortService
 
         cohort.IsActive = false;
 
-        var members = await _db.Users.Where(u => u.CohortId == id).ToListAsync();
+        var members = await _db.ApplicationUsers.Where(u => u.CohortId == id).ToListAsync();
         foreach (var m in members) m.CohortId = null;
 
         await _db.SaveChangesAsync();
@@ -100,7 +100,7 @@ public class CohortService : ICohortService
 
     public async Task<bool> AddUserAsync(Guid cohortId, Guid userId)
     {
-        var user = await _db.Users.FindAsync(userId);
+        var user = await _db.ApplicationUsers.FindAsync(userId);
         if (user is null) return false;
 
         user.CohortId = cohortId;
@@ -110,7 +110,7 @@ public class CohortService : ICohortService
 
     public async Task<bool> RemoveUserAsync(Guid cohortId, Guid userId)
     {
-        var user = await _db.Users.FindAsync(userId);
+        var user = await _db.ApplicationUsers.FindAsync(userId);
         if (user is null || user.CohortId != cohortId) return false;
 
         user.CohortId = null;
@@ -120,13 +120,13 @@ public class CohortService : ICohortService
     
     public async Task<bool> UserBelongsToCohortAsync(Guid userId, Guid cohortId, CancellationToken cancellationToken)
     {
-        return await _db.Users
+        return await _db.ApplicationUsers
             .AsNoTracking()
             .AnyAsync(u => u.Id == userId && u.CohortId == cohortId, cancellationToken);
     }
 
     public async Task<List<UserProfileDto>> GetUsersAsync(Guid cohortId) =>
-        await _db.Users
+        await _db.ApplicationUsers
             .Where(u => u.CohortId == cohortId)
             .Select(u => new UserProfileDto
             {
@@ -147,7 +147,7 @@ public class CohortService : ICohortService
                 c.Name,
                 c.CreatedByUserId,
                 CreatorUsername = c.CreatedByUser.UserName!,
-                MemberCount = c.Users.Count
+                MemberCount = c.ApplicationUsers.Count
             })
             .FirstOrDefaultAsync(ct);
 
@@ -155,7 +155,7 @@ public class CohortService : ICohortService
 
         if (!isAdmin)
         {
-            var belongs = await _db.Users
+            var belongs = await _db.ApplicationUsers
                 .AsNoTracking()
                 .AnyAsync(u => u.Id == requesterId && u.CohortId == cohortId, ct);
 
@@ -163,7 +163,7 @@ public class CohortService : ICohortService
                 throw new ForbiddenException("You are not a member of this cohort.");
         }
 
-        var members = await _db.Users
+        var members = await _db.ApplicationUsers
             .AsNoTracking()
             .Where(u => u.CohortId == cohortId)
             .Select(u => new UserProfileDto

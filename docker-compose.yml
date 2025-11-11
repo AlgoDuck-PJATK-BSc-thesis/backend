@@ -31,19 +31,8 @@ services:
     ports:
       - "${WEB_PORT:-8080}:8080"
       - "${WEB_PORT2:-8081}:8081"
-    environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
-      ASPNETCORE_URLS: http://0.0.0.0:8080
-      ConnectionStrings__DefaultConnection: "Host=${DB_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-      Jwt__DurationInMinutes: ${JWT_EXP_MINUTES}
-      S3Settings__Region: ${AWS_DEFAULT_REGION}
-      S3Settings__BucketName: ${S3_BUCKET}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    env_file:
+      - .env
     networks:
       - app_network 
 

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using AlgoDuck.Shared.Exceptions;
@@ -22,13 +22,13 @@ public class CohortLeaderboardService : ICohortLeaderboardService
     {
         var userId = GetCurrentUserId();
 
-        var belongsToCohort = await _dbContext.Users
+        var belongsToCohort = await _dbContext.ApplicationUsers
             .AnyAsync(u => u.Id == userId && u.CohortId == cohortId);
 
         if (!belongsToCohort)
             throw new ForbiddenException("You are not a member of this cohort.");
 
-        var users = await _dbContext.Users
+        var users = await _dbContext.ApplicationUsers
             .Where(u => u.CohortId == cohortId)
             .OrderByDescending(u => u.Experience)
             .Select(u => new

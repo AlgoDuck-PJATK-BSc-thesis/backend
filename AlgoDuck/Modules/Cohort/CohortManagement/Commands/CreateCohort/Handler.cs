@@ -7,6 +7,6 @@ public sealed class CreateCohortHandler
     private readonly ICohortRepository _repo;
     public CreateCohortHandler(ICohortRepository repo) => _repo = repo;
 
-    public Task<Guid> HandleAsync(CreateCohortDto dto, Guid createdByUserId, CancellationToken ct)
-        => _repo.CreateAsync(dto.Name, createdByUserId, ct);
+    public Task<Guid> HandleAsync(CohortCreationDto creationDto, Guid createdByUserId, CancellationToken ct)
+        => _repo.CreateAsync(creationDto.Name, createdByUserId, ct);
 }

@@ -1,6 +1,4 @@
-using AlgoDuck.DAL;
-using AlgoDuck.Models.Item;
-using AlgoDuck.Models.Problem;
+using AlgoDuck.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Shared.Utilities;
@@ -12,7 +10,6 @@ public class DataSeedingService(ApplicationDbContext context)
         await SeedRarities();
         await SeedCategories();
         await SeedDifficulties();
-        await SeedProblemTypes();
         await SeedLanguages();
         await SeedItems();
         await SeedProblems();
@@ -75,24 +72,6 @@ public class DataSeedingService(ApplicationDbContext context)
         }
     }
 
-    private async Task SeedProblemTypes()
-    {
-        if (!await context.ProblemTypes.AnyAsync())
-        {
-            var problemTypes = new List<ProblemType>
-            {
-                new ProblemType { ProblemTypeId = Guid.Parse("e10b7916-04ad-48fd-a099-0c6845b299a4"), Name = "test1" },
-                new ProblemType { ProblemTypeId = Guid.Parse("71c8cba5-0a26-41ae-af6f-b6f335b2a1a7"), Name = "test2" },
-                new ProblemType { ProblemTypeId = Guid.Parse("9c0a7410-2efb-4302-94fe-134f6c034e5e"), Name = "test3" },
-                new ProblemType { ProblemTypeId = Guid.Parse("8f58d296-1562-4ef1-89b4-dcc05652e9d8"), Name = "test4" },
-                new ProblemType { ProblemTypeId = Guid.Parse("604d6d1b-6b66-49e0-94ac-b72dbdb28be1"), Name = "test5" }
-            };
-
-            await context.ProblemTypes.AddRangeAsync(problemTypes);
-            await context.SaveChangesAsync();
-        }
-    }
-
     private async Task SeedLanguages()
     {
         if (!await context.Languages.AnyAsync())
@@ -116,7 +95,6 @@ public class DataSeedingService(ApplicationDbContext context)
                 new Item { 
                     ItemId = Guid.Parse("16d4a949-0f5f-481a-b9d6-e0329f9d7dd3"), 
                     Name = "pirate", 
-                    Picture = "...", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -125,7 +103,6 @@ public class DataSeedingService(ApplicationDbContext context)
                 new Item { 
                     ItemId = Guid.Parse("052b219a-ec0b-430a-a7db-95c5db35dfce"), 
                     Name = "detective", 
-                    Picture = "...", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -134,7 +111,6 @@ public class DataSeedingService(ApplicationDbContext context)
                 new Item { 
                     ItemId = Guid.Parse("03a4dced-f802-4cc5-b239-e0d4c3be9dcd"), 
                     Name = "princess", 
-                    Picture = "...", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -158,22 +134,18 @@ public class DataSeedingService(ApplicationDbContext context)
                     ProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c"),
                     ProblemTitle = "test title 1",
                     Description = "description",
-                    CreatedAt = DateTime.SpecifyKind(DateTime.Parse("2025-08-16 20:36:00.239201"), DateTimeKind.Utc),
+                    CreatedAt = DateTime.UtcNow,
                     CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
                     DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
-                    ProblemTypeId = Guid.Parse("71c8cba5-0a26-41ae-af6f-b6f335b2a1a7"),
-                    DuelId = null
                 },
                 new Problem
                 {
                     ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
                     ProblemTitle = "Linked List Cycle Detection",
                     Description = "Implement a method to detect cycles in a linked list using the tortoise and hare algorithm. The solution should include a Node class with next and previous references, and a method that checks for cycles starting from a given node.",
-                    CreatedAt = DateTime.SpecifyKind(DateTime.Parse("2025-08-18 16:59:51.370235"), DateTimeKind.Utc),
+                    CreatedAt = DateTime.UtcNow,
                     CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
                     DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
-                    ProblemTypeId = Guid.Parse("71c8cba5-0a26-41ae-af6f-b6f335b2a1a7"),
-                    DuelId = null
                 }
             };
 

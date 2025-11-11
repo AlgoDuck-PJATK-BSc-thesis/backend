@@ -35,11 +35,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Folder Include="Migrations\" />
         <Folder Include="Modules\Auth\Services\" />
-        <Folder Include="Modules\Contest\Controllers\" />
-        <Folder Include="Modules\Contest\DTOs\" />
-        <Folder Include="Modules\Contest\Repositories\" />
-        <Folder Include="Modules\Contest\Services\" />
+        <Folder Include="Modules\Contest\" />
         <Folder Include="Modules\Duel\Controllers\" />
         <Folder Include="Modules\Duel\DTOs\" />
         <Folder Include="Modules\Duel\Repositories\" />
