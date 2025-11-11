@@ -484,20 +484,11 @@ app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate();
-    var seedingService = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
-    await seedingService.SeedDataAsync();
-}
-
-await SeedRoles(app.Services);
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
 
     var attempts = 0;
-    var maxAttempts = 10;
+    const int maxAttempts = 10;
 
     while (true)
     {
@@ -505,6 +496,7 @@ using (var scope = app.Services.CreateScope())
         {
             db.Database.SetCommandTimeout(60);
             db.Database.Migrate();
+            await seeder.SeedDataAsync();
             break;
         }
         catch (Exception ex) when (attempts++ < maxAttempts)
@@ -514,6 +506,8 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
+await SeedRoles(app.Services);
 
 app.Run();
 
