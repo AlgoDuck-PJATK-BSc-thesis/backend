@@ -28,4 +28,5 @@ public partial class Problem
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
+    public virtual ICollection<TestingResult> TestingResults { get; set; } = new List<TestingResult>();
 }

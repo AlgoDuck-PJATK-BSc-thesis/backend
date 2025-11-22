@@ -18,4 +18,7 @@ public partial class TestCase
     public string DisplayRes { get; set; } = null!;
 
     public virtual Problem ProblemProblem { get; set; } = null!;
+
+    public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
+
 }

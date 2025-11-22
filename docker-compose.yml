@@ -20,6 +20,10 @@ services:
       - app_network
     group_add:
       - ${KVM_GID}
+    develop:
+      watch:
+        - action: rebuild
+          path: ExecutorService/
       
   algoduck:
     image: algoduck
@@ -35,6 +39,10 @@ services:
       - .env
     networks:
       - app_network 
+    develop:
+      watch:
+        - action: rebuild
+          path: AlgoDuck/
 
 # this is just for development purposes. Remove later on        
   db:

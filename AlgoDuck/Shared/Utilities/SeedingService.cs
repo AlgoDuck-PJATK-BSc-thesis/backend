@@ -1,9 +1,15 @@
 using AlgoDuck.Models;
+using AlgoDuck.ModelsExternal;
+using AlgoDuckShared;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Shared.Utilities;
 
-public class DataSeedingService(ApplicationDbContext context)
+public class DataSeedingService(
+    ApplicationDbContext context,
+    IAwsS3Client s3Client,
+    RoleManager<IdentityRole<Guid>> roleManager)
 {
     public async Task SeedDataAsync()
     {
@@ -13,6 +19,120 @@ public class DataSeedingService(ApplicationDbContext context)
         await SeedLanguages();
         await SeedItems();
         await SeedProblems();
+        await SeedTestCases();
+    }
+
+    private async Task SeedRolesAsync()
+    {
+        string[] roles = ["admin", "user"];
+        foreach (var role in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole<Guid> { Name = role });
+            }
+        }
+    }
+    
+    private async Task SeedTestCases()
+    {
+
+        if (!await context.TestCases.AnyAsync())
+        {
+            List<TestCase> testCases =
+            [
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("7a2264fa-b7a2-4250-ac4b-a868f746c978"),
+                    CallFunc = "hasCycle",
+                    IsPublic = true,
+                    Display = "Linear list: 1 -> 2 -> 3 -> 4 -> null",
+                    DisplayRes = "false (no cycle)",
+                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("2ed6b7ae-4dd0-4c26-84ee-ce849dd9ce13"),
+                    CallFunc = "hasCycle",
+                    IsPublic = true,
+                    Display = "Cyclic list: 1 -> 2 -> 3 -> 4 -> (back to 2)",
+                    DisplayRes = "false (no cycle)",
+                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("c2031e76-abf0-4840-8f12-f404df11bb32"),
+                    CallFunc = "hasCycle",
+                    IsPublic = false,
+                    Display = "Two-node cycle: 10 <-> 20",
+                    DisplayRes = "true (cycle detected)",
+                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("acb062e7-922f-4ed0-b86c-ac2562a4b959"),
+                    CallFunc = "hasCycle",
+                    IsPublic = false,
+                    Display = "Single node: 5 -> null",
+                    DisplayRes = "false (no cycle)",
+                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                }
+            ];
+
+            List<TestCaseS3WrapperObject> testCaseS3Partials =
+            [
+                new()
+                {
+                    ProblemId = Guid.Parse("c2031e76-abf0-4840-8f12-f404df11bb32"),
+                    TestCases = [
+                        new TestCaseS3Partial
+                        {
+                           TestCaseId = Guid.Parse("7a2264fa-b7a2-4250-ac4b-a868f746c978"),
+                           Expected = "false",
+                           Call = ["cycleTest1_node1"],
+                           Setup = "${ENTRYPOINT_CLASS_NAME}.Node cycleTest1_node1 = new ${ENTRYPOINT_CLASS_NAME}.Node(1);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest1_node2 = new ${ENTRYPOINT_CLASS_NAME}.Node(2);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest1_node3 = new ${ENTRYPOINT_CLASS_NAME}.Node(3);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest1_node4 = new ${ENTRYPOINT_CLASS_NAME}.Node(4);\n        cycleTest1_node1.next = cycleTest1_node2;\n        cycleTest1_node2.prev = cycleTest1_node1;\n        cycleTest1_node2.next = cycleTest1_node3;\n        cycleTest1_node3.prev = cycleTest1_node2;\n        cycleTest1_node3.next = cycleTest1_node4;\n        cycleTest1_node4.prev = cycleTest1_node3;"
+                        },
+                
+                        new TestCaseS3Partial
+                        {
+                           TestCaseId = Guid.Parse("2ed6b7ae-4dd0-4c26-84ee-ce849dd9ce13"),
+                           Expected = "true",
+                           Call = ["cycleTest2_node1"],
+                           Setup = "        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest2_node1 = new ${ENTRYPOINT_CLASS_NAME}.Node(1);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest2_node2 = new ${ENTRYPOINT_CLASS_NAME}.Node(2);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest2_node3 = new ${ENTRYPOINT_CLASS_NAME}.Node(3);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest2_node4 = new ${ENTRYPOINT_CLASS_NAME}.Node(4);\n        cycleTest2_node1.next = cycleTest2_node2;\n        cycleTest2_node2.prev = cycleTest2_node1;\n        cycleTest2_node2.next = cycleTest2_node3;\n        cycleTest2_node3.prev = cycleTest2_node2;\n        cycleTest2_node3.next = cycleTest2_node4;\n        cycleTest2_node4.prev = cycleTest2_node3;\n        cycleTest2_node4.next = cycleTest2_node2;"
+                        },
+                
+                        new TestCaseS3Partial
+                        {
+                           TestCaseId = Guid.Parse("c2031e76-abf0-4840-8f12-f404df11bb32"),
+                           Expected = "true",
+                           Call = ["cycleTest3_node1"],
+                           Setup = "        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest3_node1 = new ${ENTRYPOINT_CLASS_NAME}.Node(10);\n        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest3_node2 = new ${ENTRYPOINT_CLASS_NAME}.Node(20);\n        cycleTest3_node1.next = cycleTest3_node2;\n        cycleTest3_node2.prev = cycleTest3_node1;\n        cycleTest3_node2.next = cycleTest3_node1; "
+                        },
+                
+                        new TestCaseS3Partial
+                        {
+                           TestCaseId = Guid.Parse("acb062e7-922f-4ed0-b86c-ac2562a4b959"),
+                           Expected = "false",
+                           Call = ["cycleTest4_node1"],
+                           Setup = "        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest4_node1 = new ${ENTRYPOINT_CLASS_NAME}.Node(5);"
+                        },
+                    ]
+                }
+            ];
+            
+            foreach (var testCaseS3Partial in testCaseS3Partials)
+            {
+                var objectPath = $"problems/{testCaseS3Partial.ProblemId}/test-cases.xml";
+                if (!await s3Client.ObjectExistsAsync(objectPath))
+                {
+                    await s3Client.PutXmlObjectAsync(objectPath,
+                        testCaseS3Partial);
+                }
+            }
+
+            await context.TestCases.AddRangeAsync(testCases);
+            await context.SaveChangesAsync();
+        }
     }
 
     private async Task SeedRarities()

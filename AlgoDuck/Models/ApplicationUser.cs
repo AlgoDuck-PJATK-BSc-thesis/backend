@@ -35,4 +35,6 @@ public partial class ApplicationUser : IdentityUser<Guid>
     public virtual UserConfig? UserConfig { get; set; }
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
+    public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
+    
 }

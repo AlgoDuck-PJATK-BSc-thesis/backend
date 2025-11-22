@@ -61,7 +61,6 @@ RUN wget https://github.com/firecracker-microvm/firecracker/releases/download/v1
 COPY --from=publish /app/publish .
 COPY ExecutorService/Executor/VmScripts firecracker
 COPY ExecutorService/VmImages firecracker
-COPY ExecutorService/ExecutorConfig.yml .
     
 RUN find firecracker -name "*.sh" -execdir chmod u+x {} +
 

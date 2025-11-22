@@ -55,6 +55,8 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
     public virtual DbSet<UserConfig> UserConfigs { get; set; }
 
     public virtual DbSet<UserSolution> UserSolutions { get; set; }
+    public virtual DbSet<PurchasedTestCase> PurchasedTestCases { get; set; }
+    public virtual DbSet<TestingResult> TestingResults { get; set; }
 
 //     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 // #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -63,6 +65,44 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PurchasedTestCase>(entity =>
+        {
+            entity.HasKey(e => new { e.TestCaseId, e.UserId });
+
+            entity.Property(e => e.TestCaseId).HasColumnName("test_case_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(e => e.TestCase)
+                .WithMany(e => e.PurchasedTestCases)
+                .HasForeignKey(e => e.TestCaseId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(e => e.User)
+                .WithMany(e => e.PurchasedTestCases)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<TestingResult>(entity =>
+        {
+            entity.HasKey(e => new { e.ExerciseId, e.UserSolutionId });
+            entity.Property(e => e.ExerciseId).HasColumnName("exercise_id");
+            entity.Property(e => e.UserSolutionId).HasColumnName("solution_id");
+            entity.Property(e => e.IsPassed).HasColumnName("is_passed");
+
+            entity.HasOne(e => e.Problem)
+                .WithMany(e => e.TestingResults)
+                .HasForeignKey(e => e.ExerciseId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+            
+            entity.HasOne(e => e.UserSolution)
+                .WithMany(e => e.TestingResults)
+                .HasForeignKey(e => e.UserSolutionId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+            
+            
+        });
         
         modelBuilder.Entity<ApplicationUser>(entity =>
         {

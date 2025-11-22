@@ -34,6 +34,8 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
 
+    Console.WriteLine($"BuckerName: {s3Settings.BucketName}");
+    Console.WriteLine($"BuckerName: {s3Settings.Region}");
     var credentials = new BasicAWSCredentials(
         Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
         Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")

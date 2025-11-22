@@ -23,7 +23,9 @@ public partial class UserSolution
 
     public virtual Problem Problem { get; set; } = null!;
 
+
     public virtual Status Status { get; set; } = null!;
 
     public virtual ApplicationUser User { get; set; } = null!;
+    public virtual ICollection<TestingResult> TestingResults { get; set; } = new List<TestingResult>();
 }

@@ -40,6 +40,7 @@ namespace AlgoDuck.Modules.Auth.Services
 
         public async Task RegisterAsync(RegisterDto dto, CancellationToken cancellationToken)
         {
+            Console.WriteLine(dto.Email);
             if (await _userManager.FindByNameAsync(dto.Username) != null)
                 throw new UsernameAlreadyExistsException();
 
@@ -56,10 +57,13 @@ namespace AlgoDuck.Modules.Auth.Services
                 AmountSolved = 0,
                 LockoutEnabled = true
             };
+            Console.WriteLine($"user email: {user.Email}");
 
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
             {
+                Console.WriteLine($"creation result: {result.Succeeded}");
+            
                 var msg = string.Join("; ", result.Errors.Select(e => e.Description));
                 var httpCtx = _http.HttpContext;
                 _logger.LogWarning(
