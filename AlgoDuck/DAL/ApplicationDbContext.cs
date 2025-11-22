@@ -106,29 +106,33 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
         
         modelBuilder.Entity<ApplicationUser>(entity =>
         {
-            entity.HasKey(e => e.UserId).HasName("application_user_pk");
+            entity.HasKey(e => e.Id).HasName("application_user_pk");
 
             entity.ToTable("application_user");
 
-            entity.Property(e => e.UserId)
-                .ValueGeneratedNever()
+            entity.Property(e => e.Id)
                 .HasColumnName("user_id");
+
             entity.Property(e => e.AmountSolved).HasColumnName("amount_solved");
             entity.Property(e => e.CohortId).HasColumnName("cohort_id");
             entity.Property(e => e.Coins).HasColumnName("coins");
+            entity.Property(e => e.Experience).HasColumnName("experience");
+
+            entity.Property(e => e.UserName)
+                .HasMaxLength(256)
+                .HasColumnName("username");
+
             entity.Property(e => e.Email)
                 .HasMaxLength(256)
                 .HasColumnName("email");
-            entity.Property(e => e.Experience).HasColumnName("experience");
+
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(256)
                 .HasColumnName("password_hash");
+
             entity.Property(e => e.SecurityStamp)
                 .HasMaxLength(256)
                 .HasColumnName("security_stamp");
-            entity.Property(e => e.Username)
-                .HasMaxLength(256)
-                .HasColumnName("username");
 
             entity.HasOne(d => d.Cohort).WithMany(p => p.ApplicationUsers)
                 .HasForeignKey(d => d.CohortId)

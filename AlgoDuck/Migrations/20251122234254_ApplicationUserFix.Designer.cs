@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251122234254_ApplicationUserFix")]
+    partial class ApplicationUserFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -415,23 +418,6 @@ namespace AlgoDuck.Migrations
                     b.ToTable("purchase", (string)null);
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>
-                {
-                    b.Property<Guid>("TestCaseId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("test_case_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("TestCaseId", "UserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PurchasedTestCases");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Rarity", b =>
                 {
                     b.Property<Guid>("RarityId")
@@ -572,27 +558,6 @@ namespace AlgoDuck.Migrations
                     b.HasIndex("ProblemProblemId");
 
                     b.ToTable("test_case", (string)null);
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.TestingResult", b =>
-                {
-                    b.Property<Guid>("ExerciseId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("exercise_id");
-
-                    b.Property<Guid>("UserSolutionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("solution_id");
-
-                    b.Property<bool>("IsPassed")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_passed");
-
-                    b.HasKey("ExerciseId", "UserSolutionId");
-
-                    b.HasIndex("UserSolutionId");
-
-                    b.ToTable("TestingResults");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
@@ -953,23 +918,6 @@ namespace AlgoDuck.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>
-                {
-                    b.HasOne("AlgoDuck.Models.TestCase", "TestCase")
-                        .WithMany("PurchasedTestCases")
-                        .HasForeignKey("TestCaseId")
-                        .IsRequired();
-
-                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
-                        .WithMany("PurchasedTestCases")
-                        .HasForeignKey("UserId")
-                        .IsRequired();
-
-                    b.Navigation("TestCase");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Session", "ReplacedBySession")
@@ -999,23 +947,6 @@ namespace AlgoDuck.Migrations
                         .HasConstraintName("test_case_problem");
 
                     b.Navigation("ProblemProblem");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.TestingResult", b =>
-                {
-                    b.HasOne("AlgoDuck.Models.Problem", "Problem")
-                        .WithMany("TestingResults")
-                        .HasForeignKey("ExerciseId")
-                        .IsRequired();
-
-                    b.HasOne("AlgoDuck.Models.UserSolution", "UserSolution")
-                        .WithMany("TestingResults")
-                        .HasForeignKey("UserSolutionId")
-                        .IsRequired();
-
-                    b.Navigation("Problem");
-
-                    b.Navigation("UserSolution");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
@@ -1157,8 +1088,6 @@ namespace AlgoDuck.Migrations
                 {
                     b.Navigation("Messages");
 
-                    b.Navigation("PurchasedTestCases");
-
                     b.Navigation("Purchases");
 
                     b.Navigation("Sessions");
@@ -1206,8 +1135,6 @@ namespace AlgoDuck.Migrations
                 {
                     b.Navigation("TestCases");
 
-                    b.Navigation("TestingResults");
-
                     b.Navigation("UserSolutions");
                 });
 
@@ -1226,19 +1153,9 @@ namespace AlgoDuck.Migrations
                     b.Navigation("UserSolutions");
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.TestCase", b =>
-                {
-                    b.Navigation("PurchasedTestCases");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
                 {
                     b.Navigation("EditorLayouts");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.UserSolution", b =>
-                {
-                    b.Navigation("TestingResults");
                 });
 #pragma warning restore 612, 618
         }

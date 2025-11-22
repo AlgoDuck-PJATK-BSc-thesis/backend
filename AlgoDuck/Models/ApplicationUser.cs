@@ -6,22 +6,12 @@ namespace AlgoDuck.Models;
 
 public partial class ApplicationUser : IdentityUser<Guid>
 {
-    public Guid UserId { get; set; }
-
     public int Coins { get; set; }
 
     public int Experience { get; set; }
 
     public int AmountSolved { get; set; }
-
-    public string Username { get; set; } = null!;
-
-    public string Email { get; set; } = null!;
-
-    public string PasswordHash { get; set; } = null!;
-
-    public string SecurityStamp { get; set; } = null!;
-
+    
     public Guid? CohortId { get; set; }
 
     public virtual Cohort? Cohort { get; set; }
