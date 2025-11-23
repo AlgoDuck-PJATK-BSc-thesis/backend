@@ -133,12 +133,16 @@ namespace AlgoDuck.Modules.Auth.Services
             var saltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
             var hashB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, saltBytes);
             var saltB64 = Convert.ToBase64String(saltBytes);
+            
+            var prefixLength = Math.Min(rawRefresh.Length, 32);
+            var refreshPrefix = rawRefresh.Substring(0, prefixLength);
 
             var session = new Session
             {
                 SessionId = Guid.NewGuid(),
                 RefreshTokenHash = hashB64,
                 RefreshTokenSalt = saltB64,
+                RefreshTokenPrefix = refreshPrefix,
                 CreatedAtUtc = DateTime.UtcNow,
                 ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
                 UserId = user.Id,
@@ -170,7 +174,8 @@ namespace AlgoDuck.Modules.Auth.Services
         if (string.IsNullOrWhiteSpace(rawRefresh))
         {
             var cookies = ctx.Request.Cookies;
-            if (!cookies.TryGetValue(_jwtSettings.RefreshCookieName, out rawRefresh) || string.IsNullOrWhiteSpace(rawRefresh))
+            if (!cookies.TryGetValue(_jwtSettings.RefreshCookieName, out rawRefresh) ||
+                string.IsNullOrWhiteSpace(rawRefresh))
                 throw new UnauthorizedException("Missing refresh token");
 
             var header = ctx.Request.Headers[_jwtSettings.CsrfHeaderName].ToString();
@@ -178,9 +183,12 @@ namespace AlgoDuck.Modules.Auth.Services
                 throw new ForbiddenException("CSRF validation failed");
         }
 
+        var prefixLength = Math.Min(rawRefresh.Length, 32);
+        var clientPrefix = rawRefresh.Substring(0, prefixLength);
+
         var revoked = await _dbContext.Sessions
             .AsNoTracking()
-            .Where(s => s.RevokedAtUtc != null)
+            .Where(s => s.RevokedAtUtc != null && s.RefreshTokenPrefix == clientPrefix)
             .Select(s => new { s.SessionId, s.UserId, s.RefreshTokenHash, s.RefreshTokenSalt })
             .ToListAsync(cancellationToken);
 
@@ -214,7 +222,10 @@ namespace AlgoDuck.Modules.Auth.Services
 
         var candidates = await _dbContext.Sessions
             .Include(s => s.User)
-            .Where(s => s.RevokedAtUtc == null && s.ExpiresAtUtc > DateTime.UtcNow)
+            .Where(s =>
+                s.RevokedAtUtc == null &&
+                s.ExpiresAtUtc > DateTime.UtcNow &&
+                s.RefreshTokenPrefix == clientPrefix)
             .ToListAsync(cancellationToken);
 
         Session? session = null;
@@ -240,6 +251,9 @@ namespace AlgoDuck.Modules.Auth.Services
             var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
             var newSaltB64 = Convert.ToBase64String(newSaltBytes);
 
+            var newPrefixLength = Math.Min(newRaw.Length, 32);
+            var newRefreshPrefix = newRaw.Substring(0, newPrefixLength);
+
             var newId = Guid.NewGuid();
 
             var newSession = new Session
@@ -247,6 +261,7 @@ namespace AlgoDuck.Modules.Auth.Services
                 SessionId = newId,
                 RefreshTokenHash = newHashB64,
                 RefreshTokenSalt = newSaltB64,
+                RefreshTokenPrefix = newRefreshPrefix,
                 CreatedAtUtc = DateTime.UtcNow,
                 ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
                 UserId = session.UserId,

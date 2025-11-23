@@ -428,11 +428,19 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
             entity.Property(e => e.RefreshTokenSalt)
                 .HasMaxLength(512)
                 .HasColumnName("refresh_token_salt");
+
+            entity.Property(e => e.RefreshTokenPrefix)
+                .HasMaxLength(64)
+                .HasColumnName("refresh_token_prefix");
+
             entity.Property(e => e.ReplacedBySessionId).HasColumnName("replaced_by_session_id");
             entity.Property(e => e.RevokedAtUtc)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("revoked_at_utc");
             entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasIndex(e => e.RefreshTokenPrefix)
+                .HasDatabaseName("session_refresh_prefix_idx");
 
             entity.HasOne(d => d.ReplacedBySession).WithMany(p => p.InverseReplacedBySession)
                 .HasForeignKey(d => d.ReplacedBySessionId)

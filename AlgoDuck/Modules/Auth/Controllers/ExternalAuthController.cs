@@ -132,12 +132,16 @@ namespace AlgoDuck.Modules.Auth.Controllers
             var saltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
             var hashB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, saltBytes);
             var saltB64 = Convert.ToBase64String(saltBytes);
+            
+            var prefixLength = Math.Min(rawRefresh.Length, 32);
+            var refreshPrefix = rawRefresh.Substring(0, prefixLength);
 
             var session = new Session
             {
                 SessionId = Guid.NewGuid(),
                 RefreshTokenHash = hashB64,
                 RefreshTokenSalt = saltB64,
+                RefreshTokenPrefix = refreshPrefix,
                 CreatedAtUtc = DateTime.UtcNow,
                 ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwt.RefreshDays),
                 UserId = user.Id,

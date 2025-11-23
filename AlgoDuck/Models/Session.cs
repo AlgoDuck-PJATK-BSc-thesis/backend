@@ -10,6 +10,8 @@ public partial class Session
     public string RefreshTokenHash { get; set; } = null!;
 
     public string RefreshTokenSalt { get; set; } = null!;
+    
+    public string? RefreshTokenPrefix { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 
