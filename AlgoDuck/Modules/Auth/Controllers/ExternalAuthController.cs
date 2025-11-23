@@ -135,6 +135,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
 
             var session = new Session
             {
+                SessionId = Guid.NewGuid(),
                 RefreshTokenHash = hashB64,
                 RefreshTokenSalt = saltB64,
                 CreatedAtUtc = DateTime.UtcNow,

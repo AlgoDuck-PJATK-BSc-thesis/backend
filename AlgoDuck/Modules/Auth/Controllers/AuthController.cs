@@ -40,30 +40,5 @@ namespace AlgoDuck.Modules.Auth.Controllers
             return Ok(ApiResponse.Success(new { message = "Logged in successfully." }));
         }
 
-        [HttpPost("refresh")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
-        {
-            await _authService.RefreshTokenAsync(new RefreshDto { RefreshToken = string.Empty }, Response, cancellationToken);
-            return Ok(ApiResponse.Success(new { message = "Token refreshed successfully." }));
-        }
-
-        [HttpPost("logout")]
-        [Authorize]
-        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(userId))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
-            await _authService.LogoutAsync(Guid.Parse(userId), cancellationToken);
-
-            var domain = string.IsNullOrWhiteSpace(_jwt.CookieDomain) ? null : _jwt.CookieDomain;
-            Response.Cookies.Delete(_jwt.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });
-            Response.Cookies.Delete(_jwt.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
-            Response.Cookies.Delete(_jwt.CsrfCookieName, new CookieOptions { Path = "/", Domain = domain });
-
-            return Ok(ApiResponse.Success(new { message = "Logged out successfully." }));
-        }
     }
 }
