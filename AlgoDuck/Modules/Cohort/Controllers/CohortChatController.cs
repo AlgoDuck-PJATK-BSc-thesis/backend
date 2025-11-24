@@ -1,3 +1,4 @@
+using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,9 @@ public class CohortChatController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMessages(Guid cohortId)
     {
-        var messages = await _chatService.GetMessagesAsync(cohortId);
-        return Ok(ApiResponse.Success(messages));
+        return Ok(new StandardApiResponse<List<CohortChatDto>>
+        {
+            Body = await _chatService.GetMessagesAsync(cohortId)
+        });
     }
 }

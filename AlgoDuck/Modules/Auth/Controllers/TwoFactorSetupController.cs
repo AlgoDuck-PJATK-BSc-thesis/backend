@@ -24,17 +24,34 @@ namespace AlgoDuck.Modules.Auth.Controllers
         {
             var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Shared.Http.Status.Error,
+                    Message = "Unauthorized"
+                });
 
             var user = await _userManager.FindByIdAsync(uid);
             if (user is null)
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+                return Unauthorized(new StandardApiResponse()
+                {
+                    Status = Shared.Http.Status.Error,
+                    Message = "Unauthorized"
+                });
 
-            return Ok(ApiResponse.Success(new
+            return Ok(new StandardApiResponse<StatusResponseDto>
             {
-                enabled = user.TwoFactorEnabled,
-                method = user.TwoFactorEnabled ? "email" : null
-            }));
+                Body = new StatusResponseDto
+                {
+                    Enabled = user.TwoFactorEnabled,
+                    Method = user.TwoFactorEnabled ? "email" : null
+                }
+            });
+        }
+
+        private sealed class StatusResponseDto
+        {
+            public required bool Enabled { get; set; }
+            public string? Method { get; set; }
         }
 
         [HttpPost("enable")]
@@ -42,24 +59,61 @@ namespace AlgoDuck.Modules.Auth.Controllers
         {
             var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Shared.Http.Status.Error,
+                    Message = "Unauthorized"
+                });
+            }
+            
             var user = await _userManager.FindByIdAsync(uid);
             if (user is null)
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+            {
+                return Unauthorized(new StandardApiResponse()
+                {
+                    Status = Shared.Http.Status.Error,
+                    Message = "Unauthorized"
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(user.Email) || !user.EmailConfirmed)
-                return BadRequest(ApiResponse.Fail("Email must be set and verified to enable 2FA.", "email_unverified"));
-
+            {
+                return BadRequest(new StandardApiResponse()
+                {
+                    Status = Shared.Http.Status.Error,
+                    Message = "Email must be set and verified to enable 2FA."
+                });
+            }
+            
             if (!user.TwoFactorEnabled)
             {
                 user.TwoFactorEnabled = true;
                 var res = await _userManager.UpdateAsync(user);
                 if (!res.Succeeded)
-                    return BadRequest(ApiResponse.Fail(string.Join("; ", res.Errors.Select(e => e.Description)), "update_failed"));
+                {
+                    return BadRequest(new StandardApiResponse
+                    {
+                        Status = Shared.Http.Status.Error,
+                        Message = string.Join("; ", res.Errors.Select(e => e.Description))
+                    });
+                }
             }
 
-            return Ok(ApiResponse.Success(new { enabled = true, method = "email" }));
+            return Ok(new StandardApiResponse<TwoFactorResponseDto>
+            {
+                Body = new TwoFactorResponseDto
+                {
+                    Enabled = true,
+                    Method = "Email" // TODO: Could perhaps be an enum? For 2fa methods I mean
+                }
+            });
+        }
+
+        private class TwoFactorResponseDto
+        {
+            public required bool Enabled { get; set; }
+            public required string Method { get; set; }
         }
 
         [HttpPost("disable")]
@@ -67,21 +121,42 @@ namespace AlgoDuck.Modules.Auth.Controllers
         {
             var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Shared.Http.Status.Error,
+                });
+            }
             var user = await _userManager.FindByIdAsync(uid);
             if (user is null)
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
+            {
+                return Unauthorized(new StandardApiResponse()
+                {
+                    Status = Shared.Http.Status.Error,
+                });
+            }
             if (user.TwoFactorEnabled)
             {
                 user.TwoFactorEnabled = false;
                 var res = await _userManager.UpdateAsync(user);
                 if (!res.Succeeded)
-                    return BadRequest(ApiResponse.Fail(string.Join("; ", res.Errors.Select(e => e.Description)), "update_failed"));
+                {
+                    return Unauthorized(new StandardApiResponse
+                    {
+                        Status = Shared.Http.Status.Error,
+                        Message = string.Join("; ", res.Errors.Select(e => e.Description))
+                    });
+                }
             }
 
-            return Ok(ApiResponse.Success(new { enabled = false }));
+            return Ok(new StandardApiResponse<TwoFactorResponseDto>
+            {
+                Body = new TwoFactorResponseDto
+                {
+                    Enabled = false,
+                    Method = "Email"
+                }
+            });
         }
     }
 }

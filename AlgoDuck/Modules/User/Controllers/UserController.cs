@@ -24,10 +24,16 @@ namespace AlgoDuck.Modules.User.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
-            var profile = await _userService.GetProfileAsync(Guid.Parse(userId), cancellationToken);
-            return Ok(ApiResponse.Success(profile));
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Status.Error
+                });
+            }
+            return Ok(new StandardApiResponse<UserProfileDto>
+            {
+                Body = await _userService.GetProfileAsync(Guid.Parse(userId), cancellationToken)
+            });
         }
 
         [HttpPut("me")]
@@ -35,10 +41,18 @@ namespace AlgoDuck.Modules.User.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Status.Error
+                });
+            }
 
             await _userService.UpdateProfileAsync(Guid.Parse(userId), dto, cancellationToken);
-            return Ok(ApiResponse.Success(new { message = "Profile updated successfully." }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "Profile updated successfully"
+            });
         }
     }
 }

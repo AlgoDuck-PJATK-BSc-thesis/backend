@@ -23,7 +23,10 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> RefreshFromCookie(CancellationToken ct)
         {
             await _authService.RefreshTokenAsync(new RefreshDto(), Response, ct);
-            return Ok(ApiResponse.Success(new { refreshed = true }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "token refreshed"
+            });
         }
 
         [HttpPost("refresh-body")]
@@ -31,7 +34,11 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> RefreshFromBody([FromBody] RefreshDto dto, CancellationToken ct)
         {
             await _authService.RefreshTokenAsync(dto, Response, ct);
-            return Ok(ApiResponse.Success(new { refreshed = true }));
+            
+            return Ok(new StandardApiResponse
+            {
+                Message = "token refreshed"
+            });
         }
 
         [HttpPost("logout")]
@@ -40,10 +47,18 @@ namespace AlgoDuck.Modules.Auth.Controllers
         {
             var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Status.Error,
+                });
+            }
             await _authService.LogoutAsync(Guid.Parse(uid), ct);
-            return Ok(ApiResponse.Success(new { loggedOut = true }));
+            
+            return Ok(new StandardApiResponse
+            {
+                Message = "logged out"
+            });
         }
     }
 }

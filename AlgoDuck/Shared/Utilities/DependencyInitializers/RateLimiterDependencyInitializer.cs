@@ -22,7 +22,11 @@ public class RateLimiterDependencyInitializer
                 }
 
                 await ctx.HttpContext.Response.WriteAsJsonAsync(
-                    ApiResponse.Fail("Too many requests. Please slow down.", "too_many_requests"),
+                    new StandardApiResponse
+                    {
+                        Status = Status.Warning,
+                        Message = "Too many requests. Please slow down."
+                    },
                     cancellationToken: token
                 );
             };
