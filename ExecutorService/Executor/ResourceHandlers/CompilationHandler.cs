@@ -1,4 +1,3 @@
-using System.Text;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Types;
@@ -9,7 +8,7 @@ namespace ExecutorService.Executor.ResourceHandlers;
 
 public interface ICompilationHandler
 {
-    internal Task<VmCompilationResponse> CompileAsync(UserSolutionData userSolutionData);
+    internal Task<VmCompilationResponse> CompileAsync(ExecutionRequest request);
 }
 
 internal sealed class CompilationHandler : ICompilationHandler
@@ -39,10 +38,10 @@ internal sealed class CompilationHandler : ICompilationHandler
         }
     }
 
-    public async Task<VmCompilationResponse> CompileAsync(UserSolutionData userSolutionData)
+    public async Task<VmCompilationResponse> CompileAsync(ExecutionRequest request)
     {
         var compileTask = new TaskCompletionSource<VmCompilationResponse>();
-        await _taskWriter.WriteAsync(new CompileTask(userSolutionData, compileTask));
+        await _taskWriter.WriteAsync(new CompileTask(request, compileTask));
         return await compileTask.Task;
     }
 
@@ -61,11 +60,9 @@ internal sealed class CompilationHandler : ICompilationHandler
                         Method = HttpMethod.Post,
                         Content = new VmCompilationQueryContent
                         {
-                            ClassName = task.UserSolutionData.MainClassName,
-                            ExecutionId = task.UserSolutionData.ExecutionId,
-                            SrcCodeB64 =
-                                Convert.ToBase64String(
-                                    Encoding.UTF8.GetBytes(task.UserSolutionData.FileContents.ToString()))
+                            ClassName = task.Request.JavaFiles.First().Key,
+                            ExecutionId = Guid.NewGuid(),
+                            SrcCodeB64 = task.Request.JavaFiles.First().Value
                         }
                     });
                 task.Tcs.SetResult(result);

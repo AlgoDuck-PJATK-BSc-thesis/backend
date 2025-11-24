@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuckShared;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Extensions;
 
 namespace AlgoDuck.Shared.Utilities;
 
@@ -16,7 +18,6 @@ public class DataSeedingService(
         await SeedRarities();
         await SeedCategories();
         await SeedDifficulties();
-        await SeedLanguages();
         await SeedItems();
         await SeedProblems();
         await SeedTestCases();
@@ -49,7 +50,7 @@ public class DataSeedingService(
                     IsPublic = true,
                     Display = "Linear list: 1 -> 2 -> 3 -> 4 -> null",
                     DisplayRes = "false (no cycle)",
-                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                    ProblemProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1")
                 },
                 new TestCase
                 {
@@ -58,7 +59,7 @@ public class DataSeedingService(
                     IsPublic = true,
                     Display = "Cyclic list: 1 -> 2 -> 3 -> 4 -> (back to 2)",
                     DisplayRes = "false (no cycle)",
-                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                    ProblemProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1")
                 },
                 new TestCase
                 {
@@ -67,7 +68,7 @@ public class DataSeedingService(
                     IsPublic = false,
                     Display = "Two-node cycle: 10 <-> 20",
                     DisplayRes = "true (cycle detected)",
-                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                    ProblemProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1")
                 },
                 new TestCase
                 {
@@ -76,7 +77,7 @@ public class DataSeedingService(
                     IsPublic = false,
                     Display = "Single node: 5 -> null",
                     DisplayRes = "false (no cycle)",
-                    ProblemProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c")
+                    ProblemProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1")
                 }
             ];
 
@@ -84,7 +85,7 @@ public class DataSeedingService(
             [
                 new()
                 {
-                    ProblemId = Guid.Parse("c2031e76-abf0-4840-8f12-f404df11bb32"),
+                    ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
                     TestCases = [
                         new TestCaseS3Partial
                         {
@@ -193,20 +194,6 @@ public class DataSeedingService(
         }
     }
 
-    private async Task SeedLanguages()
-    {
-        if (!await context.Languages.AnyAsync())
-        {
-            var languages = new List<Language>
-            {
-                new Language { LanguageId = Guid.Parse("0fd5d3a8-48c1-451b-bcdf-cf414cc6d477"), Name = "java", Version = "17.0.12" }
-            };
-
-            await context.Languages.AddRangeAsync(languages);
-            await context.SaveChangesAsync();
-        }
-    }
-
     private async Task SeedItems()
     {
         if (!await context.Items.AnyAsync())
@@ -252,15 +239,6 @@ public class DataSeedingService(
             {
                 new Problem
                 {
-                    ProblemId = Guid.Parse("63060846-b7e7-4584-8b16-099e0cd0ff0c"),
-                    ProblemTitle = "test title 1",
-                    Description = "description",
-                    CreatedAt = DateTime.UtcNow,
-                    CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
-                    DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
-                },
-                new Problem
-                {
                     ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
                     ProblemTitle = "Linked List Cycle Detection",
                     Description = "Implement a method to detect cycles in a linked list using the tortoise and hare algorithm. The solution should include a Node class with next and previous references, and a method that checks for cycles starting from a given node.",
@@ -270,8 +248,52 @@ public class DataSeedingService(
                 }
             };
 
+            List<ProblemS3PartialTemplate> templates =
+            [
+                new()
+                {
+                    ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
+                    Template = 
+                        "public class Main {\n    private static class Node {\n        int data;\n        Node next;\n        Node prev;\n\n        public Node(int data) {\n            this.data = data;\n            this.next = null;\n            this.prev = null;\n        }\n    }\n\n    public static boolean hasCycle(Node start) {\n        // Implement the tortoise and hare algorithm here\n        return false;\n    }\n}\n",
+                }
+            ];
+            
+            foreach (var template in templates)
+            {
+                var objectPath = $"problems/{template.ProblemId}/template.xml";
+                if (!await s3Client.ObjectExistsAsync(objectPath))
+                {
+                    await s3Client.PutXmlObjectAsync(objectPath,
+                        template);
+                }
+            }
+
+            List<ProblemS3PartialInfo> partialInfos =
+            [
+                new ()
+                {
+                    ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
+                    CountryCode = SupportedLanguage.En,
+                    Title = "Linked List Cycle Detection",
+                    Description = 
+                        "In many applications, linked lists are used to represent dynamic data structures.  \nHowever, faulty logic or unintended pointer manipulations can sometimes cause a **cycle** to appear in the list, meaning that traversal never reaches a `null` terminator.  \n\nYour task is to implement a cycle detection algorithm for a **doubly linked list**. Specifically, you should: \n1. **Define a `Node` class**  \n- Contains an integer value  \n- Has both `next` and `prev` references  \n\n2. **Implement a method `hasCycle(Node start)`**  \n- Determines whether a cycle exists starting from the provided node  \n3. **Use Floyd’s Tortoise and Hare algorithm**  \n- A classic two-pointer technique  \n- Detects the cycle efficiently in **O(n) time** and **O(1) space**  \nA correct solution should be able to identify both the **presence and absence of cycles** for lists of varying sizes.  \n### Edge Cases to Consider\n- Empty list (`null` start node)  \n- Single-node list without a cycle  \n- Single-node list that links to itself"
+                }
+            ];
+            
+            foreach (var info in partialInfos)
+            {
+                var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName()}.xml";
+                if (!await s3Client.ObjectExistsAsync(objectPath))
+                {
+                    await s3Client.PutXmlObjectAsync(objectPath,
+                        info);
+                }
+            }
+            
+
             await context.Problems.AddRangeAsync(problems);
             await context.SaveChangesAsync();
         }
     }
+    
 }

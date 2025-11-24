@@ -49,7 +49,6 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
     return new AmazonS3Client(credentials, config);
 });
 
-builder.Services.AddScoped<IExecutorRepository, ExecutorRepository>();
 builder.Services.AddScoped<ICodeExecutorService, CodeExecutorService>();
 builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
 

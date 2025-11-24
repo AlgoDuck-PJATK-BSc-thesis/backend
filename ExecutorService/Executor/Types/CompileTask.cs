@@ -3,8 +3,8 @@ using ExecutorService.Executor.VmLaunchSystem;
 
 namespace ExecutorService.Executor.Types;
 
-internal class CompileTask(UserSolutionData userSolutionData, TaskCompletionSource<VmCompilationResponse> tcs)
+internal class CompileTask(ExecutionRequest request, TaskCompletionSource<VmCompilationResponse> tcs)
 {
-    internal UserSolutionData UserSolutionData => userSolutionData;
+    internal ExecutionRequest Request => request;
     internal TaskCompletionSource<VmCompilationResponse> Tcs => tcs;
 }

@@ -1,4 +1,3 @@
-using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExecutorService.Executor;
@@ -8,8 +7,13 @@ namespace ExecutorService.Executor;
 public class ExecutorApiController(ICodeExecutorService codeExecutorService) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Execute([FromBody] ExecuteRequest request)
+    public async Task<IActionResult> Execute([FromBody] ExecutionRequest request)
     {
-        return Ok(await codeExecutorService.ExecuteAgnostic(request));
+        return Ok(await codeExecutorService.Execute(request));
     }
+}
+
+public class ExecutionRequest
+{
+    public required Dictionary<string, string> JavaFiles { get; set; }
 }

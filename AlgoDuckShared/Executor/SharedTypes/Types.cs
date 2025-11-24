@@ -9,7 +9,6 @@ namespace AlgoDuckShared.Executor.SharedTypes;
 public abstract class ExecuteRequest
 {
     public string CodeB64 { get; set; } = string.Empty;
-    public string Lang { get; set; } = string.Empty;
 }
 
 public class SubmitExecuteRequest : ExecuteRequest

@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using ExecutorService.Executor.Dtos;
 
-namespace ExecutorService.Executor;
+namespace ExecutorService.Executor.Helpers;
 
 public class VmOutput
 {

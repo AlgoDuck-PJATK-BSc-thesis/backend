@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
+using ExecutorService.Executor.Helpers;
 using ExecutorService.Executor.ResourceHandlers;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using Microsoft.OpenApi.Extensions;
@@ -131,6 +132,7 @@ internal class VmLaunchManager
     {
         if (!await _oversubManager.EnqueueResourceRequest(ResourceRequestType.Query, _activeVms[vmId].VmType))
             throw new VmClusterOverloadedException(); // TODO: should probably be something else
+        
         _activeVms[vmId].ServicedRequests++;
         var queryString = JsonSerializer.Serialize(queryContents);
         var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));

@@ -78,15 +78,15 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
     public async Task PutXmlObjectAsync<T>(string path, T obj) where T : class
     {
         var serializer = new XmlSerializer(typeof(T));
-        
+    
         using var memoryStream = new MemoryStream();
-        using (var writer = new StreamWriter(memoryStream, Encoding.UTF8, leaveOpen: true))
+        await using (var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), leaveOpen: true))
         {
             serializer.Serialize(writer, obj);
         }
-        
+    
         memoryStream.Position = 0;
-        
+    
         var putRequest = new PutObjectRequest
         {
             BucketName = s3Settings.Value.BucketName,
@@ -94,9 +94,9 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
             InputStream = memoryStream,
             ContentType = "application/xml"
         };
-        
+    
         var response = await s3Client.PutObjectAsync(putRequest);
-        
+    
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
             throw new AmazonS3Exception($"Could not put XML object at path {path}");

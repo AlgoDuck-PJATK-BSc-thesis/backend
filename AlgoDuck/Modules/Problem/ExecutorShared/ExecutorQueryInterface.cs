@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuckShared;
 using AlgoDuckShared.Executor.SharedTypes;
 
@@ -7,12 +8,23 @@ namespace AlgoDuck.Modules.Problem.ExecutorShared;
 
 internal interface IExecutorQueryInterface
 {
-    internal Task<ExecuteResponse> ExecuteAsync(ExecuteRequest executeRequest);
+    internal Task<ExecutionResponse> ExecuteAsync(ExecutionRequest executeRequest);
+}
+public class ExecutionRequest
+{
+    public required Dictionary<string, string> JavaFiles { get; set; }
+}
+
+
+public class ExecutionResponse
+{
+    public string Out { get; set; } = string.Empty;
+    public string Err { get; set; } = string.Empty;
 }
 
 internal class ExecutorQueryInterface(IHttpClientFactory httpClientFactory) : IExecutorQueryInterface
 {
-    public async Task<ExecuteResponse> ExecuteAsync(ExecuteRequest executeRequest)
+    public async Task<ExecutionResponse> ExecuteAsync(ExecutionRequest executeRequest)
     {
         var request = new HttpRequestMessage
         {
@@ -24,23 +36,15 @@ internal class ExecutorQueryInterface(IHttpClientFactory httpClientFactory) : IE
         var response = await client.SendAsync(request);
         var resultRaw = await response.Content.ReadAsStringAsync();
 
-        if (!response.IsSuccessStatusCode)
+        if (response.IsSuccessStatusCode)
         {
-            var errorResponse = DefaultJsonSerializer.Deserialize<ExecutorErrorResponse>(resultRaw);
-            if (errorResponse == null) throw new ExecutorNullResponseException("Failed to deserialize error response");
-            return errorResponse;
+            return DefaultJsonSerializer.Deserialize<ExecutionResponse>(resultRaw)
+                   ?? throw new ExecutorNullResponseException("Failed to deserialize error response");
         }
-    
-        ExecuteResponse? executeResultDto = executeRequest switch
-        {
-            SubmitExecuteRequest => DefaultJsonSerializer.Deserialize<SubmitExecuteResponse>(resultRaw),
-            DryExecuteRequest => DefaultJsonSerializer.Deserialize<DryExecuteResponse>(resultRaw),
-            _ => throw new NotSupportedException($"Request type {executeRequest.GetType().Name} not supported")
-        };
-    
-        if (executeResultDto == null) throw new ExecutorNullResponseException("Failed to deserialize success response");
-    
-        return executeResultDto;
+        
+        var errorResponse = DefaultJsonSerializer.Deserialize<ExecutorErrorResponse>(resultRaw) 
+                            ?? throw new ExecutorNullResponseException("Failed to deserialize error response");
+        throw new ExecutionOutputNotFoundException(errorResponse.ErrMsg);
     }
 }
 
