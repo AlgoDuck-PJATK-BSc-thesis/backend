@@ -20,6 +20,7 @@ public class DataSeedingService(
         await SeedItems();
         await SeedProblems();
         await SeedTestCases();
+        await SeedRolesAsync();
     }
 
     private async Task SeedRolesAsync()

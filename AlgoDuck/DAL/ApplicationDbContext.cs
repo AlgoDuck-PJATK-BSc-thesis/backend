@@ -192,13 +192,13 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
                 .HasMaxLength(2048)
                 .HasColumnName("contest_description");
             entity.Property(e => e.ContestEndDate)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("contest_end_date");
             entity.Property(e => e.ContestName)
                 .HasMaxLength(256)
                 .HasColumnName("contest_name");
             entity.Property(e => e.ContestStartDate)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("contest_start_date");
             entity.Property(e => e.ItemId).HasColumnName("item_id");
 
@@ -311,7 +311,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
             entity.Property(e => e.CohortId).HasColumnName("cohort_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.Message1)
                 .HasMaxLength(256)
@@ -409,18 +409,19 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
 
         modelBuilder.Entity<Session>(entity =>
         {
-            entity.HasKey(e => e.SessionId).HasName("session_pk");
+            entity.HasKey(e => e.SessionId)
+                .HasName("session_pk");
 
             entity.ToTable("session");
 
             entity.Property(e => e.SessionId)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasColumnName("session_id");
             entity.Property(e => e.CreatedAtUtc)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at_utc");
             entity.Property(e => e.ExpiresAtUtc)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("expires_at_utc");
             entity.Property(e => e.RefreshTokenHash)
                 .HasMaxLength(512)
@@ -435,7 +436,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
 
             entity.Property(e => e.ReplacedBySessionId).HasColumnName("replaced_by_session_id");
             entity.Property(e => e.RevokedAtUtc)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("revoked_at_utc");
             entity.Property(e => e.UserId).HasColumnName("user_id");
 
@@ -552,7 +553,7 @@ public partial class ApplicationDbContext : IdentityDbContext<ApplicationUser, I
                 .ValueGeneratedNever()
                 .HasColumnName("solution_id");
             entity.Property(e => e.CodeRuntimeSubmitted)
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("code_runtime_submitted");
             entity.Property(e => e.LanguageId).HasColumnName("language_id");
             entity.Property(e => e.ProblemId).HasColumnName("problem_id");

@@ -63,7 +63,7 @@ namespace AlgoDuck.Modules.Auth.Services
             if (!result.Succeeded)
             {
                 Console.WriteLine($"creation result: {result.Succeeded}");
-            
+
                 var msg = string.Join("; ", result.Errors.Select(e => e.Description));
                 var httpCtx = _http.HttpContext;
                 _logger.LogWarning(
@@ -86,7 +86,8 @@ namespace AlgoDuck.Modules.Auth.Services
                 httpCtx2?.Request.Headers["User-Agent"].ToString());
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response, CancellationToken cancellationToken)
+        public async Task<(string AccessToken, string RefreshToken)> LoginAsync(LoginDto dto, HttpResponse response,
+            CancellationToken cancellationToken)
         {
             var user = await _userManager.Users
                 .FirstOrDefaultAsync(u => u.UserName == dto.Username || u.Email == dto.Username, cancellationToken);
@@ -167,22 +168,30 @@ namespace AlgoDuck.Modules.Auth.Services
         }
 
         public async Task RefreshTokenAsync(RefreshDto dto, HttpResponse response, CancellationToken cancellationToken)
-    {
-        var ctx = _http.HttpContext ?? throw new InvalidOperationException("No HTTP context");
-
-        string? rawRefresh = dto.RefreshToken;
-        if (string.IsNullOrWhiteSpace(rawRefresh))
         {
-            var cookies = ctx.Request.Cookies;
-            if (!cookies.TryGetValue(_jwtSettings.RefreshCookieName, out rawRefresh) ||
-                string.IsNullOrWhiteSpace(rawRefresh))
-                throw new UnauthorizedException("Missing refresh token");
+            var ctx = _http.HttpContext ?? throw new InvalidOperationException("No HTTP context");
 
-            var header = ctx.Request.Headers[_jwtSettings.CsrfHeaderName].ToString();
-            if (!cookies.TryGetValue(_jwtSettings.CsrfCookieName, out var csrfCookie) || csrfCookie != header)
-                throw new ForbiddenException("CSRF validation failed");
-        }
+            string? rawRefresh = dto.RefreshToken;
+            if (string.IsNullOrWhiteSpace(rawRefresh))
+            {
+                var cookies = ctx.Request.Cookies;
+                if (!cookies.TryGetValue(_jwtSettings.RefreshCookieName, out rawRefresh) ||
+                    string.IsNullOrWhiteSpace(rawRefresh))
+                    throw new UnauthorizedException("Missing refresh token");
 
+                var header = ctx.Request.Headers[_jwtSettings.CsrfHeaderName].ToString();
+
+                var b = !cookies.TryGetValue(_jwtSettings.CsrfCookieName, out var csrfCookie);
+
+                if (b || csrfCookie != header)
+                    throw new ForbiddenException("CSRF validation failed");
+            }
+
+            var revoked = await _dbContext.Sessions
+                .AsNoTracking()
+                .Where(s => s.RevokedAtUtc != null)
+                .Select(s => new { s.SessionId, s.UserId, s.RefreshTokenHash, s.RefreshTokenSalt })
+                .ToListAsync(cancellationToken);
         var prefixLength = Math.Min(rawRefresh.Length, 32);
         var clientPrefix = rawRefresh.Substring(0, prefixLength);
 
@@ -192,106 +201,103 @@ namespace AlgoDuck.Modules.Auth.Services
             .Select(s => new { s.SessionId, s.UserId, s.RefreshTokenHash, s.RefreshTokenSalt })
             .ToListAsync(cancellationToken);
 
-        var reused = revoked.FirstOrDefault(s => MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh));
-        if (reused is not null)
-        {
-            _logger.LogWarning(
-                "auth_refresh_reuse_detected user={UserId} session={SessionId} ip={IP} ua={UA}",
-                reused.UserId,
-                reused.SessionId,
-                ctx.Connection.RemoteIpAddress?.ToString(),
-                ctx.Request.Headers["User-Agent"].ToString());
+            var reused =
+                revoked.FirstOrDefault(s => MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh));
+            if (reused is not null)
+            {
+                _logger.LogWarning(
+                    "auth_refresh_reuse_detected user={UserId} session={SessionId} ip={IP} ua={UA}",
+                    reused.UserId,
+                    reused.SessionId,
+                    ctx.Connection.RemoteIpAddress?.ToString(),
+                    ctx.Request.Headers["User-Agent"].ToString());
 
-            var now = DateTime.UtcNow;
-            var activeForUser = await _dbContext.Sessions
-                .Where(x => x.UserId == reused.UserId && x.RevokedAtUtc == null)
+                var now = DateTime.UtcNow;
+                var activeForUser = await _dbContext.Sessions
+                    .Where(x => x.UserId == reused.UserId && x.RevokedAtUtc == null)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var a in activeForUser)
+                    a.RevokedAtUtc = now;
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                var domainR = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
+                response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domainR });
+                response.Cookies.Delete(_jwtSettings.RefreshCookieName,
+                    new CookieOptions { Path = "/api/auth/refresh", Domain = domainR });
+                response.Cookies.Delete(_jwtSettings.CsrfCookieName,
+                    new CookieOptions { Path = "/", Domain = domainR });
+
+                throw new UnauthorizedException("Refresh token reuse detected. All sessions revoked.");
+            }
+
+            var candidates = await _dbContext.Sessions
+                .Include(s => s.User)
+                .Where(s => s.RevokedAtUtc == null && s.ExpiresAtUtc > DateTime.UtcNow)
                 .ToListAsync(cancellationToken);
 
-            foreach (var a in activeForUser)
-                a.RevokedAtUtc = now;
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            var domainR = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
-            response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domainR });
-            response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domainR });
-            response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domainR });
-
-            throw new UnauthorizedException("Refresh token reuse detected. All sessions revoked.");
-        }
-
-        var candidates = await _dbContext.Sessions
-            .Include(s => s.User)
-            .Where(s =>
-                s.RevokedAtUtc == null &&
-                s.ExpiresAtUtc > DateTime.UtcNow &&
-                s.RefreshTokenPrefix == clientPrefix)
-            .ToListAsync(cancellationToken);
-
-        Session? session = null;
-        foreach (var s in candidates)
-        {
-            if (MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh))
+            Session? session = null;
+            foreach (var s in candidates)
             {
-                session = s;
-                break;
+                if (MatchesRefresh(s.RefreshTokenHash, s.RefreshTokenSalt, rawRefresh))
+                {
+                    session = s;
+                    break;
+                }
+            }
+
+            if (session is null)
+                throw new UnauthorizedException("Invalid refresh token");
+
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                session.RevokedAtUtc = DateTime.UtcNow;
+
+                var newRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+                var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
+                var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
+                var newSaltB64 = Convert.ToBase64String(newSaltBytes);
+
+                var newId = Guid.NewGuid();
+
+                var newSession = new Session
+                {
+                    SessionId = newId,
+                    RefreshTokenHash = newHashB64,
+                    RefreshTokenSalt = newSaltB64,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
+                    UserId = session.UserId,
+                    User = session.User
+                };
+
+                session.ReplacedBySessionId = newId;
+
+                _dbContext.Sessions.Add(newSession);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
+
+                var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);
+                SetJwtCookie(response, newAccessToken,
+                    DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
+                SetRefreshCookie(response, newRaw, newSession.ExpiresAtUtc);
+                SetCsrfCookie(response);
+
+                _logger.LogInformation(
+                    "auth_refresh_success user={UserId} session={SessionId} ip={IP} ua={UA}",
+                    session.UserId,
+                    newId,
+                    ctx.Connection.RemoteIpAddress?.ToString(),
+                    ctx.Request.Headers["User-Agent"].ToString());
+            }
+            catch
+            {
+                await tx.RollbackAsync(cancellationToken);
+                throw;
             }
         }
-
-        if (session is null)
-            throw new UnauthorizedException("Invalid refresh token");
-
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            session.RevokedAtUtc = DateTime.UtcNow;
-
-            var newRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-            var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
-            var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
-            var newSaltB64 = Convert.ToBase64String(newSaltBytes);
-
-            var newPrefixLength = Math.Min(newRaw.Length, 32);
-            var newRefreshPrefix = newRaw.Substring(0, newPrefixLength);
-
-            var newId = Guid.NewGuid();
-
-            var newSession = new Session
-            {
-                SessionId = newId,
-                RefreshTokenHash = newHashB64,
-                RefreshTokenSalt = newSaltB64,
-                RefreshTokenPrefix = newRefreshPrefix,
-                CreatedAtUtc = DateTime.UtcNow,
-                ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshDays),
-                UserId = session.UserId,
-                User = session.User
-            };
-
-            session.ReplacedBySessionId = newId;
-
-            _dbContext.Sessions.Add(newSession);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
-
-            var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);
-            SetJwtCookie(response, newAccessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
-            SetRefreshCookie(response, newRaw, newSession.ExpiresAtUtc);
-            SetCsrfCookie(response);
-
-            _logger.LogInformation(
-                "auth_refresh_success user={UserId} session={SessionId} ip={IP} ua={UA}",
-                session.UserId,
-                newId,
-                ctx.Connection.RemoteIpAddress?.ToString(),
-                ctx.Request.Headers["User-Agent"].ToString());
-        }
-        catch
-        {
-            await tx.RollbackAsync(cancellationToken);
-            throw;
-        }
-    }
 
         public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
         {
@@ -308,9 +314,12 @@ namespace AlgoDuck.Modules.Auth.Services
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
-            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });
-            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.RefreshCookieName, new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
-            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.CsrfCookieName, new CookieOptions { Path = "/", Domain = domain });
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.JwtCookieName,
+                new CookieOptions { Path = "/", Domain = domain });
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.RefreshCookieName,
+                new CookieOptions { Path = "/api/auth/refresh", Domain = domain });
+            _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.CsrfCookieName,
+                new CookieOptions { Path = "/", Domain = domain });
 
             var httpCtx = _http.HttpContext;
             _logger.LogInformation(

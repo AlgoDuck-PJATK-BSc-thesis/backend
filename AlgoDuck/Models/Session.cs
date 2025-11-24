@@ -5,7 +5,7 @@ namespace AlgoDuck.Models;
 
 public partial class Session
 {
-    public Guid SessionId { get; set; }
+    public Guid SessionId { get; set; } = Guid.NewGuid();
 
     public string RefreshTokenHash { get; set; } = null!;
 

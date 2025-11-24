@@ -171,7 +171,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("contest_description");
 
                     b.Property<DateTime>("ContestEndDate")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("contest_end_date");
 
                     b.Property<string>("ContestName")
@@ -181,7 +181,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("contest_name");
 
                     b.Property<DateTime>("ContestStartDate")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("contest_start_date");
 
                     b.Property<Guid>("ItemId")
@@ -329,7 +329,7 @@ namespace AlgoDuck.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -453,15 +453,16 @@ namespace AlgoDuck.Migrations
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
                 {
                     b.Property<Guid>("SessionId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("session_id");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at_utc");
 
                     b.Property<string>("RefreshTokenHash")
@@ -486,7 +487,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("replaced_by_session_id");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at_utc");
 
                     b.Property<Guid>("UserId")
@@ -630,7 +631,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("solution_id");
 
                     b.Property<DateTime>("CodeRuntimeSubmitted")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("code_runtime_submitted");
 
                     b.Property<Guid>("LanguageId")
