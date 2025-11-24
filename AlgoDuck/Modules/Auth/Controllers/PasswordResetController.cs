@@ -8,6 +8,7 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Modules.Auth.Email;
 using AlgoDuck.Shared.Http;
+using Status = AlgoDuck.Shared.Http.Status;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
@@ -49,7 +50,10 @@ namespace AlgoDuck.Modules.Auth.Controllers
                 _log.LogInformation("password_reset_email_sent user={UserId}", user.Id);
             }
 
-            return Ok(ApiResponse.Success(new { message = "ok" }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "Ok"
+            });
         }
 
         [HttpPost("reset")]
@@ -57,20 +61,37 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> Reset([FromBody] PasswordResetDto dto, CancellationToken ct)
         {
             var user = await _users.FindByIdAsync(dto.UserId.ToString());
-            if (user is null) return BadRequest(ApiResponse.Fail("Invalid user.", "invalid_user"));
+            if (user is null) return BadRequest(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Invalid user"
+            });
 
             try
             {
                 var decoded = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(dto.Token));
                 var res = await _users.ResetPasswordAsync(user, decoded, dto.NewPassword);
                 if (!res.Succeeded)
-                    return BadRequest(ApiResponse.Fail(string.Join("; ", res.Errors.Select(e => e.Description)), "reset_failed"));
+                {
+                    return BadRequest(new StandardApiResponse
+                    {
+                        Status = Status.Error,
+                        Message = string.Join("; ", res.Errors.Select(e => e.Description))
+                    });
+                }
 
-                return Ok(ApiResponse.Success(new { message = "password_reset" }));
+                return Ok(new StandardApiResponse
+                {
+                    Message = "Password reset"
+                });
             }
             catch
             {
-                return BadRequest(ApiResponse.Fail("Invalid or malformed token.", "invalid_token"));
+                return BadRequest(new StandardApiResponse
+                {
+                    Status = Status.Error,
+                    Message = "Invalid or malformed token"
+                });
             }
         }
     }

@@ -8,6 +8,7 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Email;
 using AlgoDuck.Modules.Auth.DTOs;
 using AlgoDuck.Shared.Http;
+using Status = AlgoDuck.Shared.Http.Status;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
@@ -34,11 +35,24 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> Send([FromBody] EmailVerificationStartDto dto, CancellationToken ct)
         {
             var user = await _users.GetUserAsync(User);
-            if (user is null) return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+            if (user is null) return Unauthorized(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "No such user"
+            });
+            
             if (string.IsNullOrWhiteSpace(user.Email))
-                return BadRequest(ApiResponse.Fail("Email not set.", "email_missing"));
+                return BadRequest(new StandardApiResponse
+                {
+                    Status = Status.Error,
+                    Message = "Email not set"
+                });
+            
             if (await _users.IsEmailConfirmedAsync(user))
-                return Ok(ApiResponse.Success(new { message = "already_verified" }));
+                return Ok(new StandardApiResponse
+                {
+                    Message = "Already verified"
+                });
 
             var token = await _users.GenerateEmailConfirmationTokenAsync(user);
             var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
@@ -52,7 +66,10 @@ namespace AlgoDuck.Modules.Auth.Controllers
             await _email.SendAsync(user.Email!, subject, text, html, ct);
             _log.LogInformation("email_verification_sent user={UserId}", user.Id);
 
-            return Ok(ApiResponse.Success(new { message = "verification_sent" }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "Verification Sent"
+            });
         }
 
         [HttpPost("confirm")]
@@ -60,20 +77,35 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> Confirm([FromQuery] Guid userId, [FromQuery] string token, CancellationToken ct)
         {
             var user = await _users.FindByIdAsync(userId.ToString());
-            if (user is null) return BadRequest(ApiResponse.Fail("Invalid user.", "invalid_user"));
+            if (user is null) return BadRequest(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "No such user"
+            });
 
             try
             {
                 var decoded = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
                 var res = await _users.ConfirmEmailAsync(user, decoded);
                 if (!res.Succeeded)
-                    return BadRequest(ApiResponse.Fail(string.Join("; ", res.Errors.Select(e => e.Description)), "confirm_failed"));
+                    return BadRequest(new StandardApiResponse
+                    {
+                        Status = Status.Error,
+                        Message = string.Join("; ", res.Errors.Select(e => e.Description))
+                    });
 
-                return Ok(ApiResponse.Success(new { message = "email_verified" }));
+                return Ok(new StandardApiResponse
+                {
+                    Message = "Email verified"
+                });
             }
             catch
             {
-                return BadRequest(ApiResponse.Fail("Invalid or malformed token.", "invalid_token"));
+                return BadRequest(new StandardApiResponse
+                {
+                    Status = Status.Error,
+                    Message = "Invalid or malformed token"
+                });
             }
         }
     }

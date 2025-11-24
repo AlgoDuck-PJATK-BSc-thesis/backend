@@ -63,8 +63,13 @@ namespace AlgoDuck.Modules.Auth.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
-                return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
-
+            {
+                return Unauthorized(new StandardApiResponse
+                {
+                    Status = Status.Error,
+                });
+            }
+            
             await _authService.LogoutAsync(Guid.Parse(userId), cancellationToken);
 
             var domain = string.IsNullOrWhiteSpace(_jwt.CookieDomain) ? null : _jwt.CookieDomain;
