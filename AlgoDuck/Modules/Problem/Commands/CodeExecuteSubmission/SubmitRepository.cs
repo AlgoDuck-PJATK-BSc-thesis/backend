@@ -1,28 +1,30 @@
-using System.Text;
-using System.Xml.Serialization;
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
+using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 public interface IExecutorSubmitRepository
 {
     public Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId);
     public Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId);
+    public Task<bool> InsertSubmissionResultAsync(SubmissionInsertDto insertDto);
+    
 }
 
 public class SubmitRepository(
-    ApplicationDbContext dbContext,
+    ApplicationCommandDbContext commandDbContext,
     IAwsS3Client awsS3Client
     ) : IExecutorSubmitRepository
 {
     public async Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId)
     {
         var exerciseDbPartialTestCases =
-            await dbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
+            await commandDbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
                 .ToDictionaryAsync(t => t.TestCaseId, t => t);
 
         var exerciseS3PartialTestCases = XmlToObjectParser.ParseXmlString<TestCaseS3WrapperObject>(
@@ -34,7 +36,7 @@ public class SubmitRepository(
         {
             dbTestCase = exerciseDbPartialTestCases[t.TestCaseId],
             S3TestCase = t
-        }).Select(t => new TestCaseJoined()
+        }).Select(t => new TestCaseJoined
         {
             Call = t.S3TestCase.Call,
             CallFunc = t.dbTestCase.CallFunc,
@@ -55,5 +57,38 @@ public class SubmitRepository(
                    await awsS3Client.GetDocumentStringByPathAsync($"problems/{exerciseId}/template.xml")
                    ) ?? throw new XmlParsingException();
     }
-    
+
+    public async Task<bool> InsertSubmissionResultAsync(SubmissionInsertDto insertDto)
+    {
+        var userSolution = await commandDbContext.UserSolutions.AddAsync(new UserSolution
+        {
+            CodeRuntimeSubmitted = insertDto.ExecuteResponse.ExecutionTime,
+            ProblemId = insertDto.ExecuteRequest.ExerciseId,
+            Stars = 3,
+            StatusId = Guid.NewGuid(), /* TODO: Remember what status was supposed to be*/
+            UserId = insertDto.UserId
+        });
+
+        await commandDbContext.TestingResults.AddRangeAsync(insertDto.ExecuteResponse.TestResults.Select(tr => new TestingResult
+        {
+            TestCaseId = Guid.Parse(tr.TestId),
+            UserSolutionId = userSolution.Entity.SolutionId,
+            IsPassed = tr.IsTestPassed
+        }));
+
+        await commandDbContext.SaveChangesAsync();
+        await PostUserSolutionCodeToS3Async(insertDto, insertDto.UserId);
+        return true;
+    }
+
+    private async Task PostUserSolutionCodeToS3Async(SubmissionInsertDto insertDto, Guid userSolutionId)
+    {
+        await awsS3Client.PutXmlObjectAsync<ExecuteRequest>($"users/{insertDto.UserId}/solutions/${insertDto.ExecuteRequest.ExerciseId}/${userSolutionId}.xml", insertDto.ExecuteRequest);
+    }
+}
+public class SubmissionInsertDto
+{
+    public required Guid UserId { get; set; }
+    public required SubmitExecuteRequest ExecuteRequest { get; set; }
+    public required SubmitExecuteResponse ExecuteResponse { get; set; } 
 }

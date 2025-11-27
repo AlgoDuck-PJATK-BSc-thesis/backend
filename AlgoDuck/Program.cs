@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Utils;
 using AlgoDuck.Modules.Cohort;
@@ -68,7 +69,7 @@ app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
 
     var attempts = 0;

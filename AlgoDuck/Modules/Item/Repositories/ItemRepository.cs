@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Item.DTOs;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +10,11 @@ public interface IItemRepository
     public Task<IEnumerable<ItemDto>> GetItemsAsync(int page, int pageSize);
 }
 
-public class ItemRepository(ApplicationDbContext dbContext) : IItemRepository
+public class ItemRepository(ApplicationCommandDbContext commandDbContext) : IItemRepository
 {
     public async Task<IEnumerable<ItemDto>> GetItemsAsync(int page, int pageSize)
     {
-        return await dbContext.Items
+        return await commandDbContext.Items
             .Include(i => i.Rarity) .Select(i => new ItemDto(i.ItemId, i.Name, i.Description, i.Price, new RarityDto(i.Rarity.RarityName)))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

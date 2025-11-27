@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,16 @@ internal static class DbDependencyInitializer
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
 
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorCodesToAdd: null);
+            }));
+        
+        builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
             {
                 npgsql.EnableRetryOnFailure(

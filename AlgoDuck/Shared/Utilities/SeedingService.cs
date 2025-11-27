@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuckShared;
@@ -9,7 +10,7 @@ using Microsoft.OpenApi.Extensions;
 namespace AlgoDuck.Shared.Utilities;
 
 public class DataSeedingService(
-    ApplicationDbContext context,
+    ApplicationCommandDbContext context,
     IAwsS3Client s3Client,
     RoleManager<IdentityRole<Guid>> roleManager)
 {

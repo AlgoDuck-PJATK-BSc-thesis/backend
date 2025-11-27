@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
@@ -37,6 +38,7 @@ internal static class AuthDependencyInitializer
         var clockSkewSeconds = jwtConfig.GetValue("ClockSkewSeconds", 60);
 
         var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName") ?? "jwt";
+        Console.WriteLine(jwtCookieName);
 
 
         builder.Services
@@ -75,7 +77,7 @@ internal static class AuthDependencyInitializer
                     options.Lockout.MaxFailedAccessAttempts = 5;
                 }
             })
-            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddEntityFrameworkStores<ApplicationCommandDbContext>()
             .AddDefaultTokenProviders();
 
         builder.Services.AddAuthentication(options =>
@@ -108,7 +110,6 @@ internal static class AuthDependencyInitializer
                         {
                             context.Token = token;
                         }
-
                         return Task.CompletedTask;
                     }
                 };

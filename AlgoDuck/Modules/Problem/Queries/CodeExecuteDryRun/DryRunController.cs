@@ -1,8 +1,8 @@
-using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
 [ApiController]
 [Route("/api/executor/[controller]")]

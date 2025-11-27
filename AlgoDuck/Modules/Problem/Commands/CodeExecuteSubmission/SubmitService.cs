@@ -4,12 +4,12 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuckShared.Executor.SharedTypes;
 
-namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 
 public interface IExecutorSubmitService
 {
-    internal Task<ExecuteResponse> SubmitUserCodeAsync(SubmitExecuteRequest submission);
+    internal Task<ExecuteResponse> SubmitUserCodeAsync(SubmitExecuteRequest submission, Guid userId);
 }
 
 
@@ -18,7 +18,7 @@ internal class SubmitService(
     IExecutorQueryInterface executorQueryInterface
     ) : IExecutorSubmitService
 {
-    public async Task<ExecuteResponse> SubmitUserCodeAsync(SubmitExecuteRequest submission)
+    public async Task<ExecuteResponse> SubmitUserCodeAsync(SubmitExecuteRequest submission, Guid userId)
     {
         var userSolutionData = new UserSolutionData
         {
@@ -36,12 +36,21 @@ internal class SubmitService(
         helper.InsertTiming();
         helper.InsertGsonImport();
 
-        var executionResponse = await executorQueryInterface.ExecuteAsync(new ExecutionRequest
+        var executionResponseRaw = await executorQueryInterface.ExecuteAsync(new ExecutionRequest
         {
             JavaFiles = userSolutionData.GetFileContents()
         });
 
-        return helper.ParseVmOutput(executionResponse);
+        var executionResponse = helper.ParseVmOutput(executionResponseRaw);
+
+        await executorSubmitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
+        {
+            ExecuteRequest = submission,
+            ExecuteResponse = executionResponse,
+            UserId = userId
+        });
+        
+        return executionResponse;
     }
 }
 

@@ -10,7 +10,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
-using IExecutorSubmitService = AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun.IExecutorSubmitService;
+using IExecutorSubmitService = AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission.IExecutorSubmitService;
 
 namespace AlgoDuck.Modules.Problem.Utils;
 
@@ -55,7 +55,7 @@ internal static class ProblemDependencyInitializer
         });
 
         builder.Services.AddScoped<IExecutorQueryInterface, ExecutorQueryInterface>();
-        builder.Services.AddScoped<Commands.CodeExecuteSubmission.IExecutorDryRunService, Commands.CodeExecuteSubmission.DryRunService>();
+        builder.Services.AddScoped<IExecutorDryRunService, DryRunService>();
         builder.Services.AddScoped<IExecutorSubmitService, SubmitService>();
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         

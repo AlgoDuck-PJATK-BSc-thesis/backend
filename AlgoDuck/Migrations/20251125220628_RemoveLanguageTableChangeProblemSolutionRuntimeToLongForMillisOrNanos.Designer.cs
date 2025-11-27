@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    [Migration("20251123220537_AddSessionRefreshTokenPrefix")]
-    partial class AddSessionRefreshTokenPrefix
+    [Migration("20251125220628_RemoveLanguageTableChangeProblemSolutionRuntimeToLongForMillisOrNanos")]
+    partial class RemoveLanguageTableChangeProblemSolutionRuntimeToLongForMillisOrNanos
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,7 +175,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("contest_description");
 
                     b.Property<DateTime>("ContestEndDate")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("contest_end_date");
 
                     b.Property<string>("ContestName")
@@ -185,7 +185,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("contest_name");
 
                     b.Property<DateTime>("ContestStartDate")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("contest_start_date");
 
                     b.Property<Guid>("ItemId")
@@ -297,30 +297,6 @@ namespace AlgoDuck.Migrations
                     b.ToTable("item", (string)null);
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.Language", b =>
-                {
-                    b.Property<Guid>("LanguageId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("language_id");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("version");
-
-                    b.HasKey("LanguageId")
-                        .HasName("language_pk");
-
-                    b.ToTable("language", (string)null);
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Message", b =>
                 {
                     b.Property<Guid>("MessageId")
@@ -333,7 +309,7 @@ namespace AlgoDuck.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -461,11 +437,11 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("session_id");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at_utc");
 
                     b.Property<string>("RefreshTokenHash")
@@ -490,7 +466,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("replaced_by_session_id");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("timestamp without time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at_utc");
 
                     b.Property<Guid>("UserId")
@@ -633,20 +609,16 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("solution_id");
 
-                    b.Property<DateTime>("CodeRuntimeSubmitted")
-                        .HasColumnType("timestamp without time zone")
+                    b.Property<long>("CodeRuntimeSubmitted")
+                        .HasColumnType("bigint")
                         .HasColumnName("code_runtime_submitted");
-
-                    b.Property<Guid>("LanguageId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("language_id");
 
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uuid")
                         .HasColumnName("problem_id");
 
-                    b.Property<int>("Stars")
-                        .HasColumnType("integer")
+                    b.Property<byte>("Stars")
+                        .HasColumnType("smallint")
                         .HasColumnName("stars");
 
                     b.Property<Guid>("StatusId")
@@ -659,8 +631,6 @@ namespace AlgoDuck.Migrations
 
                     b.HasKey("SolutionId")
                         .HasName("user_solution_pk");
-
-                    b.HasIndex("LanguageId");
 
                     b.HasIndex("ProblemId");
 
@@ -1043,13 +1013,6 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.UserSolution", b =>
                 {
-                    b.HasOne("AlgoDuck.Models.Language", "Language")
-                        .WithMany("UserSolutions")
-                        .HasForeignKey("LanguageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("user_solution_language_ref");
-
                     b.HasOne("AlgoDuck.Models.Problem", "Problem")
                         .WithMany("UserSolutions")
                         .HasForeignKey("ProblemId")
@@ -1070,8 +1033,6 @@ namespace AlgoDuck.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("solution_user_ref");
-
-                    b.Navigation("Language");
 
                     b.Navigation("Problem");
 
@@ -1207,11 +1168,6 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Contests");
 
                     b.Navigation("Purchases");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.Language", b =>
-                {
-                    b.Navigation("UserSolutions");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Problem", b =>

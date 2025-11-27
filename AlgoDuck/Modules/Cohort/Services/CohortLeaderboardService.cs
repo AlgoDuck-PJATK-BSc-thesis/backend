@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.DTOs;
 using AlgoDuck.Modules.Cohort.Interfaces;
@@ -9,12 +10,12 @@ namespace AlgoDuck.Modules.Cohort.Services;
 
 public class CohortLeaderboardService : ICohortLeaderboardService
 {
-    private readonly ApplicationDbContext _dbContext;
+    private readonly ApplicationCommandDbContext _commandDbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public CohortLeaderboardService(ApplicationDbContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public CohortLeaderboardService(ApplicationCommandDbContext commandDbContext, IHttpContextAccessor httpContextAccessor)
     {
-        _dbContext = dbContext;
+        _commandDbContext = commandDbContext;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -22,13 +23,13 @@ public class CohortLeaderboardService : ICohortLeaderboardService
     {
         var userId = GetCurrentUserId();
 
-        var belongsToCohort = await _dbContext.ApplicationUsers
+        var belongsToCohort = await _commandDbContext.ApplicationUsers
             .AnyAsync(u => u.Id == userId && u.CohortId == cohortId);
 
         if (!belongsToCohort)
             throw new ForbiddenException("You are not a member of this cohort.");
 
-        var users = await _dbContext.ApplicationUsers
+        var users = await _commandDbContext.ApplicationUsers
             .Where(u => u.CohortId == cohortId)
             .OrderByDescending(u => u.Experience)
             .Select(u => new

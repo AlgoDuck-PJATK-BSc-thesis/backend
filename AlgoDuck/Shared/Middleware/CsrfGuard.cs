@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Shared.Http;
 using Microsoft.Extensions.Options;
@@ -82,7 +83,10 @@ public sealed class CsrfGuard
         var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
         var headerVal = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
 
-        if (!TimeSafeEquals(cookieVal, headerVal))
+        Console.WriteLine(cookieVal);
+        Console.WriteLine(headerVal);
+        
+        if (!TimeSafeEquals(cookieVal, HttpUtility.UrlDecode(headerVal)))
         {
             _logger.LogWarning(
                 "CSRF validation failed for {Method} {Path} from {IP}. HasCookie={HasCookie} HasHeader={HasHeader}",

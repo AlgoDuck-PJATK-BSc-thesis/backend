@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApplicationUser : IdentityUser<Guid>
+public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfiguration<ApplicationUser>
 {
     public int Coins { get; set; }
 
@@ -26,5 +28,40 @@ public partial class ApplicationUser : IdentityUser<Guid>
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
     public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
-    
+
+    public void Configure(EntityTypeBuilder<ApplicationUser> builder)
+    {
+        builder.HasKey(e => e.Id).HasName("application_user_pk");
+
+        builder.ToTable("application_user");
+
+        builder.Property(e => e.Id)
+            .HasColumnName("user_id");
+
+        builder.Property(e => e.AmountSolved).HasColumnName("amount_solved");
+        builder.Property(e => e.CohortId).HasColumnName("cohort_id");
+        builder.Property(e => e.Coins).HasColumnName("coins");
+        builder.Property(e => e.Experience).HasColumnName("experience");
+
+        builder.Property(e => e.UserName)
+            .HasMaxLength(256)
+            .HasColumnName("username");
+
+        builder.Property(e => e.Email)
+            .HasMaxLength(256)
+            .HasColumnName("email");
+
+        builder.Property(e => e.PasswordHash)
+            .HasMaxLength(256)
+            .HasColumnName("password_hash");
+
+        builder.Property(e => e.SecurityStamp)
+            .HasMaxLength(256)
+            .HasColumnName("security_stamp");
+
+        builder.HasOne(d => d.Cohort).WithMany(p => p.ApplicationUsers)
+            .HasForeignKey(d => d.CohortId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .HasConstraintName("user_cohort_ref");
+    }
 }

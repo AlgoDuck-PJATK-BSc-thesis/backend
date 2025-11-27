@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using AlgoDuck.DAL;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
         private readonly IAuthService _authService;
         private readonly ITwoFactorService _twofa;
         private readonly ITokenService _tokenService;
-        private readonly ApplicationDbContext _db;
+        private readonly ApplicationCommandDbContext _commandDb;
         private readonly JwtSettings _jwt;
         private readonly IWebHostEnvironment _env;
 
@@ -31,7 +32,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             IAuthService authService,
             ITwoFactorService twofa,
             ITokenService tokenService,
-            ApplicationDbContext db,
+            ApplicationCommandDbContext commandDb,
             IOptions<JwtSettings> jwt,
             IWebHostEnvironment env)
         {
@@ -39,7 +40,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             _authService = authService;
             _twofa = twofa;
             _tokenService = tokenService;
-            _db = db;
+            _commandDb = commandDb;
             _jwt = jwt.Value;
             _env = env;
         }
@@ -155,8 +156,8 @@ namespace AlgoDuck.Modules.Auth.Controllers
                 User = user
             };
 
-            await _db.Sessions.AddAsync(session, ct);
-            await _db.SaveChangesAsync(ct);
+            await _commandDb.Sessions.AddAsync(session, ct);
+            await _commandDb.SaveChangesAsync(ct);
 
             SetJwtCookie(Response, accessToken, DateTimeOffset.UtcNow.AddMinutes(_jwt.DurationInMinutes));
             SetRefreshCookie(Response, rawRefresh, session.ExpiresAtUtc);

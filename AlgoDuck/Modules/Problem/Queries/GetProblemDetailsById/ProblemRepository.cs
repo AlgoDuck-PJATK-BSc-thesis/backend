@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById.ProblemDtos;
 using AlgoDuckShared;
@@ -11,7 +12,7 @@ public interface IProblemRepository
 }
 
 public class ProblemRepository(
-    ApplicationDbContext dbContext,
+    ApplicationCommandDbContext commandDbContext,
     IAwsS3Client awsS3Client) : IProblemRepository
 {
     public async Task<ProblemDto> GetProblemDetailsAsync(Guid problemId)
@@ -19,7 +20,7 @@ public class ProblemRepository(
         var problemTemplate = GetTemplateAsync(problemId);
         var testCases = GetTestCasesAsync(problemId);
 
-        var problemDto = await dbContext.Problems
+        var problemDto = await commandDbContext.Problems
             .AsNoTracking()
             .Where(p => p.ProblemId == problemId)
             .Select(p => new ProblemDto(

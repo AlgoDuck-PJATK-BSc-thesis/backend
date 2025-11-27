@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.CohortManagement.Queries.GetAllCohorts;
 using Microsoft.EntityFrameworkCore;
@@ -6,12 +7,12 @@ namespace AlgoDuck.Modules.Cohort.CohortManagement.Shared;
 
 public sealed class CohortRepository : ICohortRepository
 {
-    private readonly ApplicationDbContext _db;
-    public CohortRepository(ApplicationDbContext db) => _db = db;
+    private readonly ApplicationCommandDbContext _commandDb;
+    public CohortRepository(ApplicationCommandDbContext commandDb) => _commandDb = commandDb;
 
     public async Task<List<CohortDto>> GetAllAsync(CancellationToken ct)
     {
-        return await _db.Cohorts
+        return await _commandDb.Cohorts
             .AsNoTracking()
             .Select(c => new CohortDto
             {
@@ -27,13 +28,13 @@ public sealed class CohortRepository : ICohortRepository
     public async Task<Guid> CreateAsync(string name, Guid createdByUserId, CancellationToken ct)
     {
         var id = Guid.NewGuid();
-        _db.Cohorts.Add(new Models.Cohort()
+        _commandDb.Cohorts.Add(new Models.Cohort()
         {
             CohortId = id,
             Name = name,
             CreatedByUserId = createdByUserId
         });
-        await _db.SaveChangesAsync(ct);
+        await _commandDb.SaveChangesAsync(ct);
         return id;
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 
 namespace AlgoDuck.Modules.Auth.Services
@@ -14,7 +15,7 @@ namespace AlgoDuck.Modules.Auth.Services
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ITokenService _tokenService;
-        private readonly ApplicationDbContext _dbContext;
+        private readonly ApplicationCommandDbContext _commandDbContext;
         private readonly JwtSettings _jwtSettings;
         private readonly IWebHostEnvironment _env;
         private readonly IHttpContextAccessor _http;
@@ -23,7 +24,7 @@ namespace AlgoDuck.Modules.Auth.Services
         public AuthService(
             UserManager<ApplicationUser> userManager,
             ITokenService tokenService,
-            ApplicationDbContext dbContext,
+            ApplicationCommandDbContext commandDbContext,
             IOptions<JwtSettings> options,
             IWebHostEnvironment env,
             IHttpContextAccessor http,
@@ -31,7 +32,7 @@ namespace AlgoDuck.Modules.Auth.Services
         {
             _userManager = userManager;
             _tokenService = tokenService;
-            _dbContext = dbContext;
+            _commandDbContext = commandDbContext;
             _jwtSettings = options.Value;
             _env = env;
             _http = http;
@@ -149,8 +150,8 @@ namespace AlgoDuck.Modules.Auth.Services
                 User = user
             };
 
-            await _dbContext.Sessions.AddAsync(session, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _commandDbContext.Sessions.AddAsync(session, cancellationToken);
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
 
             SetJwtCookie(response, accessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
             SetRefreshCookie(response, rawRefresh, session.ExpiresAtUtc);
@@ -186,7 +187,7 @@ namespace AlgoDuck.Modules.Auth.Services
         var prefixLength = Math.Min(rawRefresh.Length, 32);
         var clientPrefix = rawRefresh.Substring(0, prefixLength);
 
-        var revoked = await _dbContext.Sessions
+        var revoked = await _commandDbContext.Sessions
             .AsNoTracking()
             .Where(s => s.RevokedAtUtc != null && s.RefreshTokenPrefix == clientPrefix)
             .Select(s => new { s.SessionId, s.UserId, s.RefreshTokenHash, s.RefreshTokenSalt })
@@ -203,14 +204,14 @@ namespace AlgoDuck.Modules.Auth.Services
                 ctx.Request.Headers["User-Agent"].ToString());
 
             var now = DateTime.UtcNow;
-            var activeForUser = await _dbContext.Sessions
+            var activeForUser = await _commandDbContext.Sessions
                 .Where(x => x.UserId == reused.UserId && x.RevokedAtUtc == null)
                 .ToListAsync(cancellationToken);
 
             foreach (var a in activeForUser)
                 a.RevokedAtUtc = now;
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
 
             var domainR = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
             response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domainR });
@@ -220,7 +221,7 @@ namespace AlgoDuck.Modules.Auth.Services
             throw new UnauthorizedException("Refresh token reuse detected. All sessions revoked.");
         }
 
-        var candidates = await _dbContext.Sessions
+        var candidates = await _commandDbContext.Sessions
             .Include(s => s.User)
             .Where(s =>
                 s.RevokedAtUtc == null &&
@@ -241,7 +242,7 @@ namespace AlgoDuck.Modules.Auth.Services
         if (session is null)
             throw new UnauthorizedException("Invalid refresh token");
 
-        await using var tx = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var tx = await _commandDbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             session.RevokedAtUtc = DateTime.UtcNow;
@@ -270,8 +271,8 @@ namespace AlgoDuck.Modules.Auth.Services
 
             session.ReplacedBySessionId = newId;
 
-            _dbContext.Sessions.Add(newSession);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            _commandDbContext.Sessions.Add(newSession);
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
             var newAccessToken = await _tokenService.CreateAccessTokenAsync(session.User);
@@ -295,7 +296,7 @@ namespace AlgoDuck.Modules.Auth.Services
 
         public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
         {
-            var sessions = await _dbContext.Sessions
+            var sessions = await _commandDbContext.Sessions
                 .Where(s => s.UserId == userId && s.RevokedAtUtc == null)
                 .ToListAsync(cancellationToken);
 
@@ -305,7 +306,7 @@ namespace AlgoDuck.Modules.Auth.Services
             foreach (var s in sessions)
                 s.RevokedAtUtc = DateTime.UtcNow;
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
 
             var domain = string.IsNullOrWhiteSpace(_jwtSettings.CookieDomain) ? null : _jwtSettings.CookieDomain;
             _http.HttpContext?.Response.Cookies.Delete(_jwtSettings.JwtCookieName, new CookieOptions { Path = "/", Domain = domain });

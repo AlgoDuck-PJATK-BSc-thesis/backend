@@ -4,7 +4,7 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuckShared.Executor.SharedTypes;
 
-namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
 
 public interface IExecutorDryRunService
