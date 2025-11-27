@@ -111,6 +111,15 @@ internal static class AuthDependencyInitializer
                             context.Token = token;
                         }
                         return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception is SecurityTokenExpiredException)
+                        {
+                            Console.WriteLine("expired");
+                            context.Response.Headers["X-Token-Expired"] = "true";
+                        }
+                        return Task.CompletedTask;
                     }
                 };
             })

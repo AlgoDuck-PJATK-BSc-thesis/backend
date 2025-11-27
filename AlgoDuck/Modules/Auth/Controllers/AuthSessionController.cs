@@ -22,7 +22,13 @@ namespace AlgoDuck.Modules.Auth.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RefreshFromCookie(CancellationToken ct)
         {
-            await _authService.RefreshTokenAsync(new RefreshDto(), Response, ct);
+            HttpContext.Request.Cookies.TryGetValue("refresh_token", out var refresh);
+
+            await _authService.RefreshTokenAsync(new RefreshDto
+            {
+                RefreshToken = refresh
+            }, Response, ct);
+            
             return Ok(new StandardApiResponse
             {
                 Message = "token refreshed"

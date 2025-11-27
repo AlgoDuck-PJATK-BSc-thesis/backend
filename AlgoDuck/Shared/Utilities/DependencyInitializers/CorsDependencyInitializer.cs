@@ -21,7 +21,8 @@ internal static class CorsDependencyInitializer
                 policy.WithOrigins(devOrigins)
                     .AllowCredentials()
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .WithExposedHeaders("X-Token-Expired");
             });
 
             options.AddPolicy("ProdCors", policy =>
@@ -29,7 +30,8 @@ internal static class CorsDependencyInitializer
                 policy.WithOrigins(prodOrigins)
                     .AllowCredentials()
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .WithExposedHeaders("X-Token-Expired");
             });
         });
     }

@@ -153,7 +153,7 @@ namespace AlgoDuck.Modules.Auth.Services
             await _commandDbContext.Sessions.AddAsync(session, cancellationToken);
             await _commandDbContext.SaveChangesAsync(cancellationToken);
 
-            SetJwtCookie(response, accessToken, DateTimeOffset.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes));
+            SetJwtCookie(response, accessToken, session.ExpiresAtUtc);
             SetRefreshCookie(response, rawRefresh, session.ExpiresAtUtc);
             SetCsrfCookie(response);
 
@@ -179,7 +179,9 @@ namespace AlgoDuck.Modules.Auth.Services
                 string.IsNullOrWhiteSpace(rawRefresh))
                 throw new UnauthorizedException("Missing refresh token");
 
-            var header = ctx.Request.Headers[_jwtSettings.CsrfHeaderName].ToString();
+            var header = Uri.UnescapeDataString(ctx.Request.Headers[_jwtSettings.CsrfHeaderName].ToString());
+            Console.WriteLine($"header: {header}");
+            Console.WriteLine($"cookie: {rawRefresh}");
             if (!cookies.TryGetValue(_jwtSettings.CsrfCookieName, out var csrfCookie) || csrfCookie != header)
                 throw new ForbiddenException("CSRF validation failed");
         }
@@ -242,9 +244,12 @@ namespace AlgoDuck.Modules.Auth.Services
         if (session is null)
             throw new UnauthorizedException("Invalid refresh token");
 
-        await using var tx = await _commandDbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
+        var strategy = _commandDbContext.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
         {
+            await using var tx = await _commandDbContext.Database.BeginTransactionAsync(cancellationToken);
+    
             session.RevokedAtUtc = DateTime.UtcNow;
 
             var newRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
@@ -286,12 +291,7 @@ namespace AlgoDuck.Modules.Auth.Services
                 newId,
                 ctx.Connection.RemoteIpAddress?.ToString(),
                 ctx.Request.Headers["User-Agent"].ToString());
-        }
-        catch
-        {
-            await tx.RollbackAsync(cancellationToken);
-            throw;
-        }
+        });
     }
 
         public async Task LogoutAsync(Guid userId, CancellationToken cancellationToken)
