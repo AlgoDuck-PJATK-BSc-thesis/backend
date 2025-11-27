@@ -29,7 +29,10 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterDto dto, CancellationToken cancellationToken)
         {
             await _authService.RegisterAsync(dto, cancellationToken);
-            return Ok(ApiResponse.Success(new { message = "User registered successfully." }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "User registered successfully."
+            });
         }
 
         [HttpPost("login")]
@@ -37,8 +40,11 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken cancellationToken)
         {
             await _authService.LoginAsync(dto, Response, cancellationToken);
-            return Ok(ApiResponse.Success(new { message = "Logged in successfully." }));
+            return Ok(new StandardApiResponse
+            {
+                Message = "Logged in successfully."
+            });
         }
-
+        
     }
 }

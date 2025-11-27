@@ -9,6 +9,7 @@ using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Modules.Auth.TwoFactor;
 using AlgoDuck.Shared.Http;
+using Status = AlgoDuck.Shared.Http.Status;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
@@ -60,10 +61,18 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> LoginStart([FromBody] LoginStartRequest dto, CancellationToken ct)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user is null) return Unauthorized(ApiResponse.Fail("Invalid credentials", "invalid_credentials"));
+            if (user is null) return Unauthorized(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Invalid credentials"
+            });
 
-            var ok = await _userManager.CheckPasswordAsync(user, dto.Password);
-            if (!ok) return Unauthorized(ApiResponse.Fail("Invalid credentials", "invalid_credentials"));
+        var ok = await _userManager.CheckPasswordAsync(user, dto.Password);
+            if (!ok) return Unauthorized(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Invalid credentials"
+            });
 
             var twofaEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
             if (!twofaEnabled)
@@ -78,19 +87,32 @@ namespace AlgoDuck.Modules.Auth.Controllers
                     ct
                 );
 
-                return Ok(ApiResponse.Success(new { message = "Logged in successfully." }));
+                return Ok(new StandardApiResponse
+                {
+                    Message = "Logged in succesfully"
+                });
             }
 
             var (challengeId, expiresAt) = await _twofa.SendLoginCodeAsync(user, ct);
             var methods = new[] { "email" };
-
-            return Ok(ApiResponse.Success(new
+            return Ok(new StandardApiResponse<LoginResponseDto>
             {
-                twoFactorRequired = true,
-                challengeId,
-                expiresAt,
-                methods
-            }));
+                Body = new LoginResponseDto
+                {
+                    TwoFactoRequired = true,
+                    ChallengeId = challengeId,
+                    ExpiresAt = expiresAt,
+                    Methods = methods
+                }
+            });
+        }
+
+        private class LoginResponseDto
+        {
+            public required bool TwoFactoRequired { get; set; }
+            public required string ChallengeId { get; set; } = string.Empty;
+            public required DateTimeOffset ExpiresAt { get; set; }
+            public required string[] Methods { get; set; }
         }
 
         [HttpPost("login-verify")]
@@ -98,10 +120,18 @@ namespace AlgoDuck.Modules.Auth.Controllers
         public async Task<IActionResult> LoginVerify([FromBody] LoginVerifyRequest dto, CancellationToken ct)
         {
             var (ok, userId, error) = await _twofa.VerifyLoginCodeAsync(dto.ChallengeId, dto.Code, ct);
-            if (!ok) return BadRequest(ApiResponse.Fail(error ?? "invalid_code", "invalid_code"));
+            if (!ok) return BadRequest(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Invalid code"
+            });
 
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user is null) return Unauthorized(ApiResponse.Fail("Unauthorized", "unauthorized"));
+            if (user is null) return Unauthorized(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Unauthorized"
+            });
 
             var accessToken = await _tokenService.CreateAccessTokenAsync(user);
 
@@ -132,7 +162,11 @@ namespace AlgoDuck.Modules.Auth.Controllers
             SetRefreshCookie(Response, rawRefresh, session.ExpiresAtUtc);
             SetCsrfCookie(Response);
 
-            return Ok(ApiResponse.Success(new { message = "Logged in with two-factor." }));
+            return Ok(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Logged in with 2fa"
+            });
         }
 
         private void SetJwtCookie(HttpResponse response, string accessToken, DateTimeOffset expires)

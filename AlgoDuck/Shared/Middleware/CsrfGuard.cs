@@ -99,8 +99,11 @@ public sealed class CsrfGuard
                 !string.IsNullOrEmpty(headerVal));
 
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await ctx.Response.WriteAsJsonAsync(
-                ApiResponse.Fail("CSRF validation failed.", "csrf_failed"));
+            await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "CSRF validation failed."
+            });
             return;
         }
 

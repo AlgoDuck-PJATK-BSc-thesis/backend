@@ -40,11 +40,12 @@ public class ErrorHandler
             _logger.LogError(error, "Unhandled exception: {Code} {Message}", code, message);
 
             response.StatusCode = statusCode;
-            var payload = statusCode >= 500
-                ? ApiResponse.Error(message, code)
-                : ApiResponse.Fail(message, code);
-
-            await response.WriteAsJsonAsync(payload);
+            
+            await response.WriteAsJsonAsync(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = message
+            });
         }
     }
 }
