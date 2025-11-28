@@ -81,7 +81,13 @@ public sealed class CsrfGuard
         }
 
         var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
-        var headerVal = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
+        var headerRaw = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
+        
+        string? headerVal = null;
+        if (!string.IsNullOrEmpty(headerRaw))
+        {
+            headerVal = Uri.UnescapeDataString(headerRaw);
+        }
 
         if (!TimeSafeEquals(cookieVal, HttpUtility.UrlDecode(headerVal)))
         {
