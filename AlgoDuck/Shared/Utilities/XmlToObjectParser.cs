@@ -25,7 +25,6 @@ internal static class XmlToObjectParser
 
     internal static TResult? ParseXmlString<TResult>(string xml)
     {
-        Console.WriteLine(xml);
         using var reader = new StringReader(xml.Trim());
         var serializer = new XmlSerializer(typeof(TResult));
         var result = serializer.Deserialize(reader);

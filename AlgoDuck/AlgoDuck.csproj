@@ -44,7 +44,6 @@
         <Folder Include="Modules\Item\Repositories\" />
         <Folder Include="Modules\Item\Services\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
-        <Folder Include="Modules\Problem\Queries\GetProblemsByCategory\" />
         <Folder Include="Modules\User\Controllers\" />
         <Folder Include="Modules\User\DTOs\" />
         <Folder Include="Modules\User\Services\" />

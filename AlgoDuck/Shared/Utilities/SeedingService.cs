@@ -79,7 +79,44 @@ public class DataSeedingService(
                     Display = "Single node: 5 -> null",
                     DisplayRes = "false (no cycle)",
                     ProblemProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("6b9c1f59-2700-4840-83ae-9a7ab9253b2e"),
+                    CallFunc = "twoSum",
+                    IsPublic = true,
+                    Display = "nums = [2, 7, 11, 15], target = 9",
+                    DisplayRes = "[0, 1]",
+                    ProblemProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("94c73084-9ac2-47fe-ab0b-536bb398e2fb"),
+                    CallFunc = "twoSum",
+                    IsPublic = true,
+                    Display = "nums = [3, 2, 4], target = 6",
+                    DisplayRes = "[1, 2]",
+                    ProblemProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("533c0f81-df26-4a83-b72f-676b49dfb93a"),
+                    CallFunc = "twoSum",
+                    IsPublic = false,
+                    Display = "nums = [3, 3], target = 6",
+                    DisplayRes = "[0, 1]",
+                    ProblemProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2")
+                },
+                new TestCase
+                {
+                    TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
+                    CallFunc = "twoSum",
+                    IsPublic = false,
+                    Display = "nums = [1, 5, 3, 7, 9, 2], target = 10",
+                    DisplayRes = "[2, 4]",
+                    ProblemProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2")
                 }
+
             ];
 
             List<TestCaseS3WrapperObject> testCaseS3Partials =
@@ -119,6 +156,40 @@ public class DataSeedingService(
                            Call = ["cycleTest4_node1"],
                            Setup = "        ${ENTRYPOINT_CLASS_NAME}.Node cycleTest4_node1 = new ${ENTRYPOINT_CLASS_NAME}.Node(5);"
                         },
+                    ]
+                },
+                new()
+                {
+                    ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
+                    TestCases = [
+                        new TestCaseS3Partial
+                        {
+                            TestCaseId = Guid.Parse("6b9c1f59-2700-4840-83ae-9a7ab9253b2e"),
+                            Expected = "[0, 1]",
+                            Call = ["twoSumTest1_nums", "9"],
+                            Setup = "int[] twoSumTest1_nums = new int[] {2, 7, 11, 15};"
+                        },
+                        new TestCaseS3Partial
+                        {
+                            TestCaseId = Guid.Parse("94c73084-9ac2-47fe-ab0b-536bb398e2fb"),
+                            Expected = "[1, 2]",
+                            Call = ["twoSumTest2_nums", "6"],
+                            Setup = "int[] twoSumTest2_nums = new int[] {3, 2, 4};"
+                        },
+                        new TestCaseS3Partial
+                        {
+                            TestCaseId = Guid.Parse("533c0f81-df26-4a83-b72f-676b49dfb93a"),
+                            Expected = "[0, 1]",
+                            Call = ["twoSumTest3_nums", "6"],
+                            Setup = "int[] twoSumTest3_nums = new int[] {3, 3};"
+                        },
+                        new TestCaseS3Partial
+                        {
+                            TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
+                            Expected = "[2, 4]",
+                            Call = ["twoSumTest4_nums", "10"],
+                            Setup = "int[] twoSumTest4_nums = new int[] {1, 5, 3, 7, 9, 2};"
+                        }
                     ]
                 }
             ];
@@ -162,16 +233,7 @@ public class DataSeedingService(
         {
             var categories = new List<Category>
             {
-                new Category { CategoryId = Guid.Parse("e3ccee7d-e1e0-4a61-bb2f-2593e194f8ef"), CategoryName = "test category 1" },
-                new Category { CategoryId = Guid.Parse("3ecb6530-4f19-4342-b08e-af746c268a22"), CategoryName = "test category 2" },
-                new Category { CategoryId = Guid.Parse("9f23ec20-bf61-4b9f-a509-45e4c9838a3b"), CategoryName = "test category 3" },
                 new Category { CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"), CategoryName = "test category 4" },
-                new Category { CategoryId = Guid.Parse("4b29315e-e0e1-4aad-8eb6-1bb75eed59f2"), CategoryName = "test category 5" },
-                new Category { CategoryId = Guid.Parse("ad4013d2-bdcd-47f7-bc4f-f08942eaa208"), CategoryName = "test category 6" },
-                new Category { CategoryId = Guid.Parse("a6fc55c1-a7aa-4532-a734-4cff16b9a4ed"), CategoryName = "test category 7" },
-                new Category { CategoryId = Guid.Parse("8efcc3db-c1bb-4284-8c6e-134a94058647"), CategoryName = "test category 8" },
-                new Category { CategoryId = Guid.Parse("02178b3a-a68f-4da3-bcb0-5e8deabfc41e"), CategoryName = "test category 9" },
-                new Category { CategoryId = Guid.Parse("3dac81de-4bd7-4b58-b091-be911a5db160"), CategoryName = "test category 20" }
             };
 
             await context.Categories.AddRangeAsync(categories);
@@ -246,6 +308,15 @@ public class DataSeedingService(
                     CreatedAt = DateTime.UtcNow,
                     CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
                     DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
+                },
+                new Problem
+                {
+                    ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
+                    ProblemTitle = "Two Sum",
+                    Description = "Given an array of integers and a target value, return the indices of two numbers that add up to the target. Each input has exactly one solution, and you cannot use the same element twice.",
+                    CreatedAt = DateTime.UtcNow,
+                    CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
+                    DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"), 
                 }
             };
 
@@ -256,6 +327,12 @@ public class DataSeedingService(
                     ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
                     Template = 
                         "public class Main {\n    private static class Node {\n        int data;\n        Node next;\n        Node prev;\n\n        public Node(int data) {\n            this.data = data;\n            this.next = null;\n            this.prev = null;\n        }\n    }\n\n    public static boolean hasCycle(Node start) {\n        // Implement the tortoise and hare algorithm here\n        return false;\n    }\n}\n",
+                },
+                new()
+                {
+                    ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
+                    Template = 
+                        "public class Main {\n    public static int[] twoSum(int[] nums, int target) {\n        // Implement your solution here\n        return new int[] {};\n    }\n}\n",
                 }
             ];
             
@@ -278,12 +355,20 @@ public class DataSeedingService(
                     Title = "Linked List Cycle Detection",
                     Description = 
                         "In many applications, linked lists are used to represent dynamic data structures.  \nHowever, faulty logic or unintended pointer manipulations can sometimes cause a **cycle** to appear in the list, meaning that traversal never reaches a `null` terminator.  \n\nYour task is to implement a cycle detection algorithm for a **doubly linked list**. Specifically, you should: \n1. **Define a `Node` class**  \n- Contains an integer value  \n- Has both `next` and `prev` references  \n\n2. **Implement a method `hasCycle(Node start)`**  \n- Determines whether a cycle exists starting from the provided node  \n3. **Use Floyd’s Tortoise and Hare algorithm**  \n- A classic two-pointer technique  \n- Detects the cycle efficiently in **O(n) time** and **O(1) space**  \nA correct solution should be able to identify both the **presence and absence of cycles** for lists of varying sizes.  \n### Edge Cases to Consider\n- Empty list (`null` start node)  \n- Single-node list without a cycle  \n- Single-node list that links to itself"
+                },
+                new ()
+                {
+                    ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
+                    CountryCode = SupportedLanguage.En,
+                    Title = "Two Sum",
+                    Description = 
+                        "Given an array of integers `nums` and an integer `target`, return the **indices** of the two numbers that add up to `target`.\n\nYou may assume that each input has **exactly one solution**, and you **cannot use the same element twice**.\n\nYou can return the answer in any order.\n\n### Example 1\n**Input:** nums = [2, 7, 11, 15], target = 9  \n**Output:** [0, 1]  \n**Explanation:** nums[0] + nums[1] = 2 + 7 = 9\n\n### Example 2\n**Input:** nums = [3, 2, 4], target = 6  \n**Output:** [1, 2]  \n**Explanation:** nums[1] + nums[2] = 2 + 4 = 6\n\n### Constraints\n- 2 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9\n- -10^9 <= target <= 10^9\n- Only one valid answer exists\n\n### Follow-up\nCan you solve it in less than O(n²) time complexity?"
                 }
             ];
             
             foreach (var info in partialInfos)
             {
-                var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName()}.xml";
+                var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName().ToLowerInvariant()}.xml";
                 if (!await s3Client.ObjectExistsAsync(objectPath))
                 {
                     await s3Client.PutXmlObjectAsync(objectPath,

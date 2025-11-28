@@ -43,12 +43,12 @@ internal class SubmitService(
 
         var executionResponse = helper.ParseVmOutput(executionResponseRaw);
 
-        await executorSubmitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
-        {
-            ExecuteRequest = submission,
-            ExecuteResponse = executionResponse,
-            UserId = userId
-        });
+        // await executorSubmitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
+        // {
+        //     ExecuteRequest = submission,
+        //     ExecuteResponse = executionResponse,
+        //     UserId = userId
+        // });
         
         return executionResponse;
     }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AlgoDuck.Shared.Exceptions;
+using AlgoDuck.Shared.Http;
 using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,10 @@ public class SubmitController(IExecutorSubmitService executorService) : Controll
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
                      ?? throw new UserNotFoundException();
-        return Ok(await executorService.SubmitUserCodeAsync(executeRequest, Guid.Parse(userId)));
+        
+        return Ok(new StandardApiResponse<ExecuteResponse>
+        {
+            Body = await executorService.SubmitUserCodeAsync(executeRequest, Guid.Parse(userId))
+        });
     }
 }

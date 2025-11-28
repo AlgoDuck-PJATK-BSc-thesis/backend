@@ -2,7 +2,9 @@ using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.ExecutorShared;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
-using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById;
+using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
+using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
+using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
 using AlgoDuckShared;
 using Amazon;
@@ -23,7 +25,7 @@ internal static class ProblemDependencyInitializer
         {
             client.BaseAddress =
                 new Uri($"http://executor:{Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"}/api/execute");
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         });
         
@@ -38,9 +40,7 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddSingleton<IAmazonS3>(sp =>
         {
             var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-
-            Console.WriteLine($"BuckerName: {s3Settings.BucketName}");
-            Console.WriteLine($"BuckerName: {s3Settings.Region}");
+            
             var credentials = new BasicAWSCredentials(
                 Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
                 Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
@@ -56,13 +56,21 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<IExecutorQueryInterface, ExecutorQueryInterface>();
         builder.Services.AddScoped<IExecutorDryRunService, DryRunService>();
+        
         builder.Services.AddScoped<IExecutorSubmitService, SubmitService>();
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         
         builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
         builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
+        
         builder.Services.AddScoped<IProblemService, ProblemService>();
         builder.Services.AddScoped<IAssistantService, AssistantService>();
+
+        builder.Services.AddScoped<IProblemCategoriesRepository, ProblemCategoriesRepository>();
+        builder.Services.AddScoped<IProblemCategoriesService, ProblemCategoriesService>();
+        
+        builder.Services.AddScoped<ICategoryProblemsRepository, CategoryProblemsRepository>();
+        builder.Services.AddScoped<ICategoryProblemsService, CategoryProblemsService>();
 
     }
 }

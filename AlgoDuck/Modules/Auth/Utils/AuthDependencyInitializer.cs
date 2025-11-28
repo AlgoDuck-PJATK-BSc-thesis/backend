@@ -38,8 +38,6 @@ internal static class AuthDependencyInitializer
         var clockSkewSeconds = jwtConfig.GetValue("ClockSkewSeconds", 60);
 
         var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName") ?? "jwt";
-        Console.WriteLine(jwtCookieName);
-
 
         builder.Services
             .AddOptions<JwtSettings>()
@@ -116,7 +114,6 @@ internal static class AuthDependencyInitializer
                     {
                         if (context.Exception is SecurityTokenExpiredException)
                         {
-                            Console.WriteLine("expired");
                             context.Response.Headers["X-Token-Expired"] = "true";
                         }
                         return Task.CompletedTask;

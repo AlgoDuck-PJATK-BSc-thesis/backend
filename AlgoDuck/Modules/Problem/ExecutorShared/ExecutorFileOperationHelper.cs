@@ -136,9 +136,6 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
     private string CreateComparingStatement(TestCaseJoined testCase, string gsonInstanceName)
     {
         var args = testCase.Call.Length == 0 ? "" : testCase.Call[0] + string.Join(",", testCase.Call.Skip(1));
-
-        Console.WriteLine(args);
-        
         return CreateSignedPrintStatement($"\" tc_id:{testCase.TestCaseId} \" + {gsonInstanceName}.toJson({testCase.Expected}).equals({gsonInstanceName}.toJson({testCase.CallFunc}({args})))",  SigningType.Answer);
     }
 

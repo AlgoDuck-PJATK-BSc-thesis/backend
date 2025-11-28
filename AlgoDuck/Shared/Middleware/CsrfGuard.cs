@@ -83,9 +83,6 @@ public sealed class CsrfGuard
         var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
         var headerVal = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
 
-        Console.WriteLine(cookieVal);
-        Console.WriteLine(headerVal);
-        
         if (!TimeSafeEquals(cookieVal, HttpUtility.UrlDecode(headerVal)))
         {
             _logger.LogWarning(

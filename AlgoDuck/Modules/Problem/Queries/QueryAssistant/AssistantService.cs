@@ -1,6 +1,5 @@
 using System.Text;
-using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById;
-using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsById.ProblemDtos;
+using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using OpenAI.Chat;
 
 namespace AlgoDuck.Modules.Problem.Queries.QueryAssistant;
@@ -13,16 +12,18 @@ public interface IAssistantService
 public class AssistantService(ChatClient chatClient, IProblemRepository problemRepository)
     : IAssistantService
 {
+    
     public async Task<AssistantResponseDto> GetAssistanceAsync(AssistantRequestDto request)
     {
+        throw new NotImplementedException();
         // TODO: This is a bit iffy, at the same time it feels weird repeating the same file or extracting it to a share. Idk inquire about this next call
-        var problemDetails = await problemRepository.GetProblemDetailsAsync(request.ExerciseId);
-        var query = ConstructAssistantQuery(request, problemDetails);
-        ChatCompletion completion = await chatClient.CompleteChatAsync(query);
-        return new AssistantResponseDto
-        {
-            Response = completion.Content[0].Text
-        };
+        // var problemDetails = await problemRepository.GetProblemDetailsAsync(request.ExerciseId);
+        // var query = ConstructAssistantQuery(request, problemDetails);
+        // ChatCompletion completion = await chatClient.CompleteChatAsync(query);
+        // return new AssistantResponseDto
+        // {
+            // Response = completion.Content[0].Text
+        // };
     }
 
     private static string ConstructAssistantQuery(AssistantRequestDto request, ProblemDto problemDto)

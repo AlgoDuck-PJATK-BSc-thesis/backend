@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Shared.Http;
 using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,6 +11,9 @@ public class DryRunController(IExecutorDryRunService executorService) : Controll
     [HttpPost]
     public async Task<IActionResult> SubmitCode([FromBody] DryExecuteRequest executeRequest)
     {
-        return Ok(await executorService.DryRunUserCodeAsync(executeRequest));
+        return Ok(new StandardApiResponse<ExecuteResponse>
+        {
+            Body = await executorService.DryRunUserCodeAsync(executeRequest)
+        });
     }
 }
