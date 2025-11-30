@@ -9,16 +9,16 @@ namespace AlgoDuckShared;
 
 public interface IAwsS3Client
 {
-    public Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path);
-    public Task<string> GetDocumentStringByPathAsync(string path);
-    public Task<bool> ObjectExistsAsync(string path);
-    public Task PutXmlObjectAsync<T>(string path, T obj) where T : class;
+    public Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path, CancellationToken cancellationToken);
+    public Task<string> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken);
+    public Task<bool> ObjectExistsAsync(string path, CancellationToken cancellationToken);
+    public Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken) where T : class;
     
 }
 
 public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : IAwsS3Client
 {
-    public async Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path)
+    public async Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path, CancellationToken cancellationToken = default)
     {
         var getRequest = new GetObjectRequest
         {
@@ -26,21 +26,21 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
             Key = path
         };
         
-        var response = await s3Client.GetObjectAsync(getRequest);
+        var response = await s3Client.GetObjectAsync(getRequest, cancellationToken);
         
         return response.HttpStatusCode == HttpStatusCode.OK ? response : throw new AmazonS3Exception($"Could not get document for path {path}");
     }
 
-    public async Task<string> GetDocumentStringByPathAsync(string path)
+    public async Task<string> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken = default)
     {
-        var responseObj = await GetDocumentObjectByPathAsync(path);
+        var responseObj = await GetDocumentObjectByPathAsync(path, cancellationToken);
         
         var buffer = new byte[responseObj.ContentLength];
         var totalBytesRead = 0;
 
         while (totalBytesRead < responseObj.ContentLength)
         {
-            var bytesRead = await responseObj.ResponseStream.ReadAsync(buffer);
+            var bytesRead = await responseObj.ResponseStream.ReadAsync(buffer, cancellationToken);
             if (bytesRead == 0) break;
             totalBytesRead += bytesRead;
         }
@@ -48,13 +48,10 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
         return Encoding.UTF8.GetString(buffer);
     }
 
-    public async Task<bool> ObjectExistsAsync(string path)
+    public async Task<bool> ObjectExistsAsync(string path, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine($"BucketName: {s3Settings.Value.BucketName}, Region: {s3Settings.Value.Region}");
-
         if (string.IsNullOrEmpty(s3Settings.Value.BucketName))
         {
-            Console.WriteLine("BucketName is null or empty!");
             throw new InvalidOperationException("S3 BucketName is not configured");
         }
 
@@ -66,7 +63,7 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
                 Key = path
             };
             
-            await s3Client.GetObjectMetadataAsync(request);
+            await s3Client.GetObjectMetadataAsync(request, cancellationToken);
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -75,7 +72,7 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
         }
     }
 
-    public async Task PutXmlObjectAsync<T>(string path, T obj) where T : class
+    public async Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
     {
         var serializer = new XmlSerializer(typeof(T));
     
@@ -95,7 +92,7 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
             ContentType = "application/xml"
         };
     
-        var response = await s3Client.PutObjectAsync(putRequest);
+        var response = await s3Client.PutObjectAsync(putRequest, cancellationToken);
     
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {

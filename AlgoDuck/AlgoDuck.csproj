@@ -39,10 +39,6 @@
         <Folder Include="Migrations\" />
         <Folder Include="Modules\Auth\Services\" />
         <Folder Include="Modules\Contest\" />
-        <Folder Include="Modules\Item\Controllers\" />
-        <Folder Include="Modules\Item\DTOs\" />
-        <Folder Include="Modules\Item\Repositories\" />
-        <Folder Include="Modules\Item\Services\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
         <Folder Include="Modules\User\Controllers\" />
         <Folder Include="Modules\User\DTOs\" />
