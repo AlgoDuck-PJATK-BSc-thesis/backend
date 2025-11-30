@@ -31,7 +31,6 @@ ProblemDependencyInitializer.Initialize(builder);
 ItemDependencyInitializer.Initialize(builder);
 AuthDependencyInitializer.Initialize(builder);
 
-
 builder.Services.AddControllers(options =>
 {
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;

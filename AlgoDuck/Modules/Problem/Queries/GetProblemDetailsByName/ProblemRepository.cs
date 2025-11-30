@@ -5,6 +5,7 @@ using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
+using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 

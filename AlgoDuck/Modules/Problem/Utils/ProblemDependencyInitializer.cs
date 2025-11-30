@@ -6,12 +6,15 @@ using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
+using AlgoDuck.Shared.S3;
 using AlgoDuckShared;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
+using AwsS3Client = AlgoDuck.Shared.S3.AwsS3Client;
+using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 using IExecutorSubmitService = AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission.IExecutorSubmitService;
 
 namespace AlgoDuck.Modules.Problem.Utils;
@@ -40,6 +43,9 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddSingleton<IAmazonS3>(sp =>
         {
             var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+
+            Console.WriteLine(s3Settings.ContentBucketSettings.BucketName);
+            Console.WriteLine(s3Settings.DataBucketSettings.BucketName);
             
             var credentials = new BasicAWSCredentials(
                 Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
@@ -48,7 +54,7 @@ internal static class ProblemDependencyInitializer
 
             var config = new AmazonS3Config
             {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.DataBucketSettings.Region)
             };
 
             return new AmazonS3Client(credentials, config);

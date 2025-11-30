@@ -1,3 +1,5 @@
+using AlgoDuck.Modules.Item.Commands.CreateItem;
+using AlgoDuck.Modules.Item.Commands.PurchaseItem;
 using AlgoDuck.Modules.Item.Queries.GetAllItemsPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
@@ -12,6 +14,11 @@ internal static class ItemDependencyInitializer
 
         builder.Services.AddScoped<IAllItemsRepository, AllItemsRepository>();
         builder.Services.AddScoped<IAllItemService, AllItemService>();
+
+        builder.Services.AddScoped<IPurchaseItemService, PurchaseItemService>();
+        builder.Services.AddScoped<IPurchaseItemRepository, PurchaseItemRepository>();
+
+        builder.Services.AddScoped<ICreateItemRepository, CreateItemRepository>();
+        builder.Services.AddScoped<ICreateItemService, CreateItemService>();
     }
-    
 }

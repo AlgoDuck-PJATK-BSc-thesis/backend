@@ -3,6 +3,7 @@ using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
 namespace AlgoDuck.Modules.Item.Commands.CreateItem;
 

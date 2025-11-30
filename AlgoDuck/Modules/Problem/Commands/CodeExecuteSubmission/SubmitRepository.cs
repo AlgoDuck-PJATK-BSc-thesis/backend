@@ -5,6 +5,7 @@ using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.EntityFrameworkCore;
+using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
 namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 

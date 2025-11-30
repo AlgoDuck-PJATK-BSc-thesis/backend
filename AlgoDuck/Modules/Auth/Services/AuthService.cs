@@ -52,7 +52,7 @@ namespace AlgoDuck.Modules.Auth.Services
                 UserName = dto.Username,
                 Email = dto.Email,
                 CohortId = null,
-                Coins = 0,
+                Coins = 1_000_000,
                 Experience = 0,
                 AmountSolved = 0,
                 LockoutEnabled = true

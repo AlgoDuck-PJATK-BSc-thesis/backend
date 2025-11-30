@@ -17,6 +17,7 @@ public class OwnedItemsController(
     ILogger<OwnedItemsController> logger
         ) : ControllerBase
 {
+    [HttpGet]
     public async Task<IActionResult> GetOwnedItemsByUserIdAsync(CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
