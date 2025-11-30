@@ -9,10 +9,10 @@ namespace AlgoDuckShared;
 
 public interface IAwsS3Client
 {
-    public Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path, CancellationToken cancellationToken);
-    public Task<string> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken);
-    public Task<bool> ObjectExistsAsync(string path, CancellationToken cancellationToken);
-    public Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken) where T : class;
+    public Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path, CancellationToken cancellationToken = default);
+    public Task<string> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken = default);
+    public Task<bool> ObjectExistsAsync(string path, CancellationToken cancellationToken = default);
+    public Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class;
     
 }
 
