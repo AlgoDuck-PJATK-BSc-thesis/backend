@@ -166,28 +166,28 @@ public class DataSeedingService(
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("6b9c1f59-2700-4840-83ae-9a7ab9253b2e"),
-                            Expected = "[0, 1]",
+                            Expected = "new int[]{0, 1}",
                             Call = ["twoSumTest1_nums", "9"],
                             Setup = "int[] twoSumTest1_nums = new int[] {2, 7, 11, 15};"
                         },
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("94c73084-9ac2-47fe-ab0b-536bb398e2fb"),
-                            Expected = "[1, 2]",
+                            Expected = "new int[]{1, 2}",
                             Call = ["twoSumTest2_nums", "6"],
                             Setup = "int[] twoSumTest2_nums = new int[] {3, 2, 4};"
                         },
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("533c0f81-df26-4a83-b72f-676b49dfb93a"),
-                            Expected = "[0, 1]",
+                            Expected = "new int[]{0, 1}",
                             Call = ["twoSumTest3_nums", "6"],
                             Setup = "int[] twoSumTest3_nums = new int[] {3, 3};"
                         },
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
-                            Expected = "[2, 4]",
+                            Expected = "new int[]{2, 4}",
                             Call = ["twoSumTest4_nums", "10"],
                             Setup = "int[] twoSumTest4_nums = new int[] {1, 5, 3, 7, 9, 2};"
                         }

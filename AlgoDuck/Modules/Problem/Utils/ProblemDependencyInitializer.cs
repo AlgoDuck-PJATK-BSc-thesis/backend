@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 using AlgoDuck.Modules.Problem.ExecutorShared;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
@@ -77,6 +78,9 @@ internal static class ProblemDependencyInitializer
         
         builder.Services.AddScoped<ICategoryProblemsRepository, CategoryProblemsRepository>();
         builder.Services.AddScoped<ICategoryProblemsService, CategoryProblemsService>();
+
+        builder.Services.AddScoped<IInsertRepository, InsertRepository>();
+        builder.Services.AddScoped<IInsertService, InsertService>();
 
     }
 }

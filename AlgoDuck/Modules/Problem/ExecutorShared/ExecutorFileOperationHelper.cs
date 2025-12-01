@@ -81,11 +81,13 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
         var gsonVariableInitialization = $"Gson {gsonInstanceName} = new Gson();\n";
         InsertAtEndOfMainMethod(gsonVariableInitialization);
         
-        foreach (var testCase in testCases)
-        {
-            InsertAtEndOfMainMethod(testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName));
-            InsertAtEndOfMainMethod(CreateComparingStatement(testCase, gsonInstanceName));
-        }
+        testCases.ForEach(t => ArrangeTestCase(t, mainClassName));
+        testCases.ForEach(t => CreateComparingStatement(t, gsonInstanceName));
+    }
+
+    public void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
+    {
+        InsertAtEndOfMainMethod(testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName));
     }
 
     public void InsertTiming()
@@ -135,7 +137,7 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
     
     private string CreateComparingStatement(TestCaseJoined testCase, string gsonInstanceName)
     {
-        var args = testCase.Call.Length == 0 ? "" : testCase.Call[0] + string.Join(",", testCase.Call.Skip(1));
+        var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
         return CreateSignedPrintStatement($"\" tc_id:{testCase.TestCaseId} \" + {gsonInstanceName}.toJson({testCase.Expected}).equals({gsonInstanceName}.toJson({testCase.CallFunc}({args})))",  SigningType.Answer);
     }
 

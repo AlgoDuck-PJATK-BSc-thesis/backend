@@ -89,7 +89,10 @@ public sealed class CsrfGuard
             headerVal = Uri.UnescapeDataString(headerRaw);
         }
 
-        if (!TimeSafeEquals(cookieVal, HttpUtility.UrlDecode(headerVal)))
+        Console.WriteLine(headerVal);
+        Console.WriteLine(cookieVal);
+        
+        if (!TimeSafeEquals(cookieVal, headerVal))
         {
             _logger.LogWarning(
                 "CSRF validation failed for {Method} {Path} from {IP}. HasCookie={HasCookie} HasHeader={HasHeader}",
