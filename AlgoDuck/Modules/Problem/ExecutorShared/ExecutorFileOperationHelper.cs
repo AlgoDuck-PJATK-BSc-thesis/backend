@@ -82,12 +82,31 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
         InsertAtEndOfMainMethod(gsonVariableInitialization);
         
         testCases.ForEach(t => ArrangeTestCase(t, mainClassName));
-        testCases.ForEach(t => CreateComparingStatement(t, gsonInstanceName));
+        testCases.ForEach(ActTestCase);
+        testCases.ForEach(t => AssertTestCase(t, gsonInstanceName));
     }
 
     public void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
     {
         InsertAtEndOfMainMethod(testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName));
+    }
+
+    internal void ActTestCase(TestCaseJoined testCase)
+    {
+        var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
+        InsertAtEndOfMainMethod($"var {ConvertGuidToJavaVariableName(testCase.TestCaseId)} = {testCase.CallFunc}({args});");
+    }
+
+    private string ConvertGuidToJavaVariableName(Guid guid)
+    {
+        return $"a{guid.ToString().Replace('-', '_')}";
+    }
+
+    private void AssertTestCase(TestCaseJoined testCase, string gsonInstanceName)
+    {
+        InsertAtEndOfMainMethod(CreateSignedPrintStatement(
+            $"\" tc_id:{testCase.TestCaseId} \" + {gsonInstanceName}.toJson({testCase.Expected}).equals({gsonInstanceName}.toJson({ConvertGuidToJavaVariableName(testCase.TestCaseId)}))",
+            SigningType.Answer));
     }
 
     public void InsertTiming()
@@ -135,12 +154,6 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
         return $"System.out.println(\"{GetExecutionSigningString(userSolutionData.SigningKey, signingType)}\" + {printContents});\n";
     }
     
-    private string CreateComparingStatement(TestCaseJoined testCase, string gsonInstanceName)
-    {
-        var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
-        return CreateSignedPrintStatement($"\" tc_id:{testCase.TestCaseId} \" + {gsonInstanceName}.toJson({testCase.Expected}).equals({gsonInstanceName}.toJson({testCase.CallFunc}({args})))",  SigningType.Answer);
-    }
-
     private string GetTimingVariable(string variableName)
     {
         return $"long {variableName} = System.currentTimeMillis();\n";

@@ -1,0 +1,68 @@
+import com.google.gson.Gson;
+public class Main {
+    private static class Node {
+        int data;
+        Node next;
+        Node prev;
+
+        public Node(int data) {
+            this.data = data;
+            this.next = null;
+            this.prev = null;
+        }
+    }
+
+    public static boolean hasCycle(Node start) {
+        // Implement the tortoise and hare algorithm here
+        return false;
+    }
+    public static void main(String[] args){
+        long a880ea3fce4eb4e5799b81f5ea162e438_start = System.currentTimeMillis();
+
+        Gson a2f1fe8e9b68a48d9a331f74c4f98c390_gson = new Gson();
+        Main.Node cycleTest1_node1 = new Main.Node(1);
+        Main.Node cycleTest1_node2 = new Main.Node(2);
+        Main.Node cycleTest1_node3 = new Main.Node(3);
+        Main.Node cycleTest1_node4 = new Main.Node(4);
+
+        cycleTest1_node1.next = cycleTest1_node2;
+        cycleTest1_node2.prev = cycleTest1_node1;
+        cycleTest1_node2.next = cycleTest1_node3;
+        cycleTest1_node3.prev = cycleTest1_node2;
+        cycleTest1_node3.next = cycleTest1_node4;
+        cycleTest1_node4.prev = cycleTest1_node3;
+
+        Main.Node cycleTest2_node1 = new Main.Node(1);
+        Main.Node cycleTest2_node2 = new Main.Node(2);
+        Main.Node cycleTest2_node3 = new Main.Node(3);
+        Main.Node cycleTest2_node4 = new Main.Node(4);
+
+        cycleTest2_node1.next = cycleTest2_node2;
+        cycleTest2_node2.prev = cycleTest2_node1;
+        cycleTest2_node2.next = cycleTest2_node3;
+        cycleTest2_node3.prev = cycleTest2_node2;
+        cycleTest2_node3.next = cycleTest2_node4;
+        cycleTest2_node4.prev = cycleTest2_node3;
+        cycleTest2_node4.next = cycleTest2_node2;
+
+        Main.Node cycleTest3_node1 = new Main.Node(10);
+        Main.Node cycleTest3_node2 = new Main.Node(20);
+
+        cycleTest3_node1.next = cycleTest3_node2;
+        cycleTest3_node2.prev = cycleTest3_node1;
+        cycleTest3_node2.next = cycleTest3_node1;
+        Main.Node cycleTest4_node1 = new Main.Node(5);
+        var a7a2264fa-b7a2-4250-ac4b-a868f746c978 = hasCycle(cycleTest1_node1);
+        var a2ed6b7ae-4dd0-4c26-84ee-ce849dd9ce13 = hasCycle(cycleTest2_node1);
+        var ac2031e76-abf0-4840-8f12-f404df11bb32 = hasCycle(cycleTest3_node1);
+        var aacb062e7-922f-4ed0-b86c-ac2562a4b959 = hasCycle(cycleTest4_node1);
+
+        System.out.println("ctr-d3faf9d0-c344-4688-a659-fd6ce41174fd-answ: " + " tc_id:7a2264fa-b7a2-4250-ac4b-a868f746c978 " + a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(false).equals(a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(a7a2264fa-b7a2-4250-ac4b-a868f746c978)));
+        System.out.println("ctr-d3faf9d0-c344-4688-a659-fd6ce41174fd-answ: " + " tc_id:2ed6b7ae-4dd0-4c26-84ee-ce849dd9ce13 " + a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(true).equals(a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(a2ed6b7ae-4dd0-4c26-84ee-ce849dd9ce13)));
+        System.out.println("ctr-d3faf9d0-c344-4688-a659-fd6ce41174fd-answ: " + " tc_id:c2031e76-abf0-4840-8f12-f404df11bb32 " + a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(true).equals(a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(ac2031e76-abf0-4840-8f12-f404df11bb32)));
+        System.out.println("ctr-d3faf9d0-c344-4688-a659-fd6ce41174fd-answ: " + " tc_id:acb062e7-922f-4ed0-b86c-ac2562a4b959 " + a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(false).equals(a2f1fe8e9b68a48d9a331f74c4f98c390_gson.toJson(aacb062e7-922f-4ed0-b86c-ac2562a4b959)));
+
+        long a7b809121d8f34100bfa4230087d9908a_end = System.currentTimeMillis();
+        System.out.println("ctr-d3faf9d0-c344-4688-a659-fd6ce41174fd-time: " + (a7b809121d8f34100bfa4230087d9908a_end - a880ea3fce4eb4e5799b81f5ea162e438_start));
+    }
+}

@@ -93,11 +93,19 @@ public class InsertRepository(
         var helper = new ExecutorFileOperationHelper(userSolutionData);
         
         var testCases = await GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
-        testCases.ForEach(t => helper.ArrangeTestCase(t, userSolutionData.MainClassName));
+        var insertedTestCase = testCases
+            .FirstOrDefault(t => t.TestCaseId == insertRequest.TestCaseId)
+                ?? throw new InvalidOperationException($"Unable to find test case {insertRequest.TestCaseId}");
 
-        Console.WriteLine(userSolutionData.FileContents);
-        
-        throw new NotImplementedException();
+        helper.ArrangeTestCase(insertedTestCase, userSolutionData.MainClassName);
+        helper.ActTestCase(insertedTestCase);
+
+        return new InsertResultDto
+        {
+            ModifiedCodeB64 = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString())
+            )
+        };
     }
 }
 
