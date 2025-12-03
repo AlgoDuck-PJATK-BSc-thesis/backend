@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
@@ -12,6 +10,9 @@ public partial class UserConfig : IEntityTypeConfiguration<UserConfig>
     public bool IsDarkMode { get; set; }
 
     public bool IsHighContrast { get; set; }
+    
+    public string Language { get; set; } = "en";
+    public string AvatarKey { get; set; } = string.Empty;
 
     public virtual ICollection<EditorLayout> EditorLayouts { get; set; } = new List<EditorLayout>();
 
