@@ -11,6 +11,7 @@ using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Modules.Auth.TwoFactor;
 using AlgoDuck.Shared.Http;
 using Status = AlgoDuck.Shared.Http.Status;
+using AlgoDuck.Shared.Utilities;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
@@ -137,8 +138,8 @@ namespace AlgoDuck.Modules.Auth.Controllers
             var accessToken = await _tokenService.CreateAccessTokenAsync(user);
 
             var rawRefresh = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-            var saltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
-            var hashB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, saltBytes);
+            var saltBytes = HashingHelper.GenerateSalt();
+            var hashB64 = HashingHelper.HashPassword(rawRefresh, saltBytes);
             var saltB64 = Convert.ToBase64String(saltBytes);
             
             var prefixLength = Math.Min(rawRefresh.Length, 32);

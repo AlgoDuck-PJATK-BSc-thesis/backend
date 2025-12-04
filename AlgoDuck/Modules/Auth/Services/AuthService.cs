@@ -8,6 +8,8 @@ using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
+using AlgoDuck.Shared.Utilities;
+
 
 namespace AlgoDuck.Modules.Auth.Services
 {
@@ -126,8 +128,8 @@ namespace AlgoDuck.Modules.Auth.Services
             var accessToken = await _tokenService.CreateAccessTokenAsync(user);
 
             var rawRefresh = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-            var saltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
-            var hashB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, saltBytes);
+            var saltBytes = HashingHelper.GenerateSalt();
+            var hashB64 = HashingHelper.HashPassword(rawRefresh, saltBytes);
             var saltB64 = Convert.ToBase64String(saltBytes);
             
             var prefixLength = Math.Min(rawRefresh.Length, 32);
@@ -246,8 +248,8 @@ namespace AlgoDuck.Modules.Auth.Services
             session.RevokedAtUtc = DateTime.UtcNow;
 
             var newRaw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-            var newSaltBytes = Shared.Utilities.HashingHelper.GenerateSalt();
-            var newHashB64 = Shared.Utilities.HashingHelper.HashPassword(newRaw, newSaltBytes);
+            var newSaltBytes = HashingHelper.GenerateSalt();
+            var newHashB64 = HashingHelper.HashPassword(newRaw, newSaltBytes);
             var newSaltB64 = Convert.ToBase64String(newSaltBytes);
 
             var newPrefixLength = Math.Min(newRaw.Length, 32);
@@ -317,7 +319,7 @@ namespace AlgoDuck.Modules.Auth.Services
         private static bool MatchesRefresh(string storedHashB64, string storedSaltB64, string rawRefresh)
         {
             var salt = Convert.FromBase64String(storedSaltB64);
-            var computedB64 = Shared.Utilities.HashingHelper.HashPassword(rawRefresh, salt);
+            var computedB64 = HashingHelper.HashPassword(rawRefresh, salt);
             return CryptographicOperations.FixedTimeEquals(
                 Convert.FromBase64String(computedB64),
                 Convert.FromBase64String(storedHashB64));

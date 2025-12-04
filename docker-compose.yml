@@ -6,24 +6,24 @@ volumes:
   postgres_data:
 
 services:      
-  executor:
-    build:
-      context: .
-      dockerfile: ExecutorService/Dockerfile
-    ports:
-      - "${EXECUTOR_PORT:-1337}:1337"
-    devices:
-      - /dev/kvm:/dev/kvm
-    env_file:
-      - .env
-    networks:
-      - app_network
-    group_add:
-      - ${KVM_GID}
-    develop:
-      watch:
-        - action: rebuild
-          path: ExecutorService/
+#  executor:
+#    build:
+#      context: .
+#      dockerfile: ExecutorService/Dockerfile
+#    ports:
+#      - "${EXECUTOR_PORT:-1337}:1337"
+#    devices:
+#      - /dev/kvm:/dev/kvm
+#    env_file:
+#      - .env
+#    networks:
+#      - app_network
+#    group_add:
+#      - ${KVM_GID}
+#    develop:
+#      watch:
+#        - action: rebuild
+#          path: ExecutorService/
       
   algoduck:
     image: algoduck

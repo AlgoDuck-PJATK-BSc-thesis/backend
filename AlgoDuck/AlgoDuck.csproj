@@ -84,15 +84,8 @@
         <Folder Include="Modules\User\Commands\UpdateUsername\" />
         <Folder Include="Modules\User\Controllers\" />
         <Folder Include="Modules\User\DTOs\" />
-        <Folder Include="Modules\User\Queries\GetUserAchievements\" />
-        <Folder Include="Modules\User\Queries\GetUserActivity\" />
-        <Folder Include="Modules\User\Queries\GetUserById\" />
-        <Folder Include="Modules\User\Queries\GetUserConfig\" />
         <Folder Include="Modules\User\Queries\GetUserProfile\" />
-        <Folder Include="Modules\User\Queries\GetUserRankings\" />
-        <Folder Include="Modules\User\Queries\GetUserSolvedProblems\" />
         <Folder Include="Modules\User\Queries\GetUserStatistics\" />
-        <Folder Include="Modules\User\Queries\SearchUsers\" />
         <Folder Include="Modules\User\Services\" />
         <Folder Include="Modules\User\Shared\Constants\" />
         <Folder Include="Modules\User\Shared\Exceptions\" />

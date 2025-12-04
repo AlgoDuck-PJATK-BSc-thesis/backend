@@ -1,9 +1,10 @@
 using System.Security.Claims;
 using AlgoDuck.Models;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
-using AlgoDuck.Shared.Http;
+using HttpStatus = AlgoDuck.Shared.Http.Status;
 
 namespace AlgoDuck.Modules.Auth.Controllers
 {
@@ -26,7 +27,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             if (string.IsNullOrWhiteSpace(uid))
                 return Unauthorized(new StandardApiResponse
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                     Message = "Unauthorized"
                 });
 
@@ -34,7 +35,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             if (user is null)
                 return Unauthorized(new StandardApiResponse()
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                     Message = "Unauthorized"
                 });
 
@@ -62,7 +63,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             {
                 return Unauthorized(new StandardApiResponse
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                     Message = "Unauthorized"
                 });
             }
@@ -72,7 +73,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             {
                 return Unauthorized(new StandardApiResponse()
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                     Message = "Unauthorized"
                 });
             }
@@ -81,7 +82,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             {
                 return BadRequest(new StandardApiResponse()
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                     Message = "Email must be set and verified to enable 2FA."
                 });
             }
@@ -94,7 +95,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
                 {
                     return BadRequest(new StandardApiResponse
                     {
-                        Status = Shared.Http.Status.Error,
+                        Status = HttpStatus.Error,
                         Message = string.Join("; ", res.Errors.Select(e => e.Description))
                     });
                 }
@@ -124,7 +125,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             {
                 return Unauthorized(new StandardApiResponse
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                 });
             }
             var user = await _userManager.FindByIdAsync(uid);
@@ -132,7 +133,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
             {
                 return Unauthorized(new StandardApiResponse()
                 {
-                    Status = Shared.Http.Status.Error,
+                    Status = HttpStatus.Error,
                 });
             }
             if (user.TwoFactorEnabled)
@@ -143,7 +144,7 @@ namespace AlgoDuck.Modules.Auth.Controllers
                 {
                     return Unauthorized(new StandardApiResponse
                     {
-                        Status = Shared.Http.Status.Error,
+                        Status = HttpStatus.Error,
                         Message = string.Join("; ", res.Errors.Select(e => e.Description))
                     });
                 }

@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Email;
 using Microsoft.Extensions.Caching.Memory;
+using AlgoDuck.Shared.Utilities;
+
 
 namespace AlgoDuck.Modules.Auth.TwoFactor
 {
@@ -27,8 +29,8 @@ namespace AlgoDuck.Modules.Auth.TwoFactor
             if (string.IsNullOrWhiteSpace(user.Email)) throw new InvalidOperationException("User has no email.");
 
             var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
-            var salt = Shared.Utilities.HashingHelper.GenerateSalt();
-            var hashB64 = Shared.Utilities.HashingHelper.HashPassword(code, salt);
+            var salt = HashingHelper.GenerateSalt();
+            var hashB64 = HashingHelper.HashPassword(code, salt);
             var saltB64 = Convert.ToBase64String(salt);
 
             var challengeId = Guid.NewGuid().ToString("n");
@@ -56,7 +58,7 @@ namespace AlgoDuck.Modules.Auth.TwoFactor
             }
 
             var salt = Convert.FromBase64String(entry.SaltB64);
-            var hashB64 = Shared.Utilities.HashingHelper.HashPassword(code, salt);
+            var hashB64 = HashingHelper.HashPassword(code, salt);
 
             if (!SlowEquals(hashB64, entry.HashB64))
             {

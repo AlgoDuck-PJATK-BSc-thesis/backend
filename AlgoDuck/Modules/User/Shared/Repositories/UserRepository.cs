@@ -44,4 +44,46 @@ public sealed class UserRepository : IUserRepository
         _commandDbContext.Users.Update(user);
         await _commandDbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<UserSolution>> GetUserSolutionsAsync(
+        Guid userId,
+        int skip,
+        int take,
+        CancellationToken cancellationToken)
+    {
+        return await _queryDbContext.UserSolutions
+            .Include(s => s.Problem)
+            .Include(s => s.Status)
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+    
+    public async Task<IReadOnlyList<ApplicationUser>> SearchAsync(
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var normalized = query.Trim();
+
+        var q = _queryDbContext.Users.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            var like = "%" + normalized.ToLower() + "%";
+            q = q.Where(u =>
+                (u.UserName != null && EF.Functions.ILike(u.UserName, like)) ||
+                (u.Email != null && EF.Functions.ILike(u.Email, like)));
+        }
+
+        q = q
+            .OrderBy(u => u.UserName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize);
+
+        return await q.ToListAsync(cancellationToken);
+    }
 }

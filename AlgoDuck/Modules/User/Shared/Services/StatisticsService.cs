@@ -69,4 +69,34 @@ public sealed class StatisticsService : IStatisticsService
             runtimeErrorSubmissions
         );
     }
+
+    public async Task<IReadOnlyList<SolvedProblemSummary>> GetSolvedProblemsAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var query = _queryDbContext.UserSolutions
+            .Include(s => s.Status)
+            .Where(
+                s =>
+                    s.UserId == userId
+                    && s.Status.StatusName == StatisticsConstants.StatusAccepted
+            )
+            .Select(s => s.ProblemId)
+            .Distinct()
+            .OrderBy(id => id);
+
+        var problemIds = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return problemIds
+            .Select(id => new SolvedProblemSummary
+            {
+                ProblemId = id
+            })
+            .ToList();
+    }
 }
