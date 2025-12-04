@@ -7,6 +7,7 @@ using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
+using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
 using AlgoDuck.Shared.S3;
 using AlgoDuckShared;
@@ -86,5 +87,7 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IAutoSaveService, AutoSaveService>();
         builder.Services.AddScoped<IAutoSaveRepository, AutoSaveRepository>();
 
+        builder.Services.AddScoped<ILoadProblemRepository, LoadProblemRepository>();
+        builder.Services.AddScoped<ILoadProblemService, LoadProblemService>();
     }
 }
