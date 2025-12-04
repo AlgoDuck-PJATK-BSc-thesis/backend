@@ -18,7 +18,7 @@ public enum TokenType
 
     Public, Private, Protected,
 
-    Byte, Short, Int, Long, Float, Double, Char, Boolean, String /*No string in future*/, Void /*Special*/, 
+    Byte, Short, Int, Long, Float, Double, Char, Boolean, Var, String /*No string in future*/, Void /*Special*/, 
 
     FloatLit, DoubleLit, CharLit, BooleanLit, IntLit, LongLit, StringLit,
     

@@ -4,6 +4,7 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
@@ -11,12 +12,14 @@ namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
  *  TODO I recognize the similarities between this and ClassParser.
  *  I do however worry that if I try to extract some shared parts it might become abstracted to the point of obscuring functionality
  */
-public class InterfaceParser(List<Token> tokens, FilePosition filePosition) :
-    HighLevelParser(tokens, filePosition),
+public class InterfaceParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    HighLevelParser(tokens, filePosition, symbolTableBuilder),
     IInterfaceParser
 {
     private readonly List<Token> _tokens = tokens;
     private readonly FilePosition _filePosition = filePosition;
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
+    
     public AstNodeInterface ParseInterface(List<MemberModifier> legalModifiers)
     {
         var nodeInterface = new AstNodeInterface();
@@ -51,7 +54,7 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition) :
         };
         while (!CheckTokenType(TokenType.CloseCurly))
         {
-            interfaceScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition).ParseTypeMember(astNodeInterface));
+            interfaceScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder).ParseTypeMember(astNodeInterface));
         }
         interfaceScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
         return interfaceScope;

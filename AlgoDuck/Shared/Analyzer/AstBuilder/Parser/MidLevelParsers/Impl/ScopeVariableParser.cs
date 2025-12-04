@@ -4,33 +4,29 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Impl;
 
-public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition) : LowLevelParser(tokens, filePosition), IScopeVariableParser
+public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) : LowLevelParser(tokens, filePosition, symbolTableBuilder), IScopeVariableParser
 {
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
     public AstNodeScopeMemberVar ParseScopeMemberVariableDeclaration(MemberModifier[] permittedModifiers)
     {
+        
         AstNodeScopeMemberVar scopedVar = new()
         {
-            VarModifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final])
+            VarModifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]),
+            Type = ParseStandardType(),
+            Identifier = ConsumeIfOfType("ident", TokenType.Ident)
         };
 
-
-        if (scopedVar.VarModifiers.Any(modifier => !permittedModifiers.Contains(modifier))) throw new JavaSyntaxException("Illegal modifier");
-
-        var varType = ParseType();
-        
-        scopedVar.Type = varType switch
+        _symbolTableBuilder.DefineSymbol(new VariableSymbol
         {
-            { IsT0: true } => varType.AsT0,
-            { IsT1: true } => throw new JavaSyntaxException("cannot declare variable of type void"), 
-            { IsT2: true } => varType.AsT2,
-            { IsT3: true } => varType.AsT3,
-            _ => throw new ArgumentOutOfRangeException()
-        };
+            Name = scopedVar.Identifier!.Value!,
+            SymbolType = scopedVar.Type,
+        });
         
-        scopedVar.Identifier = ConsumeIfOfType("ident", TokenType.Ident);
         if (CheckTokenType(TokenType.Assign))//TODO suboptimal
         {
             ConsumeToken();

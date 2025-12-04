@@ -4,13 +4,15 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 
-public class MemberVariableParser(List<Token> tokens, FilePosition filePosition) : 
-    MidLevelParser(tokens, filePosition),
+public class MemberVariableParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) : 
+    MidLevelParser(tokens, filePosition, symbolTableBuilder),
     IMemberVariableParser
 {
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
 
     public AstNodeMemberVar<T> ParseMemberVariableDeclaration<T>(AstNodeTypeMember<T> typeMember) where T: IType<T>
     {
@@ -23,6 +25,7 @@ public class MemberVariableParser(List<Token> tokens, FilePosition filePosition)
             ConsumeToken();
         }
         memberVar.ScopeMemberVar = ParseScopeMemberVariableDeclaration([MemberModifier.Final, MemberModifier.Static]);
+        
         return memberVar;
     }
 }
