@@ -1,5 +1,4 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Utils;
 using AlgoDuck.Modules.Cohort;
 using AlgoDuck.Modules.Cohort.CohortManagement;
@@ -10,7 +9,6 @@ using AlgoDuck.Modules.User.Utils;
 using AlgoDuck.Shared.Middleware;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Shared.Utilities.DependencyInitializers;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
