@@ -9,7 +9,7 @@ public sealed class JwtSettings
     public int AccessTokenMinutes { get; init; } = 15;
     public int RefreshTokenMinutes { get; init; } = 60 * 24 * 7;
 
-    public string AccessTokenCookieName { get; init; } = "access_token";
+    public string AccessTokenCookieName { get; init; } = "jwt";
     public string RefreshTokenCookieName { get; init; } = "refresh_token";
     public string CsrfCookieName { get; init; } = "csrf_token";
 }
