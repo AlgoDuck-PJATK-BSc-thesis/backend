@@ -61,6 +61,26 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
             }
         }
 
+        var existingByLogin = await _userManager.FindByLoginAsync(provider, dto.ExternalUserId);
+        if (existingByLogin is not null && existingByLogin.Id != user.Id)
+        {
+            throw new Shared.Exceptions.ValidationException("External login is already linked to another account.");
+        }
+
+        var currentLogins = await _userManager.GetLoginsAsync(user);
+        var alreadyLinked = currentLogins.Any(l => l.LoginProvider == provider && l.ProviderKey == dto.ExternalUserId);
+
+        if (!alreadyLinked)
+        {
+            var info = new UserLoginInfo(provider, dto.ExternalUserId, provider);
+            var addLoginResult = await _userManager.AddLoginAsync(user, info);
+            if (!addLoginResult.Succeeded)
+            {
+                var errors = string.Join("; ", addLoginResult.Errors.Select(e => e.Description));
+                throw new Shared.Exceptions.ValidationException($"Could not link external login: {errors}");
+            }
+        }
+
         var authResponse = await _tokenService.GenerateAuthTokensAsync(user, cancellationToken);
 
         return authResponse;
