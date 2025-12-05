@@ -4,17 +4,17 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Auth.Queries.GetApiKeys;
+namespace AlgoDuck.Modules.Auth.Queries.GetCurrentUser;
 
 [ApiController]
-[Route("api/auth/api-keys")]
-public sealed class GetApiKeysEndpoint : ControllerBase
+[Route("api/auth/me")]
+public sealed class GetCurrentUserEndpoint : ControllerBase
 {
-    private readonly IGetApiKeysHandler _handler;
+    private readonly IGetCurrentUserHandler _handler;
     private readonly IValidator<Guid> _validator;
 
-    public GetApiKeysEndpoint(
-        IGetApiKeysHandler handler,
+    public GetCurrentUserEndpoint(
+        IGetCurrentUserHandler handler,
         IValidator<Guid> validator)
     {
         _handler = handler;
@@ -23,13 +23,18 @@ public sealed class GetApiKeysEndpoint : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public async Task<ActionResult<IReadOnlyList<ApiKeyDto>>> GetApiKeys(CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthUserDto>> GetCurrentUser(CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         await _validator.ValidateAndThrowAsync(userId, cancellationToken);
 
-        var apiKeys = await _handler.HandleAsync(userId, cancellationToken);
-        return Ok(apiKeys);
+        var user = await _handler.HandleAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
     }
 
     private Guid GetUserId()

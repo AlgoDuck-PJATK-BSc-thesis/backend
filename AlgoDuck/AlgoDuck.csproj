@@ -53,11 +53,9 @@
         <Folder Include="Modules\Auth\Commands\VerifyTwoFactorLogin\" />
         <Folder Include="Modules\Auth\Queries\CheckUserPermissions\" />
         <Folder Include="Modules\Auth\Queries\GetApiKeys\" />
-        <Folder Include="Modules\Auth\Queries\GetCurrentUser\" />
         <Folder Include="Modules\Auth\Queries\GetUserByToken\" />
         <Folder Include="Modules\Auth\Queries\GetUserSessions\" />
         <Folder Include="Modules\Auth\Queries\SearchUsersByEmail\" />
-        <Folder Include="Modules\Auth\Queries\ValidateToken\" />
         <Folder Include="Modules\Auth\Services\" />
         <Folder Include="Modules\Auth\Shared\Configuration\" />
         <Folder Include="Modules\Auth\Shared\Email\" />

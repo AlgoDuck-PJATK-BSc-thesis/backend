@@ -44,4 +44,23 @@ public sealed class JwtTokenProvider
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public ClaimsPrincipal ValidateToken(string token)
+    {
+        var handler = new JwtSecurityTokenHandler();
+
+        var parameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = _signingKey,
+            ValidateIssuer = !string.IsNullOrWhiteSpace(_settings.Issuer),
+            ValidIssuer = string.IsNullOrWhiteSpace(_settings.Issuer) ? null : _settings.Issuer,
+            ValidateAudience = !string.IsNullOrWhiteSpace(_settings.Audience),
+            ValidAudience = string.IsNullOrWhiteSpace(_settings.Audience) ? null : _settings.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        return handler.ValidateToken(token, parameters, out _);
+    }
 }
