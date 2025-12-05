@@ -1,5 +1,4 @@
 using AlgoDuck.Modules.Auth.Interfaces;
-using AlgoDuck.Modules.Auth.Services;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Repositories;
@@ -41,7 +40,7 @@ public static class AuthDependencyInitializer
 
         services.AddScoped<IPermissionsService, PermissionsService>();
         services.AddScoped<SharedTokenServiceInterface, SharedTokenService>();
-        services.AddScoped<AlgoDuck.Modules.Auth.TwoFactor.ITwoFactorService, CoreTwoFactorService>();
+        services.AddScoped<TwoFactor.ITwoFactorService, CoreTwoFactorService>();
         services.AddScoped<SharedTwoFactorService>();
         services.AddScoped<IApiKeyService, ApiKeyService>();
         services.AddScoped<IAuthValidator, AuthValidator>();

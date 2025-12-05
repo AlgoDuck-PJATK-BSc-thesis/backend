@@ -28,7 +28,7 @@ public sealed class ApiKeyService : IApiKeyService
         _validator = validator;
     }
 
-    public async Task<ApiKeyDto> CreateApiKeyAsync(Guid userId, string name, TimeSpan? lifetime, CancellationToken cancellationToken)
+    public async Task<ApiKeyCreationResult> CreateApiKeyAsync(Guid userId, string name, TimeSpan? lifetime, CancellationToken cancellationToken)
     {
         if (userId == Guid.Empty)
         {
@@ -66,7 +66,13 @@ public sealed class ApiKeyService : IApiKeyService
         await _apiKeyRepository.AddAsync(apiKey, cancellationToken);
         await _apiKeyRepository.SaveChangesAsync(cancellationToken);
 
-        return ApiKeyMapper.ToApiKeyDto(apiKey);
+        var dto = ApiKeyMapper.ToApiKeyDto(apiKey);
+
+        return new ApiKeyCreationResult
+        {
+            ApiKey = dto,
+            RawKey = material.RawKey
+        };
     }
 
     public async Task<IReadOnlyList<ApiKeyDto>> GetUserApiKeysAsync(Guid userId, CancellationToken cancellationToken)

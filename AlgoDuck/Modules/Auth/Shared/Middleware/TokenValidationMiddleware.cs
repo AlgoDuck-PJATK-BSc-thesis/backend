@@ -1,23 +1,24 @@
+using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Utils;
+using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Modules.Auth.Shared.Middleware;
 
 public sealed class TokenValidationMiddleware
 {
-    private const string AccessTokenCookieName = "access_token";
-    private const string CsrfHeaderName = "X-Csrf-Token";
-    private const string CsrfCookieName = "csrf_token";
-
     private readonly RequestDelegate _next;
     private readonly TokenUtility _tokenUtility;
+    private readonly JwtSettings _jwtSettings;
 
     public TokenValidationMiddleware(
         RequestDelegate next,
-        TokenUtility tokenUtility)
+        TokenUtility tokenUtility,
+        IOptions<JwtSettings> jwtOptions)
     {
         _next = next;
         _tokenUtility = tokenUtility;
+        _jwtSettings = jwtOptions.Value;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -28,14 +29,14 @@ public sealed class TokenValidationMiddleware
             return;
         }
 
-        var accessToken = context.Request.Cookies[AccessTokenCookieName];
+        var accessToken = context.Request.Cookies[_jwtSettings.JwtCookieName];
         if (string.IsNullOrWhiteSpace(accessToken))
         {
             throw new TokenException("Access token is missing.");
         }
 
-        var csrfHeader = context.Request.Headers[CsrfHeaderName].ToString();
-        var csrfCookie = context.Request.Cookies[CsrfCookieName];
+        var csrfHeader = context.Request.Headers[_jwtSettings.CsrfHeaderName].ToString();
+        var csrfCookie = context.Request.Cookies[_jwtSettings.CsrfCookieName];
 
         if (!_tokenUtility.ValidateCsrf(csrfHeader, csrfCookie))
         {

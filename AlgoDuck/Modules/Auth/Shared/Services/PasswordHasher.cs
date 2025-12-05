@@ -1,4 +1,3 @@
-using System;
 using System.Security.Cryptography;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Shared.Utilities;

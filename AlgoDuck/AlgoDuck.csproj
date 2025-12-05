@@ -48,7 +48,6 @@
         <Folder Include="Modules\Auth\Commands\RequestPasswordReset\" />
         <Folder Include="Modules\Auth\Commands\ResetPassword\" />
         <Folder Include="Modules\Auth\Commands\RevokeApiKey\" />
-        <Folder Include="Modules\Auth\Commands\SetupTwoFactor\" />
         <Folder Include="Modules\Auth\Commands\StartEmailVerification\" />
         <Folder Include="Modules\Auth\Commands\VerifyEmail\" />
         <Folder Include="Modules\Auth\Commands\VerifyTwoFactorLogin\" />

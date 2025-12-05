@@ -45,6 +45,7 @@ public sealed class AuthExceptionMiddleware
 
         context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
+        context.Response.Headers["X-Auth-Error"] = exception.Code;
 
         var payload = JsonSerializer.Serialize(response);
         await context.Response.WriteAsync(payload);

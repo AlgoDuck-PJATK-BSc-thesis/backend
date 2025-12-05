@@ -3,7 +3,7 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.Auth.Shared.Services;
+namespace AlgoDuck.Modules.Auth.Shared.Repositories;
 
 public sealed class AuthRepository : IAuthRepository
 {

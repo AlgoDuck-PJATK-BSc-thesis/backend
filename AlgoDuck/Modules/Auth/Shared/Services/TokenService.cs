@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 
 namespace AlgoDuck.Modules.Auth.Shared.Services;
 
-public sealed class TokenService : AlgoDuck.Modules.Auth.Shared.Interfaces.ITokenService
+public sealed class TokenService : ITokenService
 {
     private const int RefreshPrefixLength = 32;
 

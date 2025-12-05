@@ -5,9 +5,9 @@ namespace AlgoDuck.Modules.Auth.Shared.Services;
 
 public sealed class TwoFactorService
 {
-    private readonly AlgoDuck.Modules.Auth.TwoFactor.ITwoFactorService _inner;
+    private readonly TwoFactor.ITwoFactorService _inner;
 
-    public TwoFactorService(AlgoDuck.Modules.Auth.TwoFactor.ITwoFactorService inner)
+    public TwoFactorService(TwoFactor.ITwoFactorService inner)
     {
         _inner = inner;
     }

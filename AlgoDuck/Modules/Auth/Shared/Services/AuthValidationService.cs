@@ -1,4 +1,3 @@
-using System;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 
 namespace AlgoDuck.Modules.Auth.Shared.Services;

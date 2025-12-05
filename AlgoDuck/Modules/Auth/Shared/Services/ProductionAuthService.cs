@@ -2,13 +2,11 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Interfaces;
 using AlgoDuck.Modules.Auth.Jwt;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+using AlgoDuck.Modules.Auth.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace AlgoDuck.Modules.Auth.Services;
+namespace AlgoDuck.Modules.Auth.Shared.Services;
 
 public sealed class ProductionAuthService : AuthService
 {

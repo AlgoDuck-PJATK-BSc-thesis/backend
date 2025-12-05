@@ -3,7 +3,7 @@ using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Validators;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 
-namespace AlgoDuck.Modules.Auth.Shared.Services;
+namespace AlgoDuck.Modules.Auth.Shared.Validators;
 
 public sealed class AuthValidator : IAuthValidator
 {
