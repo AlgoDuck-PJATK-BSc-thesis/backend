@@ -29,4 +29,10 @@ public sealed class EmailSender : IEmailSender
         var template = EmailTemplateRenderer.RenderTwoFactorCode(userId.ToString(), code);
         await _transport.SendAsync(email, template.Subject, template.Body, null, cancellationToken);
     }
+
+    public async Task SendEmailChangeConfirmationAsync(Guid userId, string newEmail, string confirmationLink, CancellationToken cancellationToken)
+    {
+        var template = EmailTemplateRenderer.RenderEmailChangeConfirmation(userId.ToString(), newEmail, confirmationLink);
+        await _transport.SendAsync(newEmail, template.Subject, template.Body, null, cancellationToken);
+    }
 }

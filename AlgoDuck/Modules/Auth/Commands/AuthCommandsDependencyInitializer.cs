@@ -12,6 +12,8 @@ using AlgoDuck.Modules.Auth.Commands.RevokeApiKey;
 using AlgoDuck.Modules.Auth.Commands.StartEmailVerification;
 using AlgoDuck.Modules.Auth.Commands.VerifyEmail;
 using AlgoDuck.Modules.Auth.Commands.VerifyTwoFactorLogin;
+using AlgoDuck.Modules.Auth.Commands.ChangeEmailRequest;
+using AlgoDuck.Modules.Auth.Commands.ChangeEmailConfirm;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.Auth.Commands;
@@ -61,6 +63,12 @@ public static class AuthCommandsDependencyInitializer
 
         services.AddScoped<IValidator<ExternalLoginDto>, ExternalLoginValidator>();
         services.AddScoped<IExternalLoginHandler, ExternalLoginHandler>();
+        
+        services.AddScoped<IValidator<ChangeEmailRequestDto>, ChangeEmailRequestValidator>();
+        services.AddScoped<IChangeEmailRequestHandler, ChangeEmailRequestHandler>();
+
+        services.AddScoped<IValidator<ChangeEmailConfirmDto>, ChangeEmailConfirmValidator>();
+        services.AddScoped<IChangeEmailConfirmHandler, ChangeEmailConfirmHandler>();
 
         return services;
     }

@@ -40,4 +40,15 @@ public static class EmailTemplateRenderer
             Body = body
         };
     }
+
+    public static EmailTemplate RenderEmailChangeConfirmation(string userName, string newEmail, string confirmationLink)
+    {
+        var subject = "Confirm your new AlgoDuck email address";
+        var body = $"Hi {userName},\n\nYou requested to change your AlgoDuck account email to:\n{newEmail}\n\nPlease confirm this change by clicking the link below:\n{confirmationLink}\n\nIf you did not request this change, you can ignore this message and your email will remain unchanged.";
+        return new EmailTemplate
+        {
+            Subject = subject,
+            Body = body
+        };
+    }
 }
