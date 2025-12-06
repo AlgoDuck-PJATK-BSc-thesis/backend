@@ -23,10 +23,13 @@ public sealed class ProfileService : IProfileService
     {
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
+        {
             throw new UserNotFoundException(userId);
+        }
 
         var dto = ProfileMapper.ToUserProfileDto(user);
-        var avatarUrl = _avatarUrlGenerator.GetAvatarUrl(dto.AvatarKey);
+
+        var s3AvatarUrl = _avatarUrlGenerator.GetAvatarUrl(dto.AvatarKey ?? string.Empty);
 
         return new UserProfileDto
         {
@@ -38,23 +41,22 @@ public sealed class ProfileService : IProfileService
             AmountSolved = dto.AmountSolved,
             CohortId = dto.CohortId,
             Language = dto.Language,
-            AvatarKey = avatarUrl
+            AvatarKey = s3AvatarUrl
         };
     }
 
     public async Task<ProfileUpdateResult> UpdateAvatarAsync(Guid userId, string avatarKey, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(avatarKey))
+        {
             throw new ValidationException("Avatar key cannot be empty.");
+        }
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
+        {
             throw new UserNotFoundException(userId);
-
-        user.UserConfig ??= new AlgoDuck.Models.UserConfig { UserId = user.Id };
-        user.UserConfig.AvatarKey = avatarKey;
-
-        await _userRepository.UpdateAsync(user, cancellationToken);
+        }
 
         return new ProfileUpdateResult
         {
@@ -67,14 +69,20 @@ public sealed class ProfileService : IProfileService
     {
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
+        {
             throw new UserNotFoundException(userId);
+        }
 
         if (string.IsNullOrWhiteSpace(newUsername))
+        {
             throw new ValidationException("Username cannot be empty.");
+        }
 
         if (newUsername.Length < ProfileConstants.MinUsernameLength ||
             newUsername.Length > ProfileConstants.MaxUsernameLength)
+        {
             throw new ValidationException("Username length is invalid.");
+        }
 
         user.UserName = newUsername;
 
@@ -90,18 +98,24 @@ public sealed class ProfileService : IProfileService
     public async Task<ProfileUpdateResult> UpdateLanguageAsync(Guid userId, string language, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(language))
+        {
             throw new ValidationException("Language cannot be empty.");
+        }
 
         language = language.Trim().ToLowerInvariant();
 
         if (language != "en" && language != "pl")
+        {
             throw new ValidationException("Language must be 'en' or 'pl'.");
+        }
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
         if (user is null)
+        {
             throw new UserNotFoundException(userId);
+        }
 
-        user.UserConfig ??= new AlgoDuck.Models.UserConfig { UserId = user.Id };
+        user.UserConfig ??= new Models.UserConfig { UserId = user.Id };
         user.UserConfig.Language = language;
 
         await _userRepository.UpdateAsync(user, cancellationToken);

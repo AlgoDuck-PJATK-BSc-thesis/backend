@@ -1,5 +1,5 @@
-using AlgoDuck.Modules.User.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Exceptions;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 
 namespace AlgoDuck.Modules.User.Queries.GetUserById;
 
@@ -32,7 +32,7 @@ public sealed class GetUserByIdHandler : IGetUserByIdHandler
             AmountSolved = user.AmountSolved,
             CohortId = user.CohortId,
             Language = config?.Language ?? string.Empty,
-            AvatarKey = config?.AvatarKey ?? string.Empty
+            AvatarKey = string.Empty
         };
     }
 }

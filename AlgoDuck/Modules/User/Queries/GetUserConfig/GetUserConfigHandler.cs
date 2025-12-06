@@ -15,7 +15,7 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
     public async Task<UserConfigDto> HandleAsync(GetUserConfigQuery query, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
-        if (user == null)
+        if (user is null)
         {
             throw new UserNotFoundException(query.UserId);
         }
@@ -27,7 +27,7 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
             IsDarkMode = config?.IsDarkMode ?? false,
             IsHighContrast = config?.IsHighContrast ?? false,
             Language = config?.Language ?? string.Empty,
-            AvatarKey = config?.AvatarKey ?? string.Empty
+            AvatarKey = string.Empty
         };
     }
 }
