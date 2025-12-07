@@ -28,6 +28,7 @@ public class KeywordLexer(char[] fileChars, FilePosition filePosition, List<Toke
             "long" => CreateToken(TokenType.Long),
             "float" => CreateToken(TokenType.Float),
             "double" => CreateToken(TokenType.Double),
+            "var" => CreateToken(TokenType.Var),
             "char" => CreateToken(TokenType.Char),
             "boolean" => CreateToken(TokenType.Boolean),
             "static" => CreateToken(TokenType.Static),

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 using AlgoDuck.Modules.Problem.ExecutorShared;
@@ -6,6 +7,7 @@ using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
+using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
 using AlgoDuck.Shared.S3;
 using AlgoDuckShared;
@@ -82,5 +84,10 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IInsertRepository, InsertRepository>();
         builder.Services.AddScoped<IInsertService, InsertService>();
 
+        builder.Services.AddScoped<IAutoSaveService, AutoSaveService>();
+        builder.Services.AddScoped<IAutoSaveRepository, AutoSaveRepository>();
+
+        builder.Services.AddScoped<ILoadProblemRepository, LoadProblemRepository>();
+        builder.Services.AddScoped<ILoadProblemService, LoadProblemService>();
     }
 }

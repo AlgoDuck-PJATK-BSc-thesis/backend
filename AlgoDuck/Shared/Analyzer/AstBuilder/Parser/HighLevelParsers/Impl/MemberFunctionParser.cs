@@ -7,13 +7,16 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Abstr;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 
-public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition) :
-    MidLevelParser(tokens, filePosition),
+public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    MidLevelParser(tokens, filePosition, symbolTableBuilder),
     IMemberFunctionParser
 {
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
+
     public AstNodeMemberFunc<T> ParseMemberFunctionDeclaration<T>(AstNodeTypeMember<T> typeMember) where T: IType<T>
     {
         var memberFunc = new AstNodeMemberFunc<T>();
@@ -35,20 +38,21 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
         if (!memberFunc.IsConstructor)
         {
             memberFunc.Identifier = ConsumeIfOfType("identifier", TokenType.Ident);
+            _symbolTableBuilder.DefineSymbol(new MethodSymbol
+            {
+                Name = memberFunc.Identifier!.Value!, 
+            });  
         }
 
         ParseMemberFunctionArguments(memberFunc);
         
         ParseThrowsDirective(memberFunc);
 
-        if (CheckTokenType(TokenType.Semi))
-        {
-            ConsumeToken();
-        }
-        else
-        {
-            memberFunc.FuncScope = ParseStatementScope();
-        }
+        // SkipIfOfType(TokenType.Semi);
+        if (SkipIfOfType(TokenType.Semi)) return memberFunc;
+
+        memberFunc.FuncScope = ParseStatementScope();
+        Console.WriteLine("after scope");
         return memberFunc;
     }
 
@@ -71,44 +75,37 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition)
     public void ParseMemberFunctionArguments<T>(AstNodeMemberFunc<T> memberFunc) where T: IType<T>
     {
         ConsumeIfOfType("'('", TokenType.OpenParen);
+        _symbolTableBuilder.EnterScope();
         List<AstNodeScopeMemberVar> funcArguments = [];
 
         while (!CheckTokenType(TokenType.CloseParen))
         {
-            if (CheckTokenType(TokenType.Ident) || CheckTokenType(TokenType.Ident, 1)) // this is not great
+            Console.WriteLine("loop");
+            var functionArgument = new AstNodeScopeMemberVar
             {
-                var functionArgument = new AstNodeScopeMemberVar();
-                if (CheckTokenType(TokenType.Final))
-                {
-                    functionArgument.VarModifiers = new List<MemberModifier>([MemberModifier.Final]);
-                    ConsumeToken();
-                }
-
-                ParseType().Switch(
-                    t1 => functionArgument.Type = t1,
-                    t2 => throw new JavaSyntaxException("can't declare variable of type void"),
-                    t3 => functionArgument.Type = t3,
-                    t4 => functionArgument.Type = t4
-                );
+                VarModifiers = ParseModifiers([MemberModifier.Final]),
+                Type = ParseStandardType(),
+                Identifier = ConsumeIfOfType("identifier", TokenType.Ident)
+            };
                 
-                functionArgument.Identifier = ConsumeIfOfType("identifier", TokenType.Ident);
-                funcArguments.Add(functionArgument);
-            }
-            else
+            funcArguments.Add(functionArgument);
+            _symbolTableBuilder.DefineSymbol(new VariableSymbol
             {
-                funcArguments.Add(ParseScopeMemberVariableDeclaration([MemberModifier.Final]));
-            }
-            
+                Name = functionArgument.Identifier.Value!,
+                SymbolType = functionArgument.Type,
+            });
+
             if (CheckTokenType(TokenType.Comma))
             {
                 ConsumeToken();
             }
             else if (!CheckTokenType(TokenType.CloseParen))
             {
-                throw new JavaSyntaxException("unexpected token");
+                throw new JavaSyntaxException("expected ')'");
             }
         }
         memberFunc.FuncArgs = funcArguments;
+        _symbolTableBuilder.ExitScope();
         ConsumeIfOfType(")", TokenType.CloseParen);
     }
 

@@ -4,15 +4,17 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
-public class ClassParser(List<Token> tokens, FilePosition filePosition) :
-    HighLevelParser(tokens, filePosition),
+public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    HighLevelParser(tokens, filePosition, symbolTableBuilder),
     IClassParser
 {
     private readonly List<Token> _tokens = tokens;
     private readonly FilePosition _filePosition = filePosition;
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
 
     public AstNodeClass ParseClass(List<MemberModifier> legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low-hanging fruit
     {
@@ -37,6 +39,11 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         ParseExtendsKeyword(nodeClass);
         
         ParseImplementsKeyword(nodeClass);
+
+        _symbolTableBuilder.DefineSymbol(new TypeSymbol
+        {
+            Name = nodeClass.Identifier.Value!,
+        });
         
         nodeClass.ClassScope = ParseClassScope(nodeClass);
         return nodeClass;
@@ -44,7 +51,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
     
     public AstNodeTypeScope<AstNodeClass> ParseClassScope(AstNodeClass clazz)
     {
-
+        _symbolTableBuilder.EnterScope();
         var classScope = new AstNodeTypeScope<AstNodeClass>
         {
             OwnerMember = clazz,
@@ -53,10 +60,12 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition) :
         
         while (!CheckTokenType(TokenType.CloseCurly))
         {
-            classScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition).ParseTypeMember(clazz));
+            var typeMemberParser = new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder);
+            classScope.TypeMembers.Add(typeMemberParser.ParseTypeMember(clazz));
         }
         
         classScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
+        _symbolTableBuilder.ExitScope();
         return classScope;
     }
 

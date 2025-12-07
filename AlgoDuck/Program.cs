@@ -78,6 +78,10 @@ using (var scope = app.Services.CreateScope())
             await seeder.SeedDataAsync();
             break;
         }
+        catch (System.Net.Sockets.SocketException ex) when (attempts++ < maxAttempts)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
         catch (Exception ex) when (attempts++ < maxAttempts)
         {
             Console.WriteLine($"DB not ready yet, retry {attempts}/{maxAttempts}: {ex.Message}");

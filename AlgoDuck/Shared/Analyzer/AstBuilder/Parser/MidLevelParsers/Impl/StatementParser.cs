@@ -2,10 +2,11 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Impl;
 
-public class StatementParser(List<Token> tokens, FilePosition filePosition) : ParserCore(tokens, filePosition), IStatementParser
+public class StatementParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) : ParserCore(tokens, filePosition, symbolTableBuilder), IStatementParser
 {
     public AstNodeStatementScope ParseStatementScope()
     {

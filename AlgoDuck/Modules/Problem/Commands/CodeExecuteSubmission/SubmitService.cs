@@ -36,6 +36,8 @@ internal class SubmitService(
         helper.InsertTiming();
         helper.InsertGsonImport();
 
+        Console.WriteLine(userSolutionData.FileContents);
+
         var executionResponseRaw = await executorQueryInterface.ExecuteAsync(new ExecutionRequest
         {
             JavaFiles = userSolutionData.GetFileContents()

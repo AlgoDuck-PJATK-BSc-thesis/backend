@@ -1,7 +1,10 @@
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 using OneOf;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
@@ -23,8 +26,13 @@ public enum LiteralType
 
 
 
-public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : ParserCore(tokens, filePosition), IExpressionParser
+public class ExpressionParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) : ParserCore(tokens, filePosition, symbolTableBuilder), IExpressionParser
 {
+    
+    private readonly List<Token> _tokens = tokens;
+    private readonly FilePosition _filePosition = filePosition;
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
+    
     private readonly Dictionary<TokenType, int> _operatorPrecedences = new()
     {
         [TokenType.Mul] = 10,
@@ -47,14 +55,23 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
         [TokenType.LogOr] = 1,
     };
 
-    public NodeTerm ParseTerm()
+    private NodeTerm ParseTerm()
     {
         if (PeekToken() == null) throw new JavaSyntaxException("");
         var nodeTerm = new NodeTerm();
         if (PeekToken()!.Type == TokenType.OpenParen)
         {
-            var binaryExpression = ParseBinExpr();
-            nodeTerm.Val = binaryExpression;
+            _filePosition.CreateCheckpoint();
+            if (TryParseCast(out var cast))
+            {
+                nodeTerm.Val = cast!;                
+            }
+            else
+            {
+                _filePosition.LoadCheckpoint();
+                var binaryExpression = ParseBinExpr();
+                nodeTerm.Val = binaryExpression;                
+            }
         }
         else if (PeekToken()!.Type == TokenType.Ident)
         {
@@ -105,6 +122,42 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition) : P
         {
             Expr = nodeExpr
         };
+    }
+    
+    private bool TryParseCast(out NodeTermCast? cast)
+    {
+        cast = null;
+        var typeParser = new TypeParser(_tokens, _filePosition, _symbolTableBuilder);
+        ConsumeIfOfType("(", TokenType.OpenParen);
+        
+        OneOf<MemberType, ArrayType, ComplexTypeDeclaration> castType;
+        try
+        {
+            castType = typeParser.ParseStandardType();
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+
+        if (castType.IsT2 && castType.AsT2.GenericInitializations == null)
+        {
+            var symbol = _symbolTableBuilder.Resolve(castType.AsT2.Identifier);
+    
+            if (symbol is VariableSymbol && !_symbolTableBuilder.IsType(castType.AsT2.Identifier))
+            {
+                return false;
+            }
+        }
+    
+        ConsumeIfOfType(")", TokenType.CloseParen);
+
+        cast = new NodeTermCast
+        {
+            TargetType = castType,
+            Expression = ParseExpr()
+        };
+        return true;
     }
     
     public NodeExpr ParseExpr(int minPrecedence = 1)
@@ -308,11 +361,17 @@ public class NodeTermArrayReference
     public NodeExpr? ArrIndex { get; set; }
 }
 
+public class NodeTermCast
+{
+    public OneOf<MemberType, ArrayType, ComplexTypeDeclaration> TargetType { get; set; }
+    public NodeExpr? Expression { get; set; }
+}
 
 
 public class NodeTerm
 {
-    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent, NodeTermArrayReference> Val { get; set; }
+    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent, NodeTermArrayReference, NodeTermCast> Val { get; set; }
+    
 }
 
 public class NodeExpr

@@ -21,7 +21,7 @@ public class LexerSimple :
     public static List<Token> Tokenize(string fileContents)
     {
         var fileContentsSanitized = fileContents.ReplaceLineEndings();
-        var lexer = new LexerSimple(fileContentsSanitized.ToCharArray(), new FilePosition(), []);
+        var lexer = new LexerSimple(fileContentsSanitized.ToCharArray(), FilePosition.GetFilePosition(out _), []);
         return lexer.Tokenize();
     }
     
@@ -30,7 +30,7 @@ public class LexerSimple :
         while (PeekChar() != null)
         {
             // TODO when you have the time rewrite this to work on a peeked token and make CreateToken do the actual consuming
-            char consumedChar = ConsumeChar();
+            var consumedChar = ConsumeChar();
             switch (consumedChar)
             {
                 case '/':

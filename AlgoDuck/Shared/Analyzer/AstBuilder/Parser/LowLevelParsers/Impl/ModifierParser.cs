@@ -3,13 +3,14 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 // ReSharper disable SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
 
-public class ModifierParser(List<Token> tokens, FilePosition filePosition) :
-    ParserCore(tokens, filePosition),
+public class ModifierParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    ParserCore(tokens, filePosition, symbolTableBuilder),
     IModifierParser
 {
     public AccessModifier? TokenIsAccessModifier(Token? token)
