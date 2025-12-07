@@ -24,26 +24,26 @@ public sealed class GetUserSessionsEndpoint : ControllerBase
     [Authorize]
     public async Task<ActionResult<IReadOnlyList<UserSessionDto>>> GetUserSessions(CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
+        var userId = GetUserIdFromClaims();
         await _validator.ValidateAndThrowAsync(userId, cancellationToken);
 
-        var currentSessionId = GetCurrentSessionId();
+        var currentSessionId = GetSessionIdFromClaims();
         var sessions = await _handler.HandleAsync(userId, currentSessionId, cancellationToken);
         return Ok(sessions);
     }
 
-    private Guid GetUserId()
+    private Guid GetUserIdFromClaims()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        if (userIdClaim is null)
+        var subjectClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        if (subjectClaim is null)
         {
             return Guid.Empty;
         }
 
-        return Guid.TryParse(userIdClaim.Value, out var id) ? id : Guid.Empty;
+        return Guid.TryParse(subjectClaim.Value, out var id) ? id : Guid.Empty;
     }
 
-    private Guid GetCurrentSessionId()
+    private Guid GetSessionIdFromClaims()
     {
         var sessionClaim = User.FindFirst("session_id");
         if (sessionClaim is null)

@@ -11,4 +11,6 @@ public sealed class UserProfileDto
     public Guid? CohortId { get; init; }
     public string Language { get; init; } = string.Empty;
     public string S3AvatarUrl { get; init; } = string.Empty;
+    public bool TwoFactorEnabled { get; init; }
+    public bool EmailConfirmed { get; init; }
 }

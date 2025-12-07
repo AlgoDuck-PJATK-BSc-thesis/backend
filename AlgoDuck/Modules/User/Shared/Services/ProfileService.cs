@@ -56,7 +56,9 @@ public sealed class ProfileService : IProfileService
             AmountSolved = dto.AmountSolved,
             CohortId = dto.CohortId,
             Language = dto.Language,
-            S3AvatarUrl = s3AvatarUrl
+            S3AvatarUrl = s3AvatarUrl,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            EmailConfirmed = user.EmailConfirmed
         };
     }
 

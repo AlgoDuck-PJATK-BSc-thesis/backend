@@ -38,6 +38,20 @@ public sealed class RefreshTokenHandler : IRefreshTokenHandler
             throw new TokenException("Invalid refresh token.");
         }
 
+        var utcNow = DateTime.UtcNow;
+
+        if (session.RevokedAtUtc.HasValue)
+        {
+            throw new TokenException("Refresh token has been revoked.");
+        }
+
+        if (session.ExpiresAtUtc <= utcNow)
+        {
+            session.RevokedAtUtc = session.RevokedAtUtc ?? utcNow;
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
+            throw new TokenException("Refresh token has expired.");
+        }
+
         return await _tokenService.RefreshTokensAsync(session, cancellationToken);
     }
 
@@ -55,21 +69,17 @@ public sealed class RefreshTokenHandler : IRefreshTokenHandler
         }
 
         var prefix = rawRefreshToken.Substring(0, prefixLength);
-        var utcNow = DateTime.UtcNow;
 
-        var candidates = await _commandDbContext.Sessions
-            .Where(s =>
-                s.RefreshTokenPrefix == prefix &&
-                !s.RevokedAtUtc.HasValue &&
-                s.ExpiresAtUtc > utcNow)
+        var sessionsWithMatchingPrefix = await _commandDbContext.Sessions
+            .Where(s => s.RefreshTokenPrefix == prefix)
             .ToListAsync(cancellationToken);
 
-        if (candidates.Count == 0)
+        if (sessionsWithMatchingPrefix.Count == 0)
         {
             return null;
         }
 
-        foreach (var session in candidates)
+        foreach (var session in sessionsWithMatchingPrefix)
         {
             if (IsRefreshTokenMatch(rawRefreshToken, session))
             {
