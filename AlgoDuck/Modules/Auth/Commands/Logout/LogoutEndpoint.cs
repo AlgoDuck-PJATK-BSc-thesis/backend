@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using AlgoDuck.Modules.Auth.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -88,8 +88,8 @@ public sealed class LogoutEndpoint : ControllerBase
             Expires = DateTimeOffset.UtcNow.AddDays(-7)
         };
 
-        Response.Cookies.Append(_jwtSettings.JwtCookieName, string.Empty, expiredOptions);
-        Response.Cookies.Append(_jwtSettings.RefreshCookieName, string.Empty, expiredOptions);
+        Response.Cookies.Append(_jwtSettings.AccessTokenCookieName, string.Empty, expiredOptions);
+        Response.Cookies.Append(_jwtSettings.RefreshTokenCookieName, string.Empty, expiredOptions);
         Response.Cookies.Append(_jwtSettings.CsrfCookieName, string.Empty, expiredCsrfOptions);
     }
 }

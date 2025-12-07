@@ -1,4 +1,5 @@
-using AlgoDuck.Modules.Auth.Interfaces;
+using AlgoDuck.Modules.Auth.Commands;
+using AlgoDuck.Modules.Auth.Queries;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Repositories;
@@ -10,10 +11,6 @@ using SharedEmailTransport = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailTrans
 using SharedPostmarkEmailSender = AlgoDuck.Modules.Auth.Shared.Email.PostmarkEmailSender;
 using SharedTokenServiceInterface = AlgoDuck.Modules.Auth.Shared.Interfaces.ITokenService;
 using SharedTokenService = AlgoDuck.Modules.Auth.Shared.Services.TokenService;
-using SharedTwoFactorService = AlgoDuck.Modules.Auth.Shared.Services.TwoFactorService;
-using CoreTwoFactorService = AlgoDuck.Modules.Auth.TwoFactor.TwoFactorService;
-using AlgoDuck.Modules.Auth.Commands;
-using AlgoDuck.Modules.Auth.Queries;
 
 namespace AlgoDuck.Modules.Auth.Shared.Utils;
 
@@ -42,26 +39,21 @@ public static class AuthDependencyInitializer
 
         services.AddScoped<IPermissionsService, PermissionsService>();
         services.AddScoped<SharedTokenServiceInterface, SharedTokenService>();
-        services.AddScoped<TwoFactor.ITwoFactorService, CoreTwoFactorService>();
-        services.AddScoped<SharedTwoFactorService>();
+        services.AddScoped<ITwoFactorService, TwoFactorService>();
         services.AddScoped<IApiKeyService, ApiKeyService>();
         services.AddScoped<IAuthValidator, AuthValidator>();
         services.AddScoped<SessionService>();
         services.AddScoped<ExternalAuthService>();
 
-        if (environment.IsDevelopment())
-        {
-            services.AddScoped<IAuthService, DevelopmentAuthService>();
-        }
-        else
-        {
-            services.AddScoped<IAuthService, ProductionAuthService>();
-        }
-        
         services.AddAuthCommands();
         services.AddAuthQueries();
 
         return services;
+    }
+
+    public static void Initialize(WebApplicationBuilder builder)
+    {
+        builder.Services.AddAuthModule(builder.Environment);
     }
 
     public static IApplicationBuilder UseAuthModule(this IApplicationBuilder app)

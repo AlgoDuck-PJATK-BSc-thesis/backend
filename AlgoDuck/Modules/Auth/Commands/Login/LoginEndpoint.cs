@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -87,8 +87,8 @@ public sealed class LoginEndpoint : ControllerBase
             Expires = expires
         };
 
-        Response.Cookies.Append(_jwtSettings.JwtCookieName, authResponse.AccessToken, jwtCookieOptions);
-        Response.Cookies.Append(_jwtSettings.RefreshCookieName, authResponse.RefreshToken, refreshCookieOptions);
+        Response.Cookies.Append(_jwtSettings.AccessTokenCookieName, authResponse.AccessToken, jwtCookieOptions);
+        Response.Cookies.Append(_jwtSettings.RefreshTokenCookieName, authResponse.RefreshToken, refreshCookieOptions);
         Response.Cookies.Append(_jwtSettings.CsrfCookieName, authResponse.CsrfToken, csrfCookieOptions);
     }
 }

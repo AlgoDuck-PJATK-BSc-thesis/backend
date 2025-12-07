@@ -10,7 +10,7 @@ namespace AlgoDuck.Modules.User.Shared.Services;
 
 public sealed class ProfileService : IProfileService
 {
-    private const string AvatarFolderPrefix = "ducks/outfits/";
+    private const string AvatarFolderPrefix = "Ducks/Outfits/";
 
     private readonly IUserRepository _userRepository;
     private readonly IS3AvatarUrlGenerator _avatarUrlGenerator;
@@ -41,7 +41,7 @@ public sealed class ProfileService : IProfileService
         string avatarKey = string.Empty;
         if (selectedItemId.HasValue)
         {
-            avatarKey = AvatarFolderPrefix + selectedItemId.Value.ToString("D");
+            avatarKey = AvatarFolderPrefix + "duck-" + selectedItemId.Value.ToString("D") + ".png";
         }
 
         var s3AvatarUrl = _avatarUrlGenerator.GetAvatarUrl(avatarKey);

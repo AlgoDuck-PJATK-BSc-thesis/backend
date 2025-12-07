@@ -1,5 +1,5 @@
-using AlgoDuck.Modules.Auth.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +29,7 @@ public sealed class TokenValidationMiddleware
             return;
         }
 
-        var accessToken = context.Request.Cookies[_jwtSettings.JwtCookieName];
+        var accessToken = context.Request.Cookies[_jwtSettings.AccessTokenCookieName];
         if (string.IsNullOrWhiteSpace(accessToken))
         {
             throw new TokenException("Access token is missing.");

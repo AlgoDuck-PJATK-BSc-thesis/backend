@@ -12,4 +12,7 @@ public sealed class JwtSettings
     public string AccessTokenCookieName { get; init; } = "jwt";
     public string RefreshTokenCookieName { get; init; } = "refresh_token";
     public string CsrfCookieName { get; init; } = "csrf_token";
+    public string CsrfHeaderName { get; init; } = "X-CSRF-Token";
+    public string? CookieDomain { get; set; }
+    
 }

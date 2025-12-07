@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +23,7 @@ public sealed class RefreshTokenEndpoint : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        var refreshToken = Request.Cookies[_jwtSettings.RefreshCookieName];
+        var refreshToken = Request.Cookies[_jwtSettings.RefreshTokenCookieName];
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
             return Unauthorized(new { message = "Refresh token cookie is missing." });
@@ -81,8 +81,8 @@ public sealed class RefreshTokenEndpoint : ControllerBase
             Expires = expires
         };
 
-        Response.Cookies.Append(_jwtSettings.JwtCookieName, result.AccessToken, jwtCookieOptions);
-        Response.Cookies.Append(_jwtSettings.RefreshCookieName, result.RefreshToken, refreshCookieOptions);
+        Response.Cookies.Append(_jwtSettings.AccessTokenCookieName, result.AccessToken, jwtCookieOptions);
+        Response.Cookies.Append(_jwtSettings.RefreshTokenCookieName, result.RefreshToken, refreshCookieOptions);
         Response.Cookies.Append(_jwtSettings.CsrfCookieName, result.CsrfToken, csrfCookieOptions);
     }
 }

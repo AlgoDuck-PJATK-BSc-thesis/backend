@@ -1,7 +1,6 @@
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
-using AlgoDuck.Modules.Auth.TwoFactor;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 

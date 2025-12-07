@@ -1,11 +1,11 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.Auth.Utils;
+using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort;
 using AlgoDuck.Modules.Cohort.CohortManagement;
 using AlgoDuck.Modules.Cohort.Utils;
 using AlgoDuck.Modules.Item.Utils;
 using AlgoDuck.Modules.Problem.Utils;
-using AlgoDuck.Modules.User.Utils;
+using AlgoDuck.Modules.User.Shared.Utils;
 using AlgoDuck.Shared.Middleware;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Shared.Utilities.DependencyInitializers;
@@ -13,16 +13,13 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// general top level stuff
 GeneralDependencyInitializer.Initialize(builder);
 
-// app wide configuration
 CorsDependencyInitializer.Initialize(builder);
 DbDependencyInitializer.Initialize(builder);
 RateLimiterDependencyInitializer.Initialize(builder);
 SwaggerDependencyInitializer.Initialize(builder);
 
-// module specific dependencies
 UserDependencyInitializer.Initialize(builder);
 CohortDependencyInitializer.Initialize(builder);
 ProblemDependencyInitializer.Initialize(builder);
