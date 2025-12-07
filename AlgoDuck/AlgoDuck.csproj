@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
+        <PackageReference Include="FluentValidation" Version="12.1.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="8.0.21" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.21" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OAuth" Version="2.3.0" />
@@ -37,12 +38,51 @@
 
     <ItemGroup>
         <Folder Include="Migrations\" />
+        <Folder Include="Modules\Auth\Commands\DisableTwoFactor\" />
+        <Folder Include="Modules\Auth\Commands\EnableTwoFactor\" />
+        <Folder Include="Modules\Auth\Commands\ExternalLogin\" />
+        <Folder Include="Modules\Auth\Commands\GenerateApiKey\" />
+        <Folder Include="Modules\Auth\Commands\Login\" />
+        <Folder Include="Modules\Auth\Commands\Logout\" />
+        <Folder Include="Modules\Auth\Commands\RefreshToken\" />
+        <Folder Include="Modules\Auth\Commands\RequestPasswordReset\" />
+        <Folder Include="Modules\Auth\Commands\ResetPassword\" />
+        <Folder Include="Modules\Auth\Commands\RevokeApiKey\" />
+        <Folder Include="Modules\Auth\Commands\StartEmailVerification\" />
+        <Folder Include="Modules\Auth\Commands\VerifyEmail\" />
+        <Folder Include="Modules\Auth\Commands\VerifyTwoFactorLogin\" />
+        <Folder Include="Modules\Auth\Queries\CheckUserPermissions\" />
+        <Folder Include="Modules\Auth\Queries\GetApiKeys\" />
+        <Folder Include="Modules\Auth\Queries\GetUserByToken\" />
+        <Folder Include="Modules\Auth\Queries\GetUserSessions\" />
+        <Folder Include="Modules\Auth\Queries\SearchUsersByEmail\" />
         <Folder Include="Modules\Auth\Services\" />
+        <Folder Include="Modules\Auth\Shared\Configuration\" />
+        <Folder Include="Modules\Auth\Shared\Email\" />
+        <Folder Include="Modules\Auth\Shared\Exceptions\" />
+        <Folder Include="Modules\Auth\Shared\Jwt\" />
+        <Folder Include="Modules\Auth\Shared\Mappers\" />
+        <Folder Include="Modules\Auth\Shared\Middleware\" />
+        <Folder Include="Modules\Auth\Shared\Repositories\" />
+        <Folder Include="Modules\Auth\Shared\Utils\" />
         <Folder Include="Modules\Contest\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
+        <Folder Include="Modules\User\Commands\ChangePassword\" />
+        <Folder Include="Modules\User\Commands\SetEditorLayout\" />
+        <Folder Include="Modules\User\Commands\SetEditorTheme\" />
+        <Folder Include="Modules\User\Commands\SelectAvatar\" />
+        <Folder Include="Modules\User\Commands\UpdatePreferences\" />
+        <Folder Include="Modules\User\Commands\UpdateUsername\" />
         <Folder Include="Modules\User\Controllers\" />
         <Folder Include="Modules\User\DTOs\" />
+        <Folder Include="Modules\User\Queries\GetUserProfile\" />
+        <Folder Include="Modules\User\Queries\GetUserStatistics\" />
         <Folder Include="Modules\User\Services\" />
+        <Folder Include="Modules\User\Shared\Constants\" />
+        <Folder Include="Modules\User\Shared\Exceptions\" />
+        <Folder Include="Modules\User\Shared\Repositories\" />
+        <Folder Include="Modules\User\Shared\Services\" />
+        <Folder Include="Modules\User\Shared\Utils\" />
     </ItemGroup>
 
     <ItemGroup>

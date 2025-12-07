@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Web;
-using AlgoDuck.Modules.Auth.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Shared.Http;
 using Microsoft.Extensions.Options;
 
@@ -71,8 +70,8 @@ public sealed class CsrfGuard
         }
 
         var hasCredCookies =
-            ctx.Request.Cookies.ContainsKey(_jwt.JwtCookieName) ||
-            ctx.Request.Cookies.ContainsKey(_jwt.RefreshCookieName);
+            ctx.Request.Cookies.ContainsKey(_jwt.AccessTokenCookieName) ||
+            ctx.Request.Cookies.ContainsKey(_jwt.RefreshTokenCookieName);
 
         if (!hasCredCookies)
         {

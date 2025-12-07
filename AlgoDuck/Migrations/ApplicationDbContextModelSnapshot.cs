@@ -22,6 +22,64 @@ namespace AlgoDuck.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("api_key_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("key_hash");
+
+                    b.Property<string>("KeySalt")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("key_salt");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("prefix");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("api_key_pk");
+
+                    b.HasIndex("Prefix")
+                        .HasDatabaseName("api_key_prefix_idx");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("api_key", (string)null);
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -405,7 +463,7 @@ namespace AlgoDuck.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PurchasedTestCases", (string)null);
+                    b.ToTable("PurchasedTestCases");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Rarity", b =>
@@ -424,6 +482,69 @@ namespace AlgoDuck.Migrations
                         .HasName("rarity_pk");
 
                     b.ToTable("rarity", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("refresh_token_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_token_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<string>("TokenPrefix")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_prefix");
+
+                    b.Property<string>("TokenSalt")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("token_salt");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("refresh_token_pk");
+
+                    b.HasIndex("ReplacedByTokenId");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("TokenPrefix")
+                        .HasDatabaseName("refresh_token_prefix_idx");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_token", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
@@ -576,7 +697,63 @@ namespace AlgoDuck.Migrations
 
                     b.HasIndex("UserSolutionId");
 
-                    b.ToTable("TestingResults", (string)null);
+                    b.ToTable("TestingResults");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.UserAchievement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("achievement_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CurrentValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_value");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_completed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("TargetValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_value");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("user_achievement_pk");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("user_achievement", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
@@ -585,6 +762,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_notifications_enabled");
+
                     b.Property<bool>("IsDarkMode")
                         .HasColumnType("boolean")
                         .HasColumnName("is_dark_mode");
@@ -592,6 +773,16 @@ namespace AlgoDuck.Migrations
                     b.Property<bool>("IsHighContrast")
                         .HasColumnType("boolean")
                         .HasColumnName("is_high_contrast");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("language");
+
+                    b.Property<bool>("PushNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("push_notifications_enabled");
 
                     b.HasKey("UserId")
                         .HasName("user_config_pk");
@@ -608,6 +799,10 @@ namespace AlgoDuck.Migrations
                     b.Property<long>("CodeRuntimeSubmitted")
                         .HasColumnType("bigint")
                         .HasColumnName("code_runtime_submitted");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uuid")
@@ -803,6 +998,18 @@ namespace AlgoDuck.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("api_key_application_user");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Cohort", "Cohort")
@@ -948,6 +1155,35 @@ namespace AlgoDuck.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.RefreshToken", "ReplacedByToken")
+                        .WithMany("InverseReplacedByToken")
+                        .HasForeignKey("ReplacedByTokenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("refresh_token_replaced_by_token");
+
+                    b.HasOne("AlgoDuck.Models.Session", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("refresh_token_session");
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("refresh_token_application_user");
+
+                    b.Navigation("ReplacedByToken");
+
+                    b.Navigation("Session");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Session", "ReplacedBySession")
@@ -994,6 +1230,18 @@ namespace AlgoDuck.Migrations
                     b.Navigation("TestCase");
 
                     b.Navigation("UserSolution");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.UserAchievement", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("UserAchievements")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("user_achievement_user_ref");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
@@ -1124,13 +1372,19 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("ApiKeys");
+
                     b.Navigation("Messages");
 
                     b.Navigation("PurchasedTestCases");
 
                     b.Navigation("Purchases");
 
+                    b.Navigation("RefreshTokens");
+
                     b.Navigation("Sessions");
+
+                    b.Navigation("UserAchievements");
 
                     b.Navigation("UserConfig");
 
@@ -1176,6 +1430,11 @@ namespace AlgoDuck.Migrations
             modelBuilder.Entity("AlgoDuck.Models.Rarity", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.Navigation("InverseReplacedByToken");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
