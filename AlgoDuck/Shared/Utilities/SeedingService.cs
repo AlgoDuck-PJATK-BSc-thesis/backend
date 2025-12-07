@@ -287,6 +287,86 @@ public class DataSeedingService(
                     Price = 500, 
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("182769e6-ff23-4584-a6fd-83d1c71725e8"), 
+                    Name = "miku", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("3cf1b82e-704a-4f2b-8bc0-af22b41dec14"), 
+                    Name = "mermaid", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("56ef2a57-707e-43d4-b62e-0c69ed4e8c65"), 
+                    Name = "anakin", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("6239a5ed-45e7-4316-80c2-b3b4c7eeab5f"), 
+                    Name = "samurai", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("660d65f2-6b1f-49c0-ac05-cfc0af7dc080"), 
+                    Name = "ninja", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("6e231d75-91ff-4112-8d25-7f289b6e6f04"), 
+                    Name = "viking", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("833e927f-55cf-43e1-9653-647819e09bf2"), 
+                    Name = "knight", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("88ae6422-cb6f-4245-8367-cf46e381d886"), 
+                    Name = "cowboy", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("8e32fcf2-a192-4cd1-ad41-2e4362b6007d"), 
+                    Name = "witch", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                },
+                new Item { 
+                    ItemId = Guid.Parse("be99f3f8-412a-4503-99d6-52fee988ad88"), 
+                    Name = "mallard", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 }
             };
 

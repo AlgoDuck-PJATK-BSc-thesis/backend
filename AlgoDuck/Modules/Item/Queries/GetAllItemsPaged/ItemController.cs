@@ -1,3 +1,4 @@
+using AlgoDuck.Shared.Extensions;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,9 +18,9 @@ public class ItemController(
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        return Ok(new StandardApiResponse<PageData<ItemDto>>()
+        return Ok(new StandardApiResponse<PageData<ItemDto>>
         {
-            Body = await allItemService.GetAllItemsPagedAsync(currentPage, pageSize, cancellationToken)
+            Body = await allItemService.GetAllItemsPagedAsync(currentPage, pageSize, User.GetUserId(), cancellationToken)
         });
     }
 }
