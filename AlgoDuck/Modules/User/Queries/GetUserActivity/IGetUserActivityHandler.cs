@@ -6,5 +6,5 @@ namespace AlgoDuck.Modules.User.Queries.GetUserActivity;
 
 public interface IGetUserActivityHandler
 {
-    Task<IReadOnlyList<UserActivityDto>> HandleAsync(Guid userId, GetUserActivityQuery query, CancellationToken cancellationToken);
+    Task<IReadOnlyList<UserActivityDto>> HandleAsync(Guid userId, GetUserActivityRequestDto requestDto, CancellationToken cancellationToken);
 }

@@ -11,32 +11,32 @@ public sealed class GetUserAchievementsHandler : IGetUserAchievementsHandler
         _achievementService = achievementService;
     }
 
-    public async Task<IReadOnlyList<UserAchievementDto>> HandleAsync(Guid userId, GetUserAchievementsQuery query, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<UserAchievementDto>> HandleAsync(Guid userId, GetUserAchievementsRequestDto requestDto, CancellationToken cancellationToken)
     {
         var achievements = await _achievementService.GetAchievementsAsync(userId, cancellationToken);
 
-        if (query.Completed.HasValue)
+        if (requestDto.Completed.HasValue)
         {
             achievements = achievements
-                .Where(a => a.IsCompleted == query.Completed.Value)
+                .Where(a => a.IsCompleted == requestDto.Completed.Value)
                 .ToList()
                 .AsReadOnly();
         }
 
-        if (!string.IsNullOrWhiteSpace(query.CodeFilter))
+        if (!string.IsNullOrWhiteSpace(requestDto.CodeFilter))
         {
-            var filter = query.CodeFilter.ToLowerInvariant();
+            var filter = requestDto.CodeFilter.ToLowerInvariant();
             achievements = achievements
                 .Where(a => a.Code.ToLowerInvariant().Contains(filter))
                 .ToList()
                 .AsReadOnly();
         }
 
-        var skip = (query.Page - 1) * query.PageSize;
+        var skip = (requestDto.Page - 1) * requestDto.PageSize;
 
         var paged = achievements
             .Skip(skip)
-            .Take(query.PageSize)
+            .Take(requestDto.PageSize)
             .Select(a => new UserAchievementDto
             {
                 Code = a.Code,

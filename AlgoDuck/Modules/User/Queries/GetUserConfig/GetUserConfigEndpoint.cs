@@ -35,7 +35,7 @@ public sealed class GetUserConfigEndpoint : ControllerBase
             });
         }
 
-        var query = new GetUserConfigQuery { UserId = userId };
+        var query = new GetUserConfigRequestDto { UserId = userId };
 
         var validationResult = await _validator.ValidateAsync(query, cancellationToken);
         if (!validationResult.IsValid)

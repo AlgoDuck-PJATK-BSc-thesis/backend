@@ -19,7 +19,7 @@ public static class ProfileMapper
             AmountSolved = user.AmountSolved,
             CohortId = user.CohortId,
             Language = config?.Language ?? string.Empty,
-            AvatarKey = string.Empty
+            S3AvatarUrl = string.Empty
         };
     }
 }

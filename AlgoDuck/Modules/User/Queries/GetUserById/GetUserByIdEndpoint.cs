@@ -24,7 +24,7 @@ public sealed class GetUserByIdEndpoint : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get(Guid userId, CancellationToken cancellationToken)
     {
-        var query = new GetUserByIdQuery { UserId = userId };
+        var query = new GetUserByIdRequestDto { UserId = userId };
 
         var validationResult = await _validator.ValidateAsync(query, cancellationToken);
         if (!validationResult.IsValid)

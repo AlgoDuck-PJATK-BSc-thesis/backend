@@ -11,28 +11,28 @@ public sealed class GetUserActivityHandler : IGetUserActivityHandler
         _userRepository = userRepository;
     }
 
-    public async Task<IReadOnlyList<UserActivityDto>> HandleAsync(Guid userId, GetUserActivityQuery query, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<UserActivityDto>> HandleAsync(Guid userId, GetUserActivityRequestDto requestDto, CancellationToken cancellationToken)
     {
-        if (query.Page < 1)
+        if (requestDto.Page < 1)
         {
-            query = new GetUserActivityQuery
+            requestDto = new GetUserActivityRequestDto
             {
                 Page = 1,
-                PageSize = query.PageSize
+                PageSize = requestDto.PageSize
             };
         }
 
-        if (query.PageSize < 1)
+        if (requestDto.PageSize < 1)
         {
-            query = new GetUserActivityQuery
+            requestDto = new GetUserActivityRequestDto
             {
-                Page = query.Page,
+                Page = requestDto.Page,
                 PageSize = 20
             };
         }
 
-        var skip = (query.Page - 1) * query.PageSize;
-        var solutions = await _userRepository.GetUserSolutionsAsync(userId, skip, query.PageSize, cancellationToken);
+        var skip = (requestDto.Page - 1) * requestDto.PageSize;
+        var solutions = await _userRepository.GetUserSolutionsAsync(userId, skip, requestDto.PageSize, cancellationToken);
 
         var result = solutions
             .Select(s => new UserActivityDto

@@ -12,7 +12,7 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
         _userRepository = userRepository;
     }
 
-    public async Task<UserConfigDto> HandleAsync(GetUserConfigQuery query, CancellationToken cancellationToken)
+    public async Task<UserConfigDto> HandleAsync(GetUserConfigRequestDto query, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
         if (user is null)
@@ -27,7 +27,7 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
             IsDarkMode = config?.IsDarkMode ?? false,
             IsHighContrast = config?.IsHighContrast ?? false,
             Language = config?.Language ?? string.Empty,
-            AvatarKey = string.Empty
+            S3AvatarUrl = string.Empty
         };
     }
 }

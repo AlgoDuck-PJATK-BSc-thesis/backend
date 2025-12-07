@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries.GetUserById;
 
-public sealed class GetUserByIdValidator : AbstractValidator<GetUserByIdQuery>
+public sealed class GetUserByIdValidator : AbstractValidator<GetUserByIdRequestDto>
 {
     public GetUserByIdValidator()
     {

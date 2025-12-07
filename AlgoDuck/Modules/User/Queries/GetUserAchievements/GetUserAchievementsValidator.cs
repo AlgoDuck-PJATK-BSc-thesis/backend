@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries.GetUserAchievements;
 
-public sealed class GetUserAchievementsValidator : AbstractValidator<GetUserAchievementsQuery>
+public sealed class GetUserAchievementsValidator : AbstractValidator<GetUserAchievementsRequestDto>
 {
     public GetUserAchievementsValidator()
     {

@@ -12,6 +12,8 @@ using SharedTokenServiceInterface = AlgoDuck.Modules.Auth.Shared.Interfaces.ITok
 using SharedTokenService = AlgoDuck.Modules.Auth.Shared.Services.TokenService;
 using SharedTwoFactorService = AlgoDuck.Modules.Auth.Shared.Services.TwoFactorService;
 using CoreTwoFactorService = AlgoDuck.Modules.Auth.TwoFactor.TwoFactorService;
+using AlgoDuck.Modules.Auth.Commands;
+using AlgoDuck.Modules.Auth.Queries;
 
 namespace AlgoDuck.Modules.Auth.Shared.Utils;
 
@@ -55,6 +57,9 @@ public static class AuthDependencyInitializer
         {
             services.AddScoped<IAuthService, ProductionAuthService>();
         }
+        
+        services.AddAuthCommands();
+        services.AddAuthQueries();
 
         return services;
     }

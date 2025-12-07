@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries.GetUserActivity;
 
-public sealed class GetUserActivityValidator : AbstractValidator<GetUserActivityQuery>
+public sealed class GetUserActivityValidator : AbstractValidator<GetUserActivityRequestDto>
 {
     public GetUserActivityValidator()
     {

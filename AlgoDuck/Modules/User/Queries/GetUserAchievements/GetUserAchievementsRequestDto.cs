@@ -1,6 +1,6 @@
 namespace AlgoDuck.Modules.User.Queries.GetUserAchievements;
 
-public sealed class GetUserAchievementsQuery
+public sealed class GetUserAchievementsRequestDto
 {
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;

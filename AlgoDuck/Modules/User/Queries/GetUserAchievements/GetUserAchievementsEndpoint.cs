@@ -20,7 +20,7 @@ public sealed class GetUserAchievementsEndpoint : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] GetUserAchievementsQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> Get([FromQuery] GetUserAchievementsRequestDto requestDto, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
@@ -32,7 +32,7 @@ public sealed class GetUserAchievementsEndpoint : ControllerBase
             });
         }
 
-        var validationResult = await _validator.ValidateAsync(query, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(requestDto, cancellationToken);
         if (!validationResult.IsValid)
         {
             return BadRequest(new StandardApiResponse
@@ -42,7 +42,7 @@ public sealed class GetUserAchievementsEndpoint : ControllerBase
             });
         }
 
-        var achievements = await _handler.HandleAsync(userId, query, cancellationToken);
+        var achievements = await _handler.HandleAsync(userId, requestDto, cancellationToken);
 
         return Ok(new StandardApiResponse<IReadOnlyList<UserAchievementDto>>
         {

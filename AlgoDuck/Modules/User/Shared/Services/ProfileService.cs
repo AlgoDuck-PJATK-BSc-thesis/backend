@@ -3,20 +3,27 @@ using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Utils;
+using AlgoDuck.DAL;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Shared.Services;
 
 public sealed class ProfileService : IProfileService
 {
+    private const string AvatarFolderPrefix = "ducks/outfits/";
+
     private readonly IUserRepository _userRepository;
     private readonly IS3AvatarUrlGenerator _avatarUrlGenerator;
+    private readonly ApplicationQueryDbContext _queryDbContext;
 
     public ProfileService(
         IUserRepository userRepository,
-        IS3AvatarUrlGenerator avatarUrlGenerator)
+        IS3AvatarUrlGenerator avatarUrlGenerator,
+        ApplicationQueryDbContext queryDbContext)
     {
         _userRepository = userRepository;
         _avatarUrlGenerator = avatarUrlGenerator;
+        _queryDbContext = queryDbContext;
     }
 
     public async Task<UserProfileDto> GetProfileAsync(Guid userId, CancellationToken cancellationToken)
@@ -29,7 +36,15 @@ public sealed class ProfileService : IProfileService
 
         var dto = ProfileMapper.ToUserProfileDto(user);
 
-        var s3AvatarUrl = _avatarUrlGenerator.GetAvatarUrl(dto.AvatarKey ?? string.Empty);
+        var selectedItemId = await GetSelectedAvatarItemIdAsync(userId, cancellationToken);
+
+        string avatarKey = string.Empty;
+        if (selectedItemId.HasValue)
+        {
+            avatarKey = AvatarFolderPrefix + selectedItemId.Value.ToString("D");
+        }
+
+        var s3AvatarUrl = _avatarUrlGenerator.GetAvatarUrl(avatarKey);
 
         return new UserProfileDto
         {
@@ -41,7 +56,7 @@ public sealed class ProfileService : IProfileService
             AmountSolved = dto.AmountSolved,
             CohortId = dto.CohortId,
             Language = dto.Language,
-            AvatarKey = s3AvatarUrl
+            S3AvatarUrl = s3AvatarUrl
         };
     }
 
@@ -125,5 +140,20 @@ public sealed class ProfileService : IProfileService
             Success = true,
             Message = "Language updated successfully."
         };
+    }
+
+    private async Task<Guid?> GetSelectedAvatarItemIdAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var selected = await _queryDbContext.Purchases
+            .Where(p => p.UserId == userId && p.Selected)
+            .Select(p => p.ItemId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (selected == Guid.Empty)
+        {
+            return null;
+        }
+
+        return selected;
     }
 }

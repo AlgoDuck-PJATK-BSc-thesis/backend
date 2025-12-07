@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries.GetUserConfig;
 
-public sealed class GetUserConfigValidator : AbstractValidator<GetUserConfigQuery>
+public sealed class GetUserConfigValidator : AbstractValidator<GetUserConfigRequestDto>
 {
     public GetUserConfigValidator()
     {

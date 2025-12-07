@@ -12,9 +12,9 @@ public sealed class GetUserByIdHandler : IGetUserByIdHandler
         _userRepository = userRepository;
     }
 
-    public async Task<UserDto> HandleAsync(GetUserByIdQuery query, CancellationToken cancellationToken)
+    public async Task<UserDto> HandleAsync(GetUserByIdRequestDto requestDto, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByIdAsync(query.UserId, cancellationToken);
+        var user = await _userRepository.GetByIdAsync(requestDto.UserId, cancellationToken);
         if (user is null)
         {
             throw new UserNotFoundException("User not found.");
@@ -32,7 +32,7 @@ public sealed class GetUserByIdHandler : IGetUserByIdHandler
             AmountSolved = user.AmountSolved,
             CohortId = user.CohortId,
             Language = config?.Language ?? string.Empty,
-            AvatarKey = string.Empty
+            S3AvatarUrl = string.Empty
         };
     }
 }

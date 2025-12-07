@@ -18,7 +18,7 @@ public sealed class GetUserActivityEndpoint : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] GetUserActivityQuery query, CancellationToken cancellationToken)
+    public async Task<IActionResult> Get([FromQuery] GetUserActivityRequestDto requestDto, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
@@ -32,7 +32,7 @@ public sealed class GetUserActivityEndpoint : ControllerBase
             return Unauthorized(unauthorizedResponse);
         }
 
-        var activity = await _handler.HandleAsync(userId, query, cancellationToken);
+        var activity = await _handler.HandleAsync(userId, requestDto, cancellationToken);
 
         var response = new StandardApiResponse<IReadOnlyList<UserActivityDto>>
         {
