@@ -28,6 +28,8 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
 
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
+    public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
+    
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public void Configure(EntityTypeBuilder<Problem> builder)

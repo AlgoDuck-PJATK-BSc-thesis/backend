@@ -55,6 +55,8 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
     public virtual DbSet<UserSolution> UserSolutions { get; set; }
     public virtual DbSet<PurchasedTestCase> PurchasedTestCases { get; set; }
     public virtual DbSet<TestingResult> TestingResults { get; set; }
+    public virtual DbSet<AssistantChat> AssistantChats { get; set; }
+    public virtual DbSet<AssistanceMessage> AssistanceMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

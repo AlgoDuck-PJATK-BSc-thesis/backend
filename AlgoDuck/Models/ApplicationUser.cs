@@ -23,6 +23,7 @@ public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfigura
     public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
 
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
+    public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
 
     public virtual UserConfig? UserConfig { get; set; }
 

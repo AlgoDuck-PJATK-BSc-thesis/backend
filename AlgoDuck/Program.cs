@@ -5,6 +5,7 @@ using AlgoDuck.Modules.Cohort;
 using AlgoDuck.Modules.Cohort.CohortManagement;
 using AlgoDuck.Modules.Cohort.Utils;
 using AlgoDuck.Modules.Item.Utils;
+using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Utils;
 using AlgoDuck.Modules.User.Utils;
 using AlgoDuck.Shared.Middleware;
@@ -64,6 +65,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
+app.MapHub<AssistantHub>("/api/hubs/assistant");
 app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
