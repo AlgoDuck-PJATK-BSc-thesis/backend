@@ -60,6 +60,8 @@ public sealed class TwoFactorService : ITwoFactorService
 
     public Task<(bool ok, Guid userId, string? error)> VerifyLoginCodeAsync(string challengeId, string code, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!_cache.TryGetValue<Entry>(Key(challengeId), out var entry) || entry is null)
         {
             return Task.FromResult<(bool ok, Guid userId, string? error)>((false, Guid.Empty, "challenge_not_found"));
