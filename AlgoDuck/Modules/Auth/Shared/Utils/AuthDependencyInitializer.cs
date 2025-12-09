@@ -44,6 +44,8 @@ public static class AuthDependencyInitializer
         services.AddScoped<IAuthValidator, AuthValidator>();
         services.AddScoped<SessionService>();
         services.AddScoped<ExternalAuthService>();
+        
+        services.AddScoped<IExternalAuthProvider, DevExternalAuthProvider>();
 
         services.AddAuthCommands();
         services.AddAuthQueries();
