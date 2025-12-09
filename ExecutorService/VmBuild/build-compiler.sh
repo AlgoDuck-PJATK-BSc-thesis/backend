@@ -10,7 +10,7 @@ mkfs.ext4 compiler-fs.ext4
 
 mkdir -p /tmp/compiler-rootfs
 
-sudo mount -o loop compiler-fs.ext4 /tmp/compiler-rootfs
+sudo mount pull compiler-fs.ext4 /tmp/compiler-rootfs
 
 cd /tmp/compiler-rootfs
 

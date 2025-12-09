@@ -28,11 +28,11 @@ public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfigura
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
     
     public virtual ICollection<UserAchievement> UserAchievements { get; set; } = new List<UserAchievement>();
+    public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
 
     public virtual UserConfig? UserConfig { get; set; }
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
-    
     public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
 
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
