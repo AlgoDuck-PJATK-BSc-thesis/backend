@@ -32,16 +32,16 @@ public class CohortChatHub : Hub
         var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
         {
-            await Clients.Caller.SendAsync("MessageRejected", "Unauthorized user.", Context.ConnectionAborted);
+            await Clients.Caller.SendAsync("MessageRejected", "Unauthorized user.");
             return;
         }
 
         try
         {
-            var result = await _sendMessageHandler.HandleAsync(userId, dto, Context.ConnectionAborted);
+            var result = await _sendMessageHandler.HandleAsync(userId, dto, CancellationToken.None);
 
             await Clients.Group(GetGroupName(dto.CohortId))
-                .SendAsync("ReceiveMessage", result, Context.ConnectionAborted);
+                .SendAsync("ReceiveMessage", result);
         }
         catch (ChatValidationException ex)
         {
@@ -55,7 +55,7 @@ public class CohortChatHub : Hub
                 ? "This message violates our content rules."
                 : ex.Message;
 
-            await Clients.Caller.SendAsync("MessageRejected", reason, Context.ConnectionAborted);
+            await Clients.Caller.SendAsync("MessageRejected", reason);
         }
         catch (CohortValidationException ex)
         {
@@ -65,7 +65,7 @@ public class CohortChatHub : Hub
                 userId,
                 dto.CohortId);
 
-            await Clients.Caller.SendAsync("MessageRejected", "You cannot send messages to this cohort.", Context.ConnectionAborted);
+            await Clients.Caller.SendAsync("MessageRejected", "You cannot send messages to this cohort.");
         }
         catch (Exception ex)
         {
@@ -75,7 +75,7 @@ public class CohortChatHub : Hub
                 userId,
                 dto.CohortId);
 
-            await Clients.Caller.SendAsync("MessageRejected", "Internal error. Please try again.", Context.ConnectionAborted);
+            await Clients.Caller.SendAsync("MessageRejected", "Internal error. Please try again.");
         }
     }
 
