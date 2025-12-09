@@ -19,8 +19,7 @@ public sealed class SendMessageEndpoint : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SendMessageResultDto>> SendAsync(
         Guid cohortId,
-        [FromBody] SendMessageDto dto,
-        CancellationToken cancellationToken)
+        [FromBody] SendMessageDto dto)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
         {
@@ -36,7 +35,7 @@ public sealed class SendMessageEndpoint : ControllerBase
             MediaContentType = dto.MediaContentType
         };
 
-        var result = await _handler.HandleAsync(userId, effectiveDto, cancellationToken);
+        var result = await _handler.HandleAsync(userId, effectiveDto, CancellationToken.None);
         return Ok(result);
     }
 }

@@ -34,13 +34,13 @@ public sealed class SendMessageHandler : ISendMessageHandler
         SendMessageDto dto,
         CancellationToken cancellationToken)
     {
-        var validationResult = await _validator.ValidateAsync(dto, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(dto, CancellationToken.None);
         if (!validationResult.IsValid)
         {
             throw new CohortValidationException("Invalid chat message payload.");
         }
 
-        var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, dto.CohortId, cancellationToken);
+        var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, dto.CohortId, CancellationToken.None);
         if (!belongs)
         {
             throw new CohortValidationException("User does not belong to this cohort.");
@@ -54,7 +54,7 @@ public sealed class SendMessageHandler : ISendMessageHandler
                 userId,
                 dto.CohortId,
                 contentToModerate,
-                cancellationToken);
+                CancellationToken.None);
 
             if (!moderationResult.IsAllowed)
             {
@@ -73,9 +73,9 @@ public sealed class SendMessageHandler : ISendMessageHandler
             CreatedAt = DateTime.UtcNow
         };
 
-        var saved = await _chatMessageRepository.AddAsync(message, cancellationToken);
+        var saved = await _chatMessageRepository.AddAsync(message, CancellationToken.None);
 
-        var profile = await _profileService.GetProfileAsync(saved.UserId, cancellationToken);
+        var profile = await _profileService.GetProfileAsync(saved.UserId, CancellationToken.None);
 
         return ChatMessageMappings.ToSendMessageResultDto(
             saved,
