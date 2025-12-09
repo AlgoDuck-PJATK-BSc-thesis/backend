@@ -2,19 +2,20 @@ using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
+using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.ExecutorShared;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
-using AlgoDuck.Modules.Problem.Queries.QueryAssistant;
 using AlgoDuck.Shared.S3;
-using AlgoDuckShared;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
+using OpenAI;
 using OpenAI.Chat;
 using AwsS3Client = AlgoDuck.Shared.S3.AwsS3Client;
 using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
@@ -35,10 +36,17 @@ internal static class ProblemDependencyInitializer
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         });
         
+        
+        builder.Services.AddSingleton<OpenAIClient>(sp =>
+        {
+            var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            return new OpenAIClient(apiKey);
+        });
+
         builder.Services.AddSingleton<ChatClient>(sp =>
         {
             var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            const string model = "gpt-5-nano";
+            const string model = "gpt-5";
             return new ChatClient(model, apiKey);
         });
         
@@ -70,11 +78,14 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         
         builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
-        builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
         
+        builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
         builder.Services.AddScoped<IProblemService, ProblemService>();
-        builder.Services.AddScoped<IAssistantService, AssistantService>();
 
+        builder.Services.AddScoped<IAssistantService, AssistantServiceMock>();
+        // builder.Services.AddScoped<IAssistantService, AssistantService>();
+        builder.Services.AddScoped<IAssistantRepository, AssistantRepository>();
+        
         builder.Services.AddScoped<IProblemCategoriesRepository, ProblemCategoriesRepository>();
         builder.Services.AddScoped<IProblemCategoriesService, ProblemCategoriesService>();
         
@@ -89,5 +100,8 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<ILoadProblemRepository, LoadProblemRepository>();
         builder.Services.AddScoped<ILoadProblemService, LoadProblemService>();
+
+        builder.Services.AddScoped<IConversationService, ConversationService>();
+        builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
     }
 }

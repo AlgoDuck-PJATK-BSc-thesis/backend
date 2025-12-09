@@ -3,6 +3,7 @@ using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
+using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Utils;
 using AlgoDuck.Modules.User.Shared.Utils;
 using AlgoDuck.Shared.Middleware;
@@ -58,7 +59,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
-
+app.MapHub<AssistantHub>("/api/hubs/assistant");
 
 using (var scope = app.Services.CreateScope())
 {
