@@ -89,8 +89,6 @@ public sealed class CsrfGuard
             headerVal = Uri.UnescapeDataString(headerRaw);
         }
 
-        Console.WriteLine(headerVal);
-        Console.WriteLine(cookieVal);
         
         if (!TimeSafeEquals(cookieVal, headerVal))
         {

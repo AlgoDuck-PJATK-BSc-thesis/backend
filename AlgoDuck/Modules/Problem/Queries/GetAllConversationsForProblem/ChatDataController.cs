@@ -80,8 +80,16 @@ public class ConversationRepository(
                             }).ToList()
                     }).FirstOrDefaultAsync(cancellationToken: cancellation);
         
-        if (chat == null) 
-            throw new NotFoundException(pageRequestDto.ChatName);
+        if (chat == null)
+        {
+            return new PageData<AssistanceMessageDto>()
+            {
+                CurrPage = 1,
+                PageSize = pageRequestDto.PageSize,
+                TotalItems = 0,
+                Items = [],
+            };
+        }
         
         return new PageData<AssistanceMessageDto>
         {

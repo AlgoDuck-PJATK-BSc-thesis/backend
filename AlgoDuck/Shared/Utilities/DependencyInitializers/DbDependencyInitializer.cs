@@ -1,6 +1,7 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace AlgoDuck.Shared.Utilities.DependencyInitializers;
 
@@ -30,5 +31,16 @@ internal static class DbDependencyInitializer
             }));
 
         builder.Services.AddScoped<DataSeedingService>();
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+            return ConnectionMultiplexer.Connect(configuration);
+        });
+        builder.Services.AddSingleton<IDatabase>(sp =>
+        {
+            var redis = sp.GetRequiredService<IConnectionMultiplexer>();
+            return redis.GetDatabase();
+        });
+        
     }
 }

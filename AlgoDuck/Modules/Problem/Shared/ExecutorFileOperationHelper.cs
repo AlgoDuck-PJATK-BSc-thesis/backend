@@ -1,15 +1,30 @@
 using System.Text;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
-using AlgoDuckShared.Executor.SharedTypes;
+using AlgoDuckShared;
 
-namespace AlgoDuck.Modules.Problem.ExecutorShared;
+namespace AlgoDuck.Modules.Problem.Shared;
 
 internal enum SigningType
 {
     Time, Answer
 }
-public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
+public class TestResultDto
+{
+    public string TestId { get; set; } = string.Empty;
+    public bool IsTestPassed { get; set; } = false;
+}
+
+public class SubmitExecuteResponse
+{
+    public string StdOutput { get; set; } = string.Empty;
+    public string StdError { get; set; } = string.Empty;
+    public List<TestResultDto> TestResults { get; set; } = [];
+    public int ExecutionTime { get; set; } = 0;
+    public SubmitExecuteRequestRabbitStatus Status { get; set; }
+}
+
+public class ExecutorFileOperationHelper
 {
     private const string TestCaseIdStartFlag = "tc_id:";
     private const string AnswerControlSymbol = "-answ:";
@@ -17,9 +32,10 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
     private const int UuidLength = 36;
     private const int SigningKeyStringLen = UuidLength + 4; // "ctr-70fcae06-b1ac-453b-b0a0-57812ba86cf4". 4 chars for "ctr-" + uuid length
     private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
+    
+    public required UserSolutionData UserSolutionData { get; set; }
 
-
-    internal SubmitExecuteResponse ParseVmOutput(ExecutionResponse vmOutput)
+    internal SubmitExecuteResponse ParseVmOutput(ExecutionResponseRabbit vmOutput)
     {
         List<TestResultDto> testResults = [];
         var executionTime = 0;
@@ -27,7 +43,7 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
         
         foreach (var line in vmOutput.Out.ReplaceLineEndings().Split(Environment.NewLine))
         {
-            if (line.Contains($"ctr-{userSolutionData.SigningKey}"))
+            if (line.Contains($"ctr-{UserSolutionData.SigningKey}"))
             {
                 switch (line.Substring(SigningKeyStringLen, AnswerControlSymbol.Length))
                 {
@@ -52,7 +68,8 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
             ExecutionTime = executionTime,
             StdError = vmOutput.Err,
             StdOutput = javaStdOut.ToString(),
-            TestResults = testResults
+            TestResults = testResults,
+            Status = vmOutput.Status
         };
     }
     
@@ -126,8 +143,8 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
 
     private void InsertAtStartOfFile(string codeToBeInserted)
     {
-        userSolutionData.FileContents.Insert(0, codeToBeInserted);
-        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+        UserSolutionData.FileContents.Insert(0, codeToBeInserted);
+        UserSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
     }
     
     private string GetHelperVariableNamePrefix()
@@ -139,19 +156,19 @@ public class ExecutorFileOperationHelper(UserSolutionData userSolutionData)
 
     private void InsertAtEndOfMainMethod(string codeToBeInserted)
     {
-        userSolutionData.FileContents.Insert(userSolutionData.MainMethod!.MethodFileEndIndex, codeToBeInserted);
-        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+        UserSolutionData.FileContents.Insert(UserSolutionData.MainMethod!.MethodFileEndIndex, codeToBeInserted);
+        UserSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
     }
     
     private void InsertAtStartOfMainMethod(string codeToBeInserted)
     {
-        userSolutionData.FileContents.Insert(userSolutionData.MainMethod!.MethodFileBeginIndex + 1, codeToBeInserted);
-        userSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
+        UserSolutionData.FileContents.Insert(UserSolutionData.MainMethod!.MethodFileBeginIndex + 1, codeToBeInserted);
+        UserSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
     }
     
     private string CreateSignedPrintStatement(string printContents, SigningType signingType)
     {
-        return $"System.out.println(\"{GetExecutionSigningString(userSolutionData.SigningKey, signingType)}\" + {printContents});\n";
+        return $"System.out.println(\"{GetExecutionSigningString(UserSolutionData.SigningKey, signingType)}\" + {printContents});\n";
     }
     
     private string GetTimingVariable(string variableName)
