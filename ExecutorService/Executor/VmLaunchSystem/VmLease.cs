@@ -3,7 +3,7 @@ using ExecutorService.Executor.Types.VmLaunchTypes;
 
 namespace ExecutorService.Executor.VmLaunchSystem;
 
-internal sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
+public sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
 {
     internal Guid VmId => vmId;
     public async Task<TResult> QueryAsync<T, TResult>(T query) 

@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Extensions;
 
 namespace ExecutorService.Executor.ResourceHandlers;
 
-internal enum FilesystemType
+public enum FilesystemType
 {
     Compiler, Executor
 }
@@ -47,7 +47,7 @@ internal interface IFilesystemPooler
     internal Task<Guid> EnqueueFilesystemRequestAsync(FilesystemType fsType);
 }
 
-internal sealed class FilesystemPooler : IFilesystemPooler
+public sealed class FilesystemPooler : IFilesystemPooler
 {
     private readonly TimeSpan _trackingPeriod = TimeSpan.FromMinutes(10);
     private readonly TimeSpan _pollingFrequency = TimeSpan.FromSeconds(15);

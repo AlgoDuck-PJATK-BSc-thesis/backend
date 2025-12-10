@@ -10,6 +10,9 @@
     <ItemGroup>
       <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
       <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0-preview.4.25258.110" />
+      <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
+    <InternalsVisibleTo Include="AlgoDuck" />
+    <InternalsVisibleTo Include="ExecutorService" />
     </ItemGroup>
 
 </Project>
