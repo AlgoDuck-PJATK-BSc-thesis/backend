@@ -1,12 +1,13 @@
+using FluentAssertions;
+
 namespace AlgoDuck.Tests.Modules.Cohort.Shared.Interfaces;
 
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
-using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Services;
+using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Shared.S3;
 using Amazon.S3;
 using Amazon.S3.Model;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -57,9 +58,14 @@ public sealed class IChatMediaStorageServiceTests
         });
 
         var formFileMock = new Mock<IFormFile>();
-        var fileContent = new MemoryStream(new byte[] { 1, 2, 3 });
-        formFileMock.Setup(f => f.OpenReadStream()).Returns(fileContent);
-        formFileMock.Setup(f => f.Length).Returns(fileContent.Length);
+        var fileContent = new byte[] { 1, 2, 3 };
+        var fileLength = fileContent.Length;
+
+        formFileMock
+            .Setup(f => f.OpenReadStream())
+            .Returns(() => new MemoryStream(fileContent));
+
+        formFileMock.Setup(f => f.Length).Returns(fileLength);
         formFileMock.Setup(f => f.FileName).Returns("image.png");
         formFileMock.Setup(f => f.ContentType).Returns("image/png");
 
@@ -76,7 +82,7 @@ public sealed class IChatMediaStorageServiceTests
         result.Url.Should().NotBeNullOrWhiteSpace();
         result.ContentType.Should().Be("image/png");
         result.MediaType.Should().Be(ChatMediaType.Image);
-        result.SizeBytes.Should().Be(fileContent.Length);
+        result.SizeBytes.Should().Be(fileLength);
         result.Key.Should().NotBeNullOrWhiteSpace();
     }
 }

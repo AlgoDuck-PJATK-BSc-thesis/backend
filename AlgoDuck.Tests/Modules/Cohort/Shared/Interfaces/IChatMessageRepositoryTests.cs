@@ -1,8 +1,9 @@
+using FluentAssertions;
+
 namespace AlgoDuck.Tests.Modules.Cohort.Shared.Interfaces;
 
 using System.Reflection;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
-using FluentAssertions;
 
 public sealed class IChatMessageRepositoryTests
 {
@@ -16,7 +17,10 @@ public sealed class IChatMessageRepositoryTests
         type.GetMethod("AddAsync", BindingFlags.Public | BindingFlags.Instance)
             .Should().NotBeNull();
 
-        type.GetMethod("GetMessagesAsync", BindingFlags.Public | BindingFlags.Instance)
+        type.GetMethod("GetPagedForCohortAsync", BindingFlags.Public | BindingFlags.Instance)
+            .Should().NotBeNull();
+
+        type.GetMethod("SoftDeleteAsync", BindingFlags.Public | BindingFlags.Instance)
             .Should().NotBeNull();
     }
 }
