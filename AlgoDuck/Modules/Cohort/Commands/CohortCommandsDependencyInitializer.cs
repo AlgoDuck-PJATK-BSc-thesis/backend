@@ -3,6 +3,7 @@ using AlgoDuck.Modules.Cohort.Commands.CohortManagement.UpdateCohort;
 using AlgoDuck.Modules.Cohort.Commands.CohortManagement.JoinCohort;
 using AlgoDuck.Modules.Cohort.Commands.CohortManagement.LeaveCohort;
 using AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+using AlgoDuck.Modules.Cohort.Commands.Chat.UploadMedia;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.Cohort.Commands;
@@ -22,6 +23,9 @@ public static class CohortCommandsDependencyInitializer
 
         services.AddScoped<IValidator<SendMessageDto>, SendMessageValidator>();
         services.AddScoped<ISendMessageHandler, SendMessageHandler>();
+        
+        services.AddScoped<IValidator<UploadMediaDto>, UploadMediaValidator>();
+        services.AddScoped<IUploadMediaHandler, UploadMediaHandler>();
 
         return services;
     }

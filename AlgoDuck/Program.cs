@@ -78,7 +78,7 @@ using (var scope = app.Services.CreateScope())
             await seeder.SeedDataAsync();
             break;
         }
-        catch (System.Net.Sockets.SocketException ex) when (attempts++ < maxAttempts)
+        catch (System.Net.Sockets.SocketException) when (attempts++ < maxAttempts)
         {
             await Task.Delay(TimeSpan.FromSeconds(5));
         }

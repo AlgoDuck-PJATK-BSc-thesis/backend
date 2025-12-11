@@ -1,25 +1,46 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Auth.Commands.VerifyEmail;
 
-[ApiController]
-[Route("api/auth/email-verification/verify")]
-public sealed class VerifyEmailEndpoint : ControllerBase
+public static class VerifyEmailEndpoint
 {
-    private readonly IVerifyEmailHandler _handler;
-
-    public VerifyEmailEndpoint(IVerifyEmailHandler handler)
+    public static IEndpointRouteBuilder MapVerifyEmailEndpoint(this IEndpointRouteBuilder app)
     {
-        _handler = handler;
+        app.MapPost("/auth/email-verification", VerifyEmail)
+            .WithTags("Auth");
+
+        app.MapGet("/auth/email-verification", VerifyEmailFromQuery)
+            .WithTags("Auth");
+
+        return app;
     }
 
-    [HttpPost]
-    [AllowAnonymous]
-    public async Task<IActionResult> Verify([FromBody] VerifyEmailDto dto, CancellationToken cancellationToken)
+    private static async Task<IResult> VerifyEmail(
+        [FromBody] VerifyEmailDto request,
+        IVerifyEmailHandler handler,
+        CancellationToken cancellationToken)
     {
-        await _handler.HandleAsync(dto, cancellationToken);
+        await handler.HandleAsync(request, cancellationToken);
+        return Results.NoContent();
+    }
 
-        return Ok(new { message = "Email verified successfully." });
+    private static async Task<IResult> VerifyEmailFromQuery(
+        [FromQuery] Guid userId,
+        [FromQuery] string token,
+        IVerifyEmailHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var dto = new VerifyEmailDto
+        {
+            UserId = userId,
+            Token = token
+        };
+
+        await handler.HandleAsync(dto, cancellationToken);
+
+        const string successHtml =
+            "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Email verified</title></head><body><h1>Email verified</h1><p>Your email address has been successfully verified. You can now close this tab and return to AlgoDuck.</p></body></html>";
+
+        return Results.Content(successHtml, "text/html");
     }
 }

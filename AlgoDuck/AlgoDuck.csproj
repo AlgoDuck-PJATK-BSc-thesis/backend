@@ -5,8 +5,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-      <UserSecretsId>07b3e251-9de0-4933-ad0c-ced3ff16c78a</UserSecretsId>
-  </PropertyGroup>
+        <UserSecretsId>07b3e251-9de0-4933-ad0c-ced3ff16c78a</UserSecretsId>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
@@ -28,6 +28,8 @@
         <PackageReference Include="OpenAI" Version="2.7.0" />
         <PackageReference Include="Postmark" Version="5.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+        <PackageReference Include="MediatR" Version="12.2.0" />
+        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -64,7 +66,6 @@
         <Folder Include="Modules\Auth\Shared\Middleware\" />
         <Folder Include="Modules\Auth\Shared\Repositories\" />
         <Folder Include="Modules\Auth\Shared\Utils\" />
-        <Folder Include="Modules\Cohort\Commands\Chat\" />
         <Folder Include="Modules\Cohort\Commands\CohortManagement\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
         <Folder Include="Modules\User\Commands\ChangePassword\" />
@@ -83,7 +84,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
+        <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
     </ItemGroup>
 
 </Project>
