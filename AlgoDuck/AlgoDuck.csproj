@@ -67,6 +67,8 @@
         <Folder Include="Modules\Auth\Shared\Middleware\" />
         <Folder Include="Modules\Auth\Shared\Repositories\" />
         <Folder Include="Modules\Auth\Shared\Utils\" />
+        <Folder Include="Modules\Cohort\Commands\Chat\" />
+        <Folder Include="Modules\Cohort\Commands\CohortManagement\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
         <Folder Include="Modules\User\Commands\ChangePassword\" />
         <Folder Include="Modules\User\Commands\SetEditorLayout\" />

@@ -1,8 +1,7 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Auth.Shared.Utils;
-using AlgoDuck.Modules.Cohort;
-using AlgoDuck.Modules.Cohort.CohortManagement;
-using AlgoDuck.Modules.Cohort.Utils;
+using AlgoDuck.Modules.Cohort.Shared.Hubs;
+using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Shared;
@@ -66,9 +65,6 @@ app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 app.MapHub<AssistantHub>("/api/hubs/assistant");
 app.MapHub<ExecutionStatusHub>("/api/hubs/execution-status");
-
-
-app.MapCohortManagementEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
