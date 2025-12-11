@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using AlgoDuckShared;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Types;
 using ExecutorService.Executor.Types.VmLaunchTypes;
@@ -8,7 +9,7 @@ namespace ExecutorService.Executor.ResourceHandlers;
 
 public interface ICompilationHandler
 {
-    internal Task<VmCompilationResponse> CompileAsync(ExecutionRequest request);
+    internal Task<VmCompilationResponse> CompileAsync(SubmitExecuteRequestRabbit request);
 }
 
 internal sealed class CompilationHandler : ICompilationHandler
@@ -38,7 +39,7 @@ internal sealed class CompilationHandler : ICompilationHandler
         }
     }
 
-    public async Task<VmCompilationResponse> CompileAsync(ExecutionRequest request)
+    public async Task<VmCompilationResponse> CompileAsync(SubmitExecuteRequestRabbit request)
     {
         var compileTask = new TaskCompletionSource<VmCompilationResponse>();
         await _taskWriter.WriteAsync(new CompileTask(request, compileTask));

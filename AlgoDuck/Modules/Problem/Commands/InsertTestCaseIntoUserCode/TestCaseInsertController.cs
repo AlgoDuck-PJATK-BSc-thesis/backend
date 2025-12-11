@@ -1,7 +1,7 @@
 using System.Text;
 using AlgoDuck.DAL;
 using AlgoDuck.ModelsExternal;
-using AlgoDuck.Modules.Problem.ExecutorShared;
+using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuck.Shared.Http;
@@ -90,7 +90,10 @@ public class InsertRepository(
         
         var analyzer = new AnalyzerSimple(userSolutionData.FileContents);
         userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Execution));
-        var helper = new ExecutorFileOperationHelper(userSolutionData);
+        var helper = new ExecutorFileOperationHelper
+        {
+            UserSolutionData = userSolutionData
+        };
         
         var testCases = await GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
         var insertedTestCase = testCases

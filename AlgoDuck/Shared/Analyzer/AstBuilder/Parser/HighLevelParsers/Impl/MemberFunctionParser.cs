@@ -52,7 +52,6 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
         if (SkipIfOfType(TokenType.Semi)) return memberFunc;
 
         memberFunc.FuncScope = ParseStatementScope();
-        Console.WriteLine("after scope");
         return memberFunc;
     }
 
@@ -80,7 +79,6 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
 
         while (!CheckTokenType(TokenType.CloseParen))
         {
-            Console.WriteLine("loop");
             var functionArgument = new AstNodeScopeMemberVar
             {
                 VarModifiers = ParseModifiers([MemberModifier.Final]),

@@ -1,9 +1,9 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
+using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
-using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.EntityFrameworkCore;
 using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
@@ -64,7 +64,7 @@ public class SubmitRepository(
         var userSolution = await commandDbContext.UserSolutions.AddAsync(new UserSolution
         {
             CodeRuntimeSubmitted = insertDto.ExecuteResponse.ExecutionTime,
-            ProblemId = insertDto.ExecuteRequest.ExerciseId,
+            ProblemId = insertDto.ExecuteRequest.ProblemId,
             Stars = 3,
             StatusId = Guid.NewGuid(), /* TODO: Remember what status was supposed to be*/
             UserId = insertDto.UserId
@@ -84,12 +84,12 @@ public class SubmitRepository(
 
     private async Task PostUserSolutionCodeToS3Async(SubmissionInsertDto insertDto, Guid userSolutionId)
     {
-        await awsS3Client.PutXmlObjectAsync<ExecuteRequest>($"users/{insertDto.UserId}/solutions/${insertDto.ExecuteRequest.ExerciseId}/${userSolutionId}.xml", insertDto.ExecuteRequest);
+        await awsS3Client.PutXmlObjectAsync($"users/{insertDto.UserId}/solutions/${insertDto.ExecuteRequest.ProblemId}/${userSolutionId}.xml", insertDto.ExecuteRequest);
     }
 }
 public class SubmissionInsertDto
 {
     public required Guid UserId { get; set; }
-    public required SubmitExecuteRequest ExecuteRequest { get; set; }
+    public required SubmitExecuteRequestRabbit ExecuteRequest { get; set; }
     public required SubmitExecuteResponse ExecuteResponse { get; set; } 
 }
