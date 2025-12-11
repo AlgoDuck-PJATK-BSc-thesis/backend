@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AlgoDuck.Models;
 
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
@@ -32,7 +33,12 @@ public enum MessageAuthor
 
 public class AssistantChatMessage
 {
-    public required string MesssageContent { get; set; }
+    public List<MessageFragmentDto> MessageFragments { get; set; } = [];
     public MessageAuthor Author { get; set; } = MessageAuthor.User;
+}
 
+public class MessageFragmentDto
+{
+    public required string FragmentContent { get; set; }
+    public required FragmentType Type { get; set; }
 }

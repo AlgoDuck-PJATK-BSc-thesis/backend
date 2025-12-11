@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
+using Microsoft.IdentityModel.Tokens;
 using OpenAI;
 using OpenAI.Chat;
 
@@ -30,17 +31,83 @@ public class AssistantService(
         var chatData = await assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
         var problemData = await assistantRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
         
-        var message = ChatMessage.CreateUserMessage(BuildAssistantQuery(request, problemData, chatData));
+        var assistantQueryJson = BuildAssistantQuery(request, problemData, chatData);
+        var message = ChatMessage.CreateUserMessage(assistantQueryJson);
 
         var parser = new SignalParser();
         AsyncCollectionResult<StreamingChatCompletionUpdate> completionUpdates = openAiClient
             .GetChatClient("gpt-5-nano")
-            .CompleteChatStreamingAsync([message], new ChatCompletionOptions(), cancellationToken);
+            .CompleteChatStreamingAsync([message],
+                new ChatCompletionOptions(),
+                cancellationToken);
         
+        var nameBuilder = new StringBuilder();
+        List<StringBuilder> textBuilders = [];
+        List<StringBuilder> codeBuilders = [];
+        ContentType? currentlyWriting = null;
         await foreach (var completionUpdate in parser.Parse(TransformOpenAiStream(completionUpdates, cancellationToken), cancellationToken))
         {
+            switch (completionUpdate.Type)
+            {
+                case ContentType.Name:
+                    nameBuilder.Append(completionUpdate.Message);
+                    break;
+                case ContentType.Code:
+                    if (currentlyWriting != ContentType.Code)
+                    {
+                        currentlyWriting = ContentType.Code;
+                        codeBuilders.Add(new StringBuilder());
+                    }
+                    codeBuilders.Last().Append(completionUpdate.Message);
+                    break;
+                case ContentType.Text:
+                    if (currentlyWriting != ContentType.Text)
+                    {
+                        currentlyWriting = ContentType.Text;
+                        textBuilders.Add(new StringBuilder());
+                    }
+                    textBuilders.Last().Append(completionUpdate.Message);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
             yield return completionUpdate;
         }
+
+        var conversationName = nameBuilder.ToString().Trim();
+        
+        await assistantRepository.CreateNewChatMessage(new ChatMessageInsertDto
+        {
+            Author = MessageAuthor.User,
+            UserId = request.UserId,
+            ProblemId = request.ExerciseId,
+            ChatName = conversationName,
+            TextFragments =
+            [
+                new ChatMessageTextFragment
+                {
+                    Message = request.Query.IsNullOrEmpty() ? "User did not provide query" : Encoding.UTF8.GetString(Convert.FromBase64String(request.Query)).Trim(),
+                }
+            ]
+        }, cancellationToken);
+        
+        
+        
+        await assistantRepository.CreateNewChatMessage(new ChatMessageInsertDto
+        {
+            Author = MessageAuthor.Assistant,
+            UserId = request.UserId,
+            ProblemId = request.ExerciseId,
+            ChatName = conversationName,
+            CodeFragments = codeBuilders.Where(cb => !cb.ToString().IsNullOrEmpty()).Select(x => new ChatMessageCodeFragment
+            {
+                Message = x.ToString().Trim()
+            }).ToList(),
+            TextFragments = textBuilders.Where(tb => !tb.ToString().IsNullOrEmpty()).Select(x => new ChatMessageTextFragment
+            {
+                Message = x.ToString().Trim()
+            }).ToList()
+        }, cancellationToken);
     }
 
     private static async IAsyncEnumerable<SimpleStreamingUpdate> TransformOpenAiStream(IAsyncEnumerable<StreamingChatCompletionUpdate> chatData, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -70,7 +137,7 @@ public class AssistantService(
             ProvidedTemplate = problemData.TemplateContents,
             Role = $"{duckType} a helpful programming ducky/ADS field expert",
             Instructions =
-                $"Help out the user with the exercise. If a chatName is not provided generate it based on user query and exercise contents",
+                "Help out the user with the exercise. If a chatName is not provided generate it based on user query and exercise contents. Use markdown where possible to emphasise points. Titles do not need to be continuous strings; \"some title\" this is preferred to \"some-title\"",
             UserCode = Encoding.UTF8.GetString(Convert.FromBase64String(request.CodeB64)),
             UserQueryToAssistant = Encoding.UTF8.GetString(Convert.FromBase64String(request.Query)),
             PublicTestCases = problemData.TestCases.Select(t => new TestCaseData
@@ -80,7 +147,11 @@ public class AssistantService(
             }),
             MessagesInChat10Newest = (chatData?.Messages ?? []).Select(m => new AssistantChatMessage
             {
-                MesssageContent = m.Content,
+                MessageFragments = m.Fragments.Select(f => new MessageFragmentDto
+                {
+                    FragmentContent = f.Content,
+                    Type = f.FragmentType
+                }).ToList(),
                 Author = m.IsUserMessage ? MessageAuthor.User : MessageAuthor.Assistant
             }),
             Restrictions = "Title can be at most 128 characters. Keep code provided to the user at a minimum. Focus on explaining concepts, not a ready to wear solution.",
@@ -93,5 +164,26 @@ public class AssistantService(
 public class ChatCompletionStreamedDto
 {
     public required ContentType Type { get; set; }
+    public required string Message { get; set; }
+}
+
+
+public class ChatMessageInsertDto
+{
+    public required MessageAuthor Author { get; set; }
+    public required Guid ProblemId { get; set; }
+    public required Guid UserId { get; set; }
+    public string ChatName { get; set; } = "";
+    public ICollection<ChatMessageTextFragment> TextFragments { get; set; } = [];
+    public ICollection<ChatMessageCodeFragment> CodeFragments { get; set; } = [];
+}
+
+public class ChatMessageTextFragment
+{
+    public required string Message { get; set; }
+}
+
+public class ChatMessageCodeFragment
+{
     public required string Message { get; set; }
 }

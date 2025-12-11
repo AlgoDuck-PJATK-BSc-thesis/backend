@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Extensions;
 using AlgoDuck.Shared.Http;
@@ -61,6 +62,13 @@ public class ConversationRepository(
 {
     public async Task<PageData<AssistanceMessageDto>> GetPagedChatData(PageRequestDto pageRequestDto, CancellationToken cancellation = default)
     {
+        var totalItems = await dbContext.AssistanceMessages.CountAsync(
+            c => c.ProblemId == pageRequestDto.ProblemId && c.UserId == pageRequestDto.UserId &&
+                 c.ChatName == pageRequestDto.ChatName, cancellationToken: cancellation);
+        var pageCount = (int) Math.Ceiling((decimal)totalItems / pageRequestDto.PageSize);
+
+        var actualPage = Math.Max(1, Math.Min(pageRequestDto.Page, pageCount));
+        
         var chat = await dbContext.AssistantChats
                 .Where(c => c.ProblemId == pageRequestDto.ProblemId
                             && c.UserId == pageRequestDto.UserId
@@ -71,31 +79,43 @@ public class ConversationRepository(
                         ChatName = c.Name,
                         Messages = c.Messages
                             .OrderByDescending(m => m.CreatedOn)
-                            .Skip((pageRequestDto.Page - 1) * pageRequestDto.PageSize)
+                            .Skip((actualPage - 1) * pageRequestDto.PageSize)
                             .Take(pageRequestDto.PageSize)
-                            .Select(m => new AssistanceMessageDto()
+                            .Select(m => new AssistanceMessageDto
                             {
-                                Message = m.Content,
-                                MessageAuthor = m.IsUserMessage ? MessageAuthor.User : MessageAuthor.Assistant
+                                Fragments = m.Fragments.Select(f => new MessageFragmentDto
+                                {
+                                    Content = f.Content,
+                                    Type = f.FragmentType,
+                                }).ToList(),
+                                MessageAuthor = m.IsUserMessage ? MessageAuthor.User : MessageAuthor.Assistant,
+                                CreatedOn = m.CreatedOn
                             }).ToList()
                     }).FirstOrDefaultAsync(cancellationToken: cancellation);
         
+        
         if (chat == null)
         {
-            return new PageData<AssistanceMessageDto>()
+            
+            return new PageData<AssistanceMessageDto>
             {
                 CurrPage = 1,
                 PageSize = pageRequestDto.PageSize,
+                NextCursor = 2,
                 TotalItems = 0,
                 Items = [],
             };
         }
-        
+
+
+
         return new PageData<AssistanceMessageDto>
         {
-            CurrPage = pageRequestDto.Page,
+            CurrPage = actualPage,
+            PrevCursor = actualPage > 1 ? actualPage - 1 : null,
+            NextCursor = actualPage < pageCount ? actualPage + 1 : null,
             PageSize = pageRequestDto.PageSize,
-            TotalItems = await dbContext.AssistanceMessages.CountAsync(c => c.ProblemId == pageRequestDto.ProblemId && c.UserId == pageRequestDto.UserId && c.ChatName == pageRequestDto.ChatName, cancellationToken: cancellation),
+            TotalItems = totalItems,
             Items = chat.Messages
         };
     }
@@ -126,6 +146,13 @@ public class ChatDto
 
 public class AssistanceMessageDto
 {
-    public required string Message { get; set; }
+    public required List<MessageFragmentDto> Fragments { get; set; }
     public required MessageAuthor MessageAuthor { get; set; }
+    public required DateTime CreatedOn { get; set; }
+}
+
+public class MessageFragmentDto
+{
+    public required string Content { get; set; }
+    public required FragmentType Type { get; set; }
 }

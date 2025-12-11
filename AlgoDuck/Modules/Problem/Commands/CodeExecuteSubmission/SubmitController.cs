@@ -17,7 +17,7 @@ public class SubmitController(IExecutorSubmitService executorService) : Controll
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
                      ?? throw new UserNotFoundException();
-        
+        Console.WriteLine(DateTime.UtcNow);
         return Ok(new StandardApiResponse<ExecutionTaskRegistrationDto>
         {
             Body = new  ExecutionTaskRegistrationDto

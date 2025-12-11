@@ -77,6 +77,7 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         
         builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
+        builder.Services.Decorate<IAwsS3Client, AwsS3ClientCached>();
         
         builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
         builder.Services.AddScoped<IProblemService, ProblemService>();

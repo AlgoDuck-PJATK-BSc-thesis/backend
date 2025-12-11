@@ -62,7 +62,6 @@ public sealed class CodeExecutionResultChannelReadWorker(
                         arg1: results, 
                         cancellationToken: stoppingToken
                         );
-                
             }
             await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
         };

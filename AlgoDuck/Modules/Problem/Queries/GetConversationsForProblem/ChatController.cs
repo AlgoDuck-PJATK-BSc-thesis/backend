@@ -13,7 +13,7 @@ public class ChatController(
     ) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAllChatsForProblemAsync([FromRoute] Guid problemId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAllChatsForProblemAsync([FromQuery] Guid problemId, CancellationToken cancellationToken)
     {
         return Ok(new StandardApiResponse<ChatList>
         {
@@ -37,6 +37,8 @@ public class ChatService(
 {
     public async Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken)
     {
+        Console.WriteLine(request.ProblemId);
+        Console.WriteLine(request.UserId);
         return await chatRepository.GetChatsForProblemAsync(request, cancellationToken);
     }
 }

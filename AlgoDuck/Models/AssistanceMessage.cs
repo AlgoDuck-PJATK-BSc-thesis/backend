@@ -7,8 +7,8 @@ public class AssistanceMessage : IEntityTypeConfiguration<AssistanceMessage>
 {
     public Guid MessageId { get; set; } = Guid.NewGuid();
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
-    public string Content { get; set; } = string.Empty;
 
+    public virtual ICollection<AssistantMessageFragment> Fragments { get; set; } = new List<AssistantMessageFragment>();
     public Guid UserId { get; set; }
     public Guid ProblemId { get; set; }
     public string ChatName { get; set; } = string.Empty;
@@ -45,10 +45,6 @@ public class AssistanceMessage : IEntityTypeConfiguration<AssistanceMessage>
         builder.Property(e => e.ChatName)
             .HasColumnName("chat_name")
             .HasMaxLength(128)
-            .IsRequired();
-        
-        builder.Property(e => e.Content)
-            .HasColumnName("content")
             .IsRequired();
         
         builder.HasOne(e => e.Chat)
