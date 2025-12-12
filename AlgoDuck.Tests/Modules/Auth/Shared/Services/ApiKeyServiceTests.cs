@@ -1,5 +1,4 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;
@@ -40,7 +39,7 @@ public class ApiKeyServiceTests
 
         authRepositoryMock
             .Setup(x => x.FindByIdAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ApplicationUser)null);
+            .ReturnsAsync((ApplicationUser?)null);
 
         await Assert.ThrowsAsync<ApiKeyException>(() =>
             service.CreateApiKeyAsync(userId, name, TimeSpan.FromDays(30), CancellationToken.None));
@@ -67,7 +66,7 @@ public class ApiKeyServiceTests
             UserName = "alice",
             Email = "alice@gmail.com"
         };
-        ApiKey captured = null;
+        ApiKey? captured = null;
 
         authRepositoryMock
             .Setup(x => x.FindByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -90,7 +89,7 @@ public class ApiKeyServiceTests
         Assert.Equal(name, result.ApiKey.Name);
 
         Assert.NotNull(captured);
-        Assert.Equal(userId, captured.UserId);
+        Assert.Equal(userId, captured!.UserId);
         Assert.Equal(name, captured.Name);
         Assert.False(string.IsNullOrWhiteSpace(captured.Prefix));
         Assert.False(string.IsNullOrWhiteSpace(captured.KeyHash));
@@ -176,7 +175,7 @@ public class ApiKeyServiceTests
 
         apiKeyRepositoryMock
             .Setup(x => x.GetByIdAsync(apiKeyId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ApiKey)null);
+            .ReturnsAsync((ApiKey?)null);
 
         await Assert.ThrowsAsync<ApiKeyException>(() =>
             service.RevokeApiKeyAsync(userId, apiKeyId, CancellationToken.None));
