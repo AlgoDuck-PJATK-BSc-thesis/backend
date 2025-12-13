@@ -6,7 +6,7 @@ using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
-using AlgoDuck.Modules.Problem.Utils;
+using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.User.Shared.Utils;
 using AlgoDuck.Shared.Middleware;
 using AlgoDuck.Shared.Utilities;
@@ -15,13 +15,16 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// general top level stuff
 GeneralDependencyInitializer.Initialize(builder);
 
+// app wide configuration
 CorsDependencyInitializer.Initialize(builder);
 DbDependencyInitializer.Initialize(builder);
 RateLimiterDependencyInitializer.Initialize(builder);
 SwaggerDependencyInitializer.Initialize(builder);
 
+// module specific dependencies
 UserDependencyInitializer.Initialize(builder);
 CohortDependencyInitializer.Initialize(builder);
 ProblemDependencyInitializer.Initialize(builder);
@@ -66,6 +69,7 @@ app.MapControllers();
 
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 app.MapHub<AssistantHub>("/api/hubs/assistant");
+app.MapHub<ExecutionStatusHub>("/api/hubs/execution-status");
 
 using (var scope = app.Services.CreateScope())
 {

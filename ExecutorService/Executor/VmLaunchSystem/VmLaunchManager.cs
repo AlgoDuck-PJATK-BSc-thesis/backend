@@ -13,7 +13,7 @@ using Polly.Timeout;
 
 namespace ExecutorService.Executor.VmLaunchSystem;
 
-internal class VmLaunchManager
+public class VmLaunchManager
 {
     private readonly FilesystemPooler _pooler;
     

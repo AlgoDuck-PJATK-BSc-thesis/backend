@@ -3,25 +3,27 @@ using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
-using AlgoDuck.Modules.Problem.ExecutorShared;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
+using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Shared.S3;
+using AlgoDuckShared;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 using OpenAI;
 using OpenAI.Chat;
+using RabbitMQ.Client;
 using AwsS3Client = AlgoDuck.Shared.S3.AwsS3Client;
 using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 using IExecutorSubmitService = AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission.IExecutorSubmitService;
 
-namespace AlgoDuck.Modules.Problem.Utils;
+namespace AlgoDuck.Modules.Problem.Shared;
 
 internal static class ProblemDependencyInitializer
 {
@@ -55,9 +57,6 @@ internal static class ProblemDependencyInitializer
         {
             var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
 
-            Console.WriteLine(s3Settings.ContentBucketSettings.BucketName);
-            Console.WriteLine(s3Settings.DataBucketSettings.BucketName);
-            
             var credentials = new BasicAWSCredentials(
                 Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
                 Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY")
@@ -78,12 +77,13 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         
         builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
+        builder.Services.Decorate<IAwsS3Client, AwsS3ClientCached>();
         
         builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
         builder.Services.AddScoped<IProblemService, ProblemService>();
 
-        builder.Services.AddScoped<IAssistantService, AssistantServiceMock>();
-        // builder.Services.AddScoped<IAssistantService, AssistantService>();
+        // builder.Services.AddScoped<IAssistantService, AssistantServiceMock>();
+        builder.Services.AddScoped<IAssistantService, AssistantService>();
         builder.Services.AddScoped<IAssistantRepository, AssistantRepository>();
         
         builder.Services.AddScoped<IProblemCategoriesRepository, ProblemCategoriesRepository>();
@@ -103,5 +103,26 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<IConversationService, ConversationService>();
         builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
+
+        builder.Services.AddScoped<IChatService, ChatService>();
+        builder.Services.AddScoped<IChatRepository, ChatRepository>();
+
+        builder.Services.AddSingleton<IConnectionFactory>(sp =>
+        {
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            return new ConnectionFactory
+            {
+                HostName = configuration["RabbitMq:HostName"] ?? "localhost",
+                UserName = configuration["RabbitMq:UserName"] ?? "guest",
+                Password = configuration["RabbitMq:Password"] ?? "guest",
+                Port = configuration.GetValue("RabbitMq:Port", 5672),
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+                RequestedConnectionTimeout = TimeSpan.FromSeconds(30)
+            };
+        });
+        
+        builder.Services.AddSingleton<IRabbitMqConnectionService, RabbitMqConnectionService>();
+        builder.Services.AddHostedService<CodeExecutionResultChannelReadWorker>();
     }
 }

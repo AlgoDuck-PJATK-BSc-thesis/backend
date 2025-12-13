@@ -11,42 +11,45 @@ using OpenAI.Chat;
 
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
-
 public interface IAssistantRepository
 {
-    public Task<AssistantChat?> GetChatDataIfExistsAsync(AssistantRequestDto request, CancellationToken cancellationToken = default);
+    public Task<AssistantChat?> GetChatDataIfExistsAsync(AssistantRequestDto request,
+        CancellationToken cancellationToken = default);
+
     public Task<ProblemDto> GetProblemDetailsAsync(Guid problemId, CancellationToken cancellationToken = default);
 
-    public Task<AssistanceMessage> CreateNewChatMessage(ChatMessageDto chatMessage, CancellationToken cancellationToken = default);
-
-
+    public Task<AssistanceMessage> CreateNewChatMessage(ChatMessageInsertDto chatMessage,
+        CancellationToken cancellationToken = default);
 }
 
 public class AssistantRepository(
     ApplicationCommandDbContext dbContext,
     IAwsS3Client awsS3Client
-    ) : IAssistantRepository 
+) : IAssistantRepository
 {
-    public Task<AssistantChat?> GetChatDataIfExistsAsync(AssistantRequestDto request, CancellationToken cancellationToken = default)
+    public Task<AssistantChat?> GetChatDataIfExistsAsync(AssistantRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         return dbContext.AssistantChats
-            .Include(
-                e => e.Messages.OrderByDescending(ie => ie.CreatedOn).Take(10)
-                ).FirstOrDefaultAsync(e => e.UserId == request.UserId && e.ProblemId == request.ExerciseId && e.Name == request.ChatName, cancellationToken); 
+            .Include(e => e.Messages.OrderByDescending(ie => ie.CreatedOn).Take(10)
+            ).ThenInclude(e => e.Fragments)
+            .FirstOrDefaultAsync(
+                e => e.UserId == request.UserId && e.ProblemId == request.ExerciseId && e.Name == request.ChatName,
+                cancellationToken);
     }
-    
+
     public async Task<ProblemDto> GetProblemDetailsAsync(Guid problemId, CancellationToken cancellationToken = default)
     {
         var problemTemplate = await GetTemplateAsync(problemId, cancellationToken);
         var testCases = await GetTestCasesAsync(problemId, cancellationToken);
         var problemInfos = await GetProblemInfoAsync(problemId, cancellationToken);
-    
+
         var problem = await dbContext.Problems
                           .Include(p => p.Category)
                           .Include(p => p.Difficulty)
                           .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken: cancellationToken)
                       ?? throw new NotFoundException($"Problem {problemId} not found");
-    
+
         return new ProblemDto
         {
             Description = problemInfos.Description,
@@ -70,15 +73,17 @@ public class AssistantRepository(
             }
         };
     }
-    
-    private async Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId, CancellationToken cancellationToken = default)
+
+    private async Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId,
+        CancellationToken cancellationToken = default)
     {
         return XmlToObjectParser.ParseXmlString<ProblemS3PartialTemplate>(
             await awsS3Client.GetDocumentStringByPathAsync($"problems/{exerciseId}/template.xml", cancellationToken)
         ) ?? throw new XmlParsingException();
     }
 
-    private async Task<ProblemS3PartialInfo> GetProblemInfoAsync(Guid problemId, CancellationToken cancellation = default, SupportedLanguage lang = SupportedLanguage.En)
+    private async Task<ProblemS3PartialInfo> GetProblemInfoAsync(Guid problemId,
+        CancellationToken cancellation = default, SupportedLanguage lang = SupportedLanguage.En)
     {
         var objectPath = $"problems/{problemId}/infos/{lang.GetDisplayName().ToLowerInvariant()}.xml";
         if (!await awsS3Client.ObjectExistsAsync(objectPath, cancellation))
@@ -88,12 +93,13 @@ public class AssistantRepository(
 
         var problemInfosRaw = await awsS3Client.GetDocumentStringByPathAsync(objectPath, cancellation);
         var problemInfos = XmlToObjectParser.ParseXmlString<ProblemS3PartialInfo>(problemInfosRaw)
-            ?? throw new XmlParsingException(objectPath);
-        
+                           ?? throw new XmlParsingException(objectPath);
+
         return problemInfos;
     }
-    
-    private async Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId, CancellationToken cancellationToken = default)
+
+    private async Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId,
+        CancellationToken cancellationToken = default)
     {
         var exerciseDbPartialTestCases =
             await dbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
@@ -103,7 +109,7 @@ public class AssistantRepository(
                                              await awsS3Client.GetDocumentStringByPathAsync(
                                                  $"problems/{exerciseId}/test-cases.xml", cancellationToken))
                                          ?? throw new XmlParsingException($"problems/{exerciseId}/test-cases.xml");
-        
+
         return exerciseS3PartialTestCases.TestCases.Select(t => new
         {
             dbTestCase = exerciseDbPartialTestCases[t.TestCaseId],
@@ -120,10 +126,10 @@ public class AssistantRepository(
             Setup = t.S3TestCase.Setup,
             TestCaseId = t.dbTestCase.TestCaseId
         }).ToList();
-        
     }
 
-    public async Task<AssistanceMessage> CreateNewChatMessage(ChatMessageDto chatMessage, CancellationToken cancellationToken = default)
+    public async Task<AssistanceMessage> CreateNewChatMessage(ChatMessageInsertDto chatMessage,
+        CancellationToken cancellationToken = default)
     {
         var chat = await dbContext.AssistantChats
             .Where(m => m.ProblemId == chatMessage.ProblemId && m.UserId == chatMessage.UserId &&
@@ -141,25 +147,29 @@ public class AssistantRepository(
             dbContext.AssistantChats.Add(chat);
         }
 
+        var fragments = chatMessage.TextFragments.Select(f => new AssistantMessageFragment
+        {
+            Content = f.Message,
+            FragmentType = FragmentType.Text,
+        }).ToList();
+
+        fragments.AddRange(chatMessage.CodeFragments.Select(f => new AssistantMessageFragment
+        {
+            Content = f.Message,
+            FragmentType = FragmentType.Code,
+        }).ToList());
+
         var newMessage = new AssistanceMessage
         {
             ProblemId = chatMessage.ProblemId,
             UserId = chatMessage.UserId,
             ChatName = chatMessage.ChatName,
-            Content = chatMessage.Message,
-            IsUserMessage = chatMessage.IsUserMessage,
+            Fragments = fragments,
+            IsUserMessage = chatMessage.Author == MessageAuthor.User,
         };
         chat.Messages.Add(newMessage);
         await dbContext.SaveChangesAsync(cancellationToken);
         return newMessage;
+        throw new NotImplementedException();
     }
-}
-
-public sealed class ChatMessageDto
-{
-    public bool IsUserMessage { get; init; }
-    public required string Message { get; init; }
-    public required string ChatName { get; init; }
-    public required Guid UserId { get; init; }
-    public required Guid ProblemId { get; init; }
 }
