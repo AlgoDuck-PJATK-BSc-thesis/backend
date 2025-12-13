@@ -20,7 +20,7 @@ public sealed class JwtTokenProvider
         _signingCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
     }
 
-    public string CreateAccessToken(ApplicationUser user, out DateTimeOffset expiresAt)
+    public string CreateAccessToken(ApplicationUser user, Guid sessionId, out DateTimeOffset expiresAt)
     {
         var now = DateTimeOffset.UtcNow;
         expiresAt = now.AddMinutes(_settings.AccessTokenMinutes);
@@ -30,7 +30,8 @@ public sealed class JwtTokenProvider
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty)
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim("sid", sessionId.ToString())
         };
 
         var token = new JwtSecurityToken(

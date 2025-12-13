@@ -22,7 +22,7 @@ public class TokenServiceTests : AuthTestBase
         var jwtOptions = Options.Create(jwtSettings);
         var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
         var user = CreateUser();
-        Session capturedSession = null;
+        Session? capturedSession = null;
 
         sessionRepositoryMock
             .Setup(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
@@ -50,7 +50,7 @@ public class TokenServiceTests : AuthTestBase
         Assert.True(result.RefreshTokenExpiresAt > result.AccessTokenExpiresAt);
 
         Assert.NotNull(capturedSession);
-        Assert.Equal(user.Id, capturedSession.UserId);
+        Assert.Equal(user.Id, capturedSession!.UserId);
         Assert.False(string.IsNullOrWhiteSpace(capturedSession.RefreshTokenHash));
         Assert.False(string.IsNullOrWhiteSpace(capturedSession.RefreshTokenSalt));
         Assert.False(string.IsNullOrWhiteSpace(capturedSession.RefreshTokenPrefix));
@@ -116,7 +116,7 @@ public class TokenServiceTests : AuthTestBase
 
         tokenRepositoryMock
             .Setup(x => x.GetTokenInfoAsync(sessionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((TokenInfoDto)null);
+            .ReturnsAsync((TokenInfoDto?)null);
 
         var service = new TokenService(
             sessionRepositoryMock.Object,
@@ -128,5 +128,177 @@ public class TokenServiceTests : AuthTestBase
         await Assert.ThrowsAsync<TokenException>(() => service.GetTokenInfoAsync(sessionId, CreateCancellationToken()));
 
         tokenRepositoryMock.Verify(x => x.GetTokenInfoAsync(sessionId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTokensAsync_WhenSessionIsRevoked_ThenThrowsTokenException()
+    {
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var commandDbContext = CreateCommandDbContext();
+        var jwtSettings = CreateJwtSettings();
+        var jwtOptions = Options.Create(jwtSettings);
+        var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
+
+        var session = new Session
+        {
+            SessionId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            RefreshTokenPrefix = "p",
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1),
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+            RevokedAtUtc = DateTime.UtcNow
+        };
+
+        var service = new TokenService(
+            sessionRepositoryMock.Object,
+            tokenRepositoryMock.Object,
+            commandDbContext,
+            jwtTokenProvider,
+            jwtOptions);
+
+        await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
+
+        sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RefreshTokensAsync_WhenSessionIsExpired_ThenThrowsTokenException()
+    {
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var commandDbContext = CreateCommandDbContext();
+        var jwtSettings = CreateJwtSettings();
+        var jwtOptions = Options.Create(jwtSettings);
+        var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
+
+        var session = new Session
+        {
+            SessionId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            RefreshTokenPrefix = "p",
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-30),
+            ExpiresAtUtc = DateTime.UtcNow.AddSeconds(-1),
+            RevokedAtUtc = null
+        };
+
+        var service = new TokenService(
+            sessionRepositoryMock.Object,
+            tokenRepositoryMock.Object,
+            commandDbContext,
+            jwtTokenProvider,
+            jwtOptions);
+
+        await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
+
+        sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RefreshTokensAsync_WhenUserNotFound_ThenThrowsTokenException()
+    {
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var commandDbContext = CreateCommandDbContext();
+        var jwtSettings = CreateJwtSettings();
+        var jwtOptions = Options.Create(jwtSettings);
+        var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
+
+        var session = new Session
+        {
+            SessionId = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            RefreshTokenPrefix = "p",
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1),
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+            RevokedAtUtc = null
+        };
+
+        var service = new TokenService(
+            sessionRepositoryMock.Object,
+            tokenRepositoryMock.Object,
+            commandDbContext,
+            jwtTokenProvider,
+            jwtOptions);
+
+        await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
+
+        sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RefreshTokensAsync_WhenValidSession_ThenRevokesOldAndCreatesNewSessionAndReturnsTokens()
+    {
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var commandDbContext = CreateCommandDbContext();
+        var jwtSettings = CreateJwtSettings();
+        var jwtOptions = Options.Create(jwtSettings);
+        var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
+        var user = CreateUser();
+
+        commandDbContext.ApplicationUsers.Add(user);
+        await commandDbContext.SaveChangesAsync(CreateCancellationToken());
+
+        var oldSession = new Session
+        {
+            SessionId = Guid.NewGuid(),
+            UserId = user.Id,
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            RefreshTokenPrefix = "p",
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1),
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10),
+            RevokedAtUtc = null
+        };
+
+        Session? capturedNew = null;
+
+        sessionRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
+            .Callback<Session, CancellationToken>((s, _) => capturedNew = s)
+            .Returns(Task.CompletedTask);
+
+        sessionRepositoryMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new TokenService(
+            sessionRepositoryMock.Object,
+            tokenRepositoryMock.Object,
+            commandDbContext,
+            jwtTokenProvider,
+            jwtOptions);
+
+        var result = await service.RefreshTokensAsync(oldSession, CreateCancellationToken());
+
+        Assert.NotNull(oldSession.RevokedAtUtc);
+        Assert.NotNull(oldSession.ReplacedBySessionId);
+        Assert.NotNull(capturedNew);
+
+        Assert.Equal(oldSession.ReplacedBySessionId, capturedNew!.SessionId);
+        Assert.Equal(user.Id, capturedNew.UserId);
+        Assert.False(string.IsNullOrWhiteSpace(capturedNew.RefreshTokenHash));
+        Assert.False(string.IsNullOrWhiteSpace(capturedNew.RefreshTokenSalt));
+        Assert.False(string.IsNullOrWhiteSpace(capturedNew.RefreshTokenPrefix));
+
+        Assert.Equal(user.Id, result.UserId);
+        Assert.Equal(capturedNew.SessionId, result.SessionId);
+        Assert.False(string.IsNullOrWhiteSpace(result.AccessToken));
+        Assert.False(string.IsNullOrWhiteSpace(result.RefreshToken));
+        Assert.False(string.IsNullOrWhiteSpace(result.CsrfToken));
+        Assert.True(result.RefreshTokenExpiresAt > result.AccessTokenExpiresAt);
+
+        sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
+        sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

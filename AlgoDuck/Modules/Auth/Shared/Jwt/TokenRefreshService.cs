@@ -25,7 +25,7 @@ public sealed class TokenRefreshService
         Guid sessionId,
         CancellationToken cancellationToken)
     {
-        var accessToken = _jwtTokenProvider.CreateAccessToken(user, out var accessExpiresAt);
+        var accessToken = _jwtTokenProvider.CreateAccessToken(user, sessionId, out var accessExpiresAt);
         var refreshToken = _tokenGenerator.GenerateRefreshToken();
         var refreshExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_settings.RefreshTokenMinutes);
         var csrfToken = _tokenGenerator.GenerateCsrfToken();

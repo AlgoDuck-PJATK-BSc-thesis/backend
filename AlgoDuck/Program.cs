@@ -1,4 +1,6 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Modules.Auth.Commands.VerifyEmail;
+using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
@@ -52,6 +54,8 @@ if (builder.Environment.IsProduction() && Environment.GetEnvironmentVariable("EN
 
 app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
+app.UseMiddleware<AuthExceptionMiddleware>();
+
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
 app.UseMiddleware<CsrfGuard>();
@@ -60,6 +64,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapVerifyEmailEndpoint();
 app.MapControllers();
 
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
@@ -83,7 +88,7 @@ using (var scope = app.Services.CreateScope())
             await seeder.SeedDataAsync();
             break;
         }
-        catch (System.Net.Sockets.SocketException ex) when (attempts++ < maxAttempts)
+        catch (System.Net.Sockets.SocketException) when (attempts++ < maxAttempts)
         {
             await Task.Delay(TimeSpan.FromSeconds(5));
         }

@@ -1,19 +1,48 @@
+using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Auth.Shared.Services;
 
 public class EmailSenderTests
 {
+    static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
+    {
+        var store = new Mock<IUserStore<ApplicationUser>>();
+        return new Mock<UserManager<ApplicationUser>>(
+            store.Object,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!);
+    }
+
     [Fact]
     public async Task SendEmailConfirmationAsync_WhenCalled_ThenUsesEmailTransportWithRenderedTemplate()
     {
         var transportMock = new Mock<IEmailTransport>();
-        var sender = new EmailSender(transportMock.Object);
+        var userManagerMock = CreateUserManagerMock();
+        var sender = new EmailSender(transportMock.Object, userManagerMock.Object);
         var userId = Guid.NewGuid();
         var email = "alice@gmail.com";
         var confirmationLink = "https://algoduck.test/confirm-email?token=abc";
+
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "alice",
+            Email = email
+        };
+
+        userManagerMock
+            .Setup(x => x.FindByIdAsync(userId.ToString()))
+            .ReturnsAsync(user);
 
         transportMock
             .Setup(x => x.SendAsync(
@@ -38,10 +67,22 @@ public class EmailSenderTests
     public async Task SendPasswordResetAsync_WhenCalled_ThenUsesEmailTransportWithRenderedTemplate()
     {
         var transportMock = new Mock<IEmailTransport>();
-        var sender = new EmailSender(transportMock.Object);
+        var userManagerMock = CreateUserManagerMock();
+        var sender = new EmailSender(transportMock.Object, userManagerMock.Object);
         var userId = Guid.NewGuid();
         var email = "alice@gmail.com";
         var resetLink = "https://algoduck.test/reset-password?token=xyz";
+
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "alice",
+            Email = email
+        };
+
+        userManagerMock
+            .Setup(x => x.FindByIdAsync(userId.ToString()))
+            .ReturnsAsync(user);
 
         transportMock
             .Setup(x => x.SendAsync(
@@ -66,10 +107,22 @@ public class EmailSenderTests
     public async Task SendTwoFactorCodeAsync_WhenCalled_ThenUsesEmailTransportWithRenderedTemplate()
     {
         var transportMock = new Mock<IEmailTransport>();
-        var sender = new EmailSender(transportMock.Object);
+        var userManagerMock = CreateUserManagerMock();
+        var sender = new EmailSender(transportMock.Object, userManagerMock.Object);
         var userId = Guid.NewGuid();
         var email = "alice@gmail.com";
         var code = "123456";
+
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "alice",
+            Email = email
+        };
+
+        userManagerMock
+            .Setup(x => x.FindByIdAsync(userId.ToString()))
+            .ReturnsAsync(user);
 
         transportMock
             .Setup(x => x.SendAsync(
@@ -94,10 +147,22 @@ public class EmailSenderTests
     public async Task SendEmailChangeConfirmationAsync_WhenCalled_ThenUsesEmailTransportWithNewEmail()
     {
         var transportMock = new Mock<IEmailTransport>();
-        var sender = new EmailSender(transportMock.Object);
+        var userManagerMock = CreateUserManagerMock();
+        var sender = new EmailSender(transportMock.Object, userManagerMock.Object);
         var userId = Guid.NewGuid();
         var newEmail = "alice+new@gmail.com";
         var confirmationLink = "https://algoduck.test/confirm-email-change?token=def";
+
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "alice",
+            Email = newEmail
+        };
+
+        userManagerMock
+            .Setup(x => x.FindByIdAsync(userId.ToString()))
+            .ReturnsAsync(user);
 
         transportMock
             .Setup(x => x.SendAsync(

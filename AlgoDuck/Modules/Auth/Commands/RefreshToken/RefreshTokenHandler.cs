@@ -70,16 +70,17 @@ public sealed class RefreshTokenHandler : IRefreshTokenHandler
 
         var prefix = rawRefreshToken.Substring(0, prefixLength);
 
-        var sessionsWithMatchingPrefix = await _commandDbContext.Sessions
+        var candidates = await _commandDbContext.Sessions
             .Where(s => s.RefreshTokenPrefix == prefix)
+            .Take(2)
             .ToListAsync(cancellationToken);
 
-        if (sessionsWithMatchingPrefix.Count == 0)
+        if (candidates.Count == 0)
         {
             return null;
         }
 
-        foreach (var session in sessionsWithMatchingPrefix)
+        foreach (var session in candidates)
         {
             if (IsRefreshTokenMatch(rawRefreshToken, session))
             {

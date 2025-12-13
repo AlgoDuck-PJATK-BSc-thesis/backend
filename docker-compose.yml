@@ -1,9 +1,10 @@
-﻿networks:
+networks:
   app_network:
     driver: bridge
 
 volumes:
   postgres_data:
+  dataprotection_keys:
   rabbitmq_data:
   redis_data:
 
@@ -38,6 +39,8 @@ services:
     ports:
       - "${WEB_PORT:-8080}:8080"
       - "${WEB_PORT2:-8081}:8081"
+    volumes:
+      - dataprotection_keys:/app/keys
     env_file:
       - .env
     networks:

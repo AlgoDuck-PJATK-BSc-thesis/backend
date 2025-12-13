@@ -39,7 +39,12 @@ public sealed class GetCohortByIdHandler : IGetCohortByIdHandler
         }
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        var isMember = user?.CohortId == cohort.CohortId;
+        if (user is null)
+        {
+            throw new CohortValidationException("User not found.");
+        }
+
+        var isMember = user.CohortId == cohort.CohortId;
 
         return new GetCohortByIdResultDto
         {
