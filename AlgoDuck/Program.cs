@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Modules.Auth.Commands.VerifyEmail;
 using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
@@ -60,7 +61,9 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapVerifyEmailEndpoint();
 app.MapControllers();
+
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 app.MapHub<AssistantHub>("/api/hubs/assistant");
 
