@@ -1,6 +1,8 @@
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Queries.GetCurrentUser;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.GetCurrentUser;
@@ -10,7 +12,26 @@ public sealed class GetCurrentUserHandlerTests
     static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<ApplicationUser>>();
-        return new Mock<UserManager<ApplicationUser>>(store.Object, null, null, null, null, null, null, null, null);
+        var options = Options.Create(new IdentityOptions());
+        var passwordHasher = new Mock<IPasswordHasher<ApplicationUser>>();
+        var userValidators = new List<IUserValidator<ApplicationUser>> { new Mock<IUserValidator<ApplicationUser>>().Object };
+        var passwordValidators = new List<IPasswordValidator<ApplicationUser>> { new Mock<IPasswordValidator<ApplicationUser>>().Object };
+        var keyNormalizer = new Mock<ILookupNormalizer>();
+        var errors = new IdentityErrorDescriber();
+        var services = new Mock<IServiceProvider>();
+        var logger = new Mock<ILogger<UserManager<ApplicationUser>>>();
+
+        return new Mock<UserManager<ApplicationUser>>(
+            store.Object,
+            options,
+            passwordHasher.Object,
+            userValidators,
+            passwordValidators,
+            keyNormalizer.Object,
+            errors,
+            services.Object,
+            logger.Object
+        );
     }
 
     [Fact]

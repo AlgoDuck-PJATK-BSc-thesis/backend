@@ -57,7 +57,8 @@ public sealed class JwtTokenProviderTests
             Email = "alice@example.com"
         };
 
-        var token = provider.CreateAccessToken(user, out var expiresAt);
+        var sessionId = Guid.NewGuid();
+        var token = provider.CreateAccessToken(user, sessionId, out var expiresAt);
 
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.True(expiresAt > DateTimeOffset.UtcNow);
@@ -67,6 +68,7 @@ public sealed class JwtTokenProviderTests
         Assert.Equal(user.Id.ToString(), principal.FindFirstValue(ClaimTypes.NameIdentifier));
         Assert.Equal(user.UserName, principal.FindFirstValue(ClaimTypes.Name));
         Assert.Equal(user.Email, principal.FindFirstValue(ClaimTypes.Email));
+        Assert.Equal(sessionId.ToString(), principal.FindFirstValue("sid"));
     }
 
     [Fact]
@@ -89,7 +91,7 @@ public sealed class JwtTokenProviderTests
         }));
 
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = "alice", Email = "alice@example.com" };
-        var token = providerA.CreateAccessToken(user, out _);
+        var token = providerA.CreateAccessToken(user, Guid.NewGuid(), out _);
 
         Assert.ThrowsAny<SecurityTokenException>(() => providerB.ValidateToken(token));
     }

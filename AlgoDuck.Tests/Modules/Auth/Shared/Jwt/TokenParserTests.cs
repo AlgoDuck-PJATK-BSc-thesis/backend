@@ -54,7 +54,7 @@ public sealed class TokenParserTests
         var parser = new TokenParser(Options.Create(settings));
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = "alice", Email = "alice@example.com" };
 
-        var token = provider.CreateAccessToken(user, out _);
+        var token = provider.CreateAccessToken(user, Guid.NewGuid(), out _);
 
         var principal = parser.GetPrincipalFromExpiredToken(token);
 
@@ -72,7 +72,7 @@ public sealed class TokenParserTests
         var parser = new TokenParser(Options.Create(settingsB));
 
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = "alice", Email = "alice@example.com" };
-        var token = provider.CreateAccessToken(user, out _);
+        var token = provider.CreateAccessToken(user, Guid.NewGuid(), out _);
 
         Assert.ThrowsAny<SecurityTokenException>(() => parser.GetPrincipalFromExpiredToken(token));
     }

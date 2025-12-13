@@ -226,23 +226,23 @@ public sealed class AuthValidatorTests
     }
 
     [Fact]
-    public void ValidateEmailConfirmationAsync_WhenUserIdEmpty_ThenThrowsEmailVerificationException()
+    public async Task ValidateEmailConfirmationAsync_WhenUserIdEmpty_ThenThrowsEmailVerificationException()
     {
         var authRepositoryMock = new Mock<IAuthRepository>();
         var validator = new AuthValidator(authRepositoryMock.Object, new EmailValidator(), new PasswordValidator());
 
-        Assert.Throws<EmailVerificationException>(() =>
-            validator.ValidateEmailConfirmationAsync(Guid.Empty, "token", CancellationToken.None).GetAwaiter().GetResult());
+        await Assert.ThrowsAsync<EmailVerificationException>(() =>
+            validator.ValidateEmailConfirmationAsync(Guid.Empty, "token", CancellationToken.None));
     }
 
     [Fact]
-    public void ValidateEmailConfirmationAsync_WhenTokenMissing_ThenThrowsEmailVerificationException()
+    public async Task ValidateEmailConfirmationAsync_WhenTokenMissing_ThenThrowsEmailVerificationException()
     {
         var authRepositoryMock = new Mock<IAuthRepository>();
         var validator = new AuthValidator(authRepositoryMock.Object, new EmailValidator(), new PasswordValidator());
 
-        Assert.Throws<EmailVerificationException>(() =>
-            validator.ValidateEmailConfirmationAsync(Guid.NewGuid(), "   ", CancellationToken.None).GetAwaiter().GetResult());
+        await Assert.ThrowsAsync<EmailVerificationException>(() =>
+            validator.ValidateEmailConfirmationAsync(Guid.NewGuid(), "   ", CancellationToken.None));
     }
 
     [Fact]
@@ -258,23 +258,23 @@ public sealed class AuthValidatorTests
     }
 
     [Fact]
-    public void ValidatePasswordChangeAsync_WhenUserIdEmpty_ThenThrowsValidationException()
+    public async Task ValidatePasswordChangeAsync_WhenUserIdEmpty_ThenThrowsValidationException()
     {
         var authRepositoryMock = new Mock<IAuthRepository>();
         var validator = new AuthValidator(authRepositoryMock.Object, new EmailValidator(), new PasswordValidator());
 
-        Assert.Throws<ValidationException>(() =>
-            validator.ValidatePasswordChangeAsync(Guid.Empty, "old", "NewPassw0rd", CancellationToken.None).GetAwaiter().GetResult());
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            validator.ValidatePasswordChangeAsync(Guid.Empty, "old", "NewPassw0rd", CancellationToken.None));
     }
 
     [Fact]
-    public void ValidatePasswordChangeAsync_WhenCurrentPasswordMissing_ThenThrowsValidationException()
+    public async Task ValidatePasswordChangeAsync_WhenCurrentPasswordMissing_ThenThrowsValidationException()
     {
         var authRepositoryMock = new Mock<IAuthRepository>();
         var validator = new AuthValidator(authRepositoryMock.Object, new EmailValidator(), new PasswordValidator());
 
-        Assert.Throws<ValidationException>(() =>
-            validator.ValidatePasswordChangeAsync(Guid.NewGuid(), "   ", "NewPassw0rd", CancellationToken.None).GetAwaiter().GetResult());
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            validator.ValidatePasswordChangeAsync(Guid.NewGuid(), "   ", "NewPassw0rd", CancellationToken.None));
     }
 
     [Fact]

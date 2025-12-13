@@ -21,12 +21,16 @@ public sealed class LogoutEndpoint : ControllerBase
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult> Logout([FromBody] LogoutDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout([FromBody] LogoutDto? dto, CancellationToken cancellationToken)
     {
-        var userId = GetUserIdFromClaims(User);
-        var sessionId = GetSessionIdFromClaims(User);
+        dto ??= new LogoutDto();
 
-        await _handler.HandleAsync(dto, userId, sessionId, cancellationToken);
+        var userId = GetUserIdFromClaims(User);
+        var claimSessionId = GetSessionIdFromClaims(User);
+
+        var effectiveSessionId = dto.SessionId ?? claimSessionId;
+
+        await _handler.HandleAsync(new LogoutDto { SessionId = effectiveSessionId }, userId, claimSessionId, cancellationToken);
 
         ClearAuthCookies();
 

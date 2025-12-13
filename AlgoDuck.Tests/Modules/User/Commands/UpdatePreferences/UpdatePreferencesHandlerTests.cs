@@ -79,11 +79,11 @@ public sealed class UpdatePreferencesHandlerTests
 
         await handler.HandleAsync(userId, dto, CancellationToken.None);
 
-        Assert.Equal(true, GetBool(config, "IsDarkMode"));
-        Assert.Equal(true, GetBool(config, "IsHighContrast"));
+        Assert.True(GetBool(config, "IsDarkMode"));
+        Assert.True(GetBool(config, "IsHighContrast"));
         Assert.Equal("pl", GetString(config, "Language"));
-        Assert.Equal(true, GetBool(config, "EmailNotificationsEnabled"));
-        Assert.Equal(false, GetBool(config, "PushNotificationsEnabled"));
+        Assert.True(GetBool(config, "EmailNotificationsEnabled"));
+        Assert.False(GetBool(config, "PushNotificationsEnabled"));
     }
 
     static ApplicationCommandDbContext CreateCommandDbContext()

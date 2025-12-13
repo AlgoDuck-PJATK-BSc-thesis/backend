@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
@@ -49,6 +50,8 @@ if (builder.Environment.IsProduction() && Environment.GetEnvironmentVariable("EN
 
 app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
+app.UseMiddleware<AuthExceptionMiddleware>();
+
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
 app.UseMiddleware<CsrfGuard>();

@@ -20,7 +20,7 @@ public sealed class ValidationRulesTests
     [InlineData("alice_smith@example.io")]
     public void EmailRegex_MatchesValidEmails(string email)
     {
-        Assert.True(ValidationRules.EmailRegex.IsMatch(email));
+        Assert.Matches(ValidationRules.EmailRegex, email);
     }
 
     [Theory]
@@ -33,6 +33,6 @@ public sealed class ValidationRulesTests
     [InlineData("alice example.com")]
     public void EmailRegex_DoesNotMatchInvalidEmails(string email)
     {
-        Assert.False(ValidationRules.EmailRegex.IsMatch(email));
+        Assert.DoesNotMatch(ValidationRules.EmailRegex, email);
     }
 }
