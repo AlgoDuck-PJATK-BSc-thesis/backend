@@ -14,6 +14,9 @@ public static class VerifyEmailEndpoint
         app.MapGet("/auth/email-verification", VerifyEmailFromQuery)
             .WithTags("Auth");
 
+        app.MapGet("/auth/email-verification/success.js", SuccessJs)
+            .WithTags("Auth");
+
         return app;
     }
 
@@ -46,63 +49,96 @@ public static class VerifyEmailEndpoint
         }
         catch (Exception ex)
         {
-            var errorHtml =
-                "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Email verification failed</title></head><body><h1>Email verification failed</h1><p>" +
-                WebUtility.HtmlEncode(ex.Message) +
-                "</p></body></html>";
-
-            return Results.Content(errorHtml, "text/html", Encoding.UTF8, 400);
+            return Results.Content(
+                BuildFailureHtml(ex.Message),
+                "text/html",
+                Encoding.UTF8,
+                (int)HttpStatusCode.BadRequest);
         }
 
-        var redirect = BuildRedirectUrl(returnUrl, configuration);
-        if (redirect is not null)
-        {
-            return Results.Redirect(redirect);
-        }
+        var frontendBaseUrl = GetFrontendBaseUrl(configuration);
+        var safeRedirect = BuildRedirectUrl(returnUrl, configuration, frontendBaseUrl);
 
-        const string successHtml =
-            "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Email verified</title></head><body><h1>Email verified</h1><p>Your email address has been successfully verified. You can now close this tab and return to AlgoDuck.</p></body></html>";
-
-        return Results.Content(successHtml, "text/html");
+        return Results.Content(
+            BuildSuccessHtml(frontendBaseUrl, safeRedirect),
+            "text/html",
+            Encoding.UTF8,
+            (int)HttpStatusCode.OK);
     }
 
-    private static string? BuildRedirectUrl(string? returnUrl, IConfiguration configuration)
+    private static IResult SuccessJs([FromQuery] string? returnUrl)
     {
-        if (string.IsNullOrWhiteSpace(returnUrl))
-        {
-            return null;
-        }
+        var js = string.IsNullOrWhiteSpace(returnUrl)
+            ? string.Empty
+            : """
+              (() => {
+                try {
+                  const s = document.currentScript;
+                  if (!s) return;
+                  const u = new URL(s.src);
+                  const r = u.searchParams.get("returnUrl");
+                  if (!r) return;
 
-        if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absolute))
-        {
-            return IsAllowedAbsolute(absolute, configuration) ? absolute.ToString() : null;
-        }
+                  const controller = new AbortController();
+                  const t = setTimeout(() => controller.abort(), 700);
 
-        if (!returnUrl.StartsWith("/") || returnUrl.StartsWith("//"))
-        {
-            return null;
-        }
+                  fetch(r, { method: "GET", mode: "no-cors", cache: "no-store", signal: controller.signal })
+                    .then(() => {
+                      clearTimeout(t);
+                      window.location.replace(r);
+                    })
+                    .catch(() => {});
+                } catch (_) {}
+              })();
+              """;
 
-        var frontendBaseUrl =
+        return Results.Text(js, "application/javascript; charset=utf-8");
+    }
+
+    private static string GetFrontendBaseUrl(IConfiguration configuration)
+    {
+        var v =
             configuration["App:FrontendUrl"] ??
             configuration["CORS:DevOrigins:0"] ??
             "http://localhost:5173";
 
-        return frontendBaseUrl.TrimEnd('/') + returnUrl;
+        return v.TrimEnd('/');
     }
 
-    private static bool IsAllowedAbsolute(Uri absolute, IConfiguration configuration)
+    private static string BuildRedirectUrl(string? returnUrl, IConfiguration configuration, string frontendBaseUrl)
     {
-        foreach (var origin in GetAllowedOrigins(configuration))
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return frontendBaseUrl;
+        }
+
+        if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absolute))
+        {
+            return IsAllowedAbsolute(absolute, configuration, frontendBaseUrl) ? absolute.ToString() : frontendBaseUrl;
+        }
+
+        if (!returnUrl.StartsWith("/") || returnUrl.StartsWith("//"))
+        {
+            return frontendBaseUrl;
+        }
+
+        return frontendBaseUrl + returnUrl;
+    }
+
+    private static bool IsAllowedAbsolute(Uri absolute, IConfiguration configuration, string frontendBaseUrl)
+    {
+        foreach (var origin in GetAllowedOrigins(configuration, frontendBaseUrl))
         {
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var allowed))
             {
                 continue;
             }
 
-            if (string.Equals(absolute.Scheme, allowed.Scheme, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(absolute.Host, allowed.Host, StringComparison.OrdinalIgnoreCase) &&
-                absolute.Port == allowed.Port)
+            var sameScheme = string.Equals(absolute.Scheme, allowed.Scheme, StringComparison.OrdinalIgnoreCase);
+            var sameHost = string.Equals(absolute.Host, allowed.Host, StringComparison.OrdinalIgnoreCase);
+            var samePort = absolute.Port == allowed.Port;
+
+            if (sameScheme && sameHost && samePort)
             {
                 return true;
             }
@@ -111,13 +147,9 @@ public static class VerifyEmailEndpoint
         return false;
     }
 
-    private static IEnumerable<string> GetAllowedOrigins(IConfiguration configuration)
+    private static IEnumerable<string> GetAllowedOrigins(IConfiguration configuration, string frontendBaseUrl)
     {
-        var frontend = configuration["App:FrontendUrl"];
-        if (!string.IsNullOrWhiteSpace(frontend))
-        {
-            yield return frontend;
-        }
+        yield return frontendBaseUrl;
 
         foreach (var o in GetIndexed(configuration.GetSection("CORS:DevOrigins")))
         {
@@ -140,7 +172,52 @@ public static class VerifyEmailEndpoint
                 yield break;
             }
 
-            yield return v;
+            yield return v.TrimEnd('/');
         }
+    }
+
+    private static string BuildSuccessHtml(string frontendBaseUrl, string? redirectUrl)
+    {
+        var safeRedirect = WebUtility.HtmlEncode(redirectUrl ?? frontendBaseUrl);
+        var encodedRedirect = Uri.EscapeDataString(redirectUrl ?? frontendBaseUrl);
+
+        return $"""
+                <!doctype html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width,initial-scale=1">
+                  <title>Email confirmed</title>
+                </head>
+                <body>
+                  <h1>Your email address has been confirmed</h1>
+                  <p>You will be automatically re-directed now.</p>
+                  <p><a href="{safeRedirect}">Continue to AlgoDuck</a></p>
+                  <p>If nothing happens automatically, click the link above.</p>
+                  <script src="/auth/email-verification/success.js?returnUrl={encodedRedirect}"></script>
+                </body>
+                </html>
+                """;
+    }
+
+    private static string BuildFailureHtml(string errorMessage)
+    {
+        var msg = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(errorMessage) ? "Invalid token." : errorMessage);
+
+        return $"""
+                <!doctype html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width,initial-scale=1">
+                  <title>Email confirmation failed</title>
+                </head>
+                <body>
+                  <h1>Email confirmation failed</h1>
+                  <p>{msg}</p>
+                  <p>Please go back to AlgoDuck and request a new confirmation email.</p>
+                </body>
+                </html>
+                """;
     }
 }

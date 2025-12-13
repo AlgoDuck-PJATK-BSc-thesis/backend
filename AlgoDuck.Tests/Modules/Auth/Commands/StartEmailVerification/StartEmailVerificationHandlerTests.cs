@@ -4,7 +4,6 @@ using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
-using AuthValidationException = AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.StartEmailVerification;
 
@@ -16,9 +15,14 @@ public sealed class StartEmailVerificationHandlerTests
         return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
-    static IConfiguration CreateConfiguration(string? frontendBaseUrl = null)
+    static IConfiguration CreateConfiguration(string? apiBaseUrl = null, string? frontendBaseUrl = null)
     {
-        var dict = new Dictionary<string, string?> { ["CORS:DevOrigins:0"] = frontendBaseUrl };
+        var dict = new Dictionary<string, string?>
+        {
+            ["App:PublicApiUrl"] = apiBaseUrl,
+            ["App:FrontendUrl"] = frontendBaseUrl
+        };
+
         return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
     }
 
@@ -27,7 +31,7 @@ public sealed class StartEmailVerificationHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var emailSender = new Mock<IEmailSender>();
-        var config = CreateConfiguration("http://frontend");
+        var config = CreateConfiguration("http://api", "http://frontend");
 
         var handler = new StartEmailVerificationHandler(userManager.Object, emailSender.Object, new StartEmailVerificationValidator(), config);
 
@@ -36,11 +40,11 @@ public sealed class StartEmailVerificationHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenEmailNotRegistered_ThrowsAuthValidationException()
+    public async Task HandleAsync_WhenEmailNotRegistered_DoesNothing()
     {
         var userManager = CreateUserManagerMock();
         var emailSender = new Mock<IEmailSender>();
-        var config = CreateConfiguration("http://frontend");
+        var config = CreateConfiguration("http://api", "http://frontend");
 
         var dto = new StartEmailVerificationDto { Email = "alice@example.com" };
 
@@ -48,10 +52,8 @@ public sealed class StartEmailVerificationHandlerTests
 
         var handler = new StartEmailVerificationHandler(userManager.Object, emailSender.Object, new StartEmailVerificationValidator(), config);
 
-        var ex = await Assert.ThrowsAsync<AuthValidationException>(() =>
-            handler.HandleAsync(dto, CancellationToken.None));
+        await handler.HandleAsync(dto, CancellationToken.None);
 
-        Assert.Equal("auth_validation_error", ex.Code);
-        Assert.Equal("Email address is not registered.", ex.Message);
+        emailSender.VerifyNoOtherCalls();
     }
 }
