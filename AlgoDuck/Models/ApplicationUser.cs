@@ -1,39 +1,40 @@
-﻿
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfiguration<ApplicationUser>
+public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
     public int Coins { get; set; }
 
     public int Experience { get; set; }
 
     public int AmountSolved { get; set; }
-    
+
     public Guid? CohortId { get; set; }
 
     public virtual Cohort? Cohort { get; set; }
 
     public virtual ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
-    
+
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
-    
+
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
 
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
-    
+
     public virtual ICollection<UserAchievement> UserAchievements { get; set; } = new List<UserAchievement>();
+
     public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
 
     public virtual UserConfig? UserConfig { get; set; }
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
-    public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
+
+    public virtual ICollection<PurchasedTestCase> PurchasedTestCases { get; set; } = new List<PurchasedTestCase>();
 
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
@@ -58,7 +59,6 @@ public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfigura
             .HasColumnName("email");
 
         builder.Property(e => e.PasswordHash)
-            .HasMaxLength(256)
             .HasColumnName("password_hash");
 
         builder.Property(e => e.SecurityStamp)
@@ -67,7 +67,7 @@ public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfigura
 
         builder.HasOne(d => d.Cohort).WithMany(p => p.ApplicationUsers)
             .HasForeignKey(d => d.CohortId)
-            .OnDelete(DeleteBehavior.Cascade)
+            .OnDelete(DeleteBehavior.SetNull)
             .HasConstraintName("user_cohort_ref");
     }
 }

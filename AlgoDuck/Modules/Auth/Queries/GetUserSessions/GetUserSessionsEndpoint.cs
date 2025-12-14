@@ -45,7 +45,7 @@ public sealed class GetUserSessionsEndpoint : ControllerBase
 
     private Guid GetSessionIdFromClaims()
     {
-        var sessionClaim = User.FindFirst("session_id");
+        var sessionClaim = User.FindFirst("sid") ?? User.FindFirst("session_id");
         if (sessionClaim is null)
         {
             return Guid.Empty;

@@ -43,4 +43,10 @@ public sealed class CohortRepository : ICohortRepository
             .Where(c => c.ApplicationUsers.Any(u => u.Id == userId))
             .ToListAsync(cancellationToken);
     }
+
+    public Task AddAsync(Models.Cohort cohort, CancellationToken cancellationToken)
+    {
+        _commandDb.Cohorts.Add(cohort);
+        return Task.CompletedTask;
+    }
 }
