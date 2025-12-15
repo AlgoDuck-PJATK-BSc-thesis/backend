@@ -2,18 +2,15 @@ namespace AlgoDuck.Shared.Utilities.DependencyInitializers;
 
 internal static class CorsDependencyInitializer
 {
-    
-    
     internal static void Initialize(WebApplicationBuilder builder)
     {
-        
-        var devOrigins = builder.Configuration.GetSection("Cors:DevOrigins").Get<string[]>() 
+        var devOrigins = builder.Configuration.GetSection("Cors:DevOrigins").Get<string[]>()
                          ?? ["http://localhost:5173", "https://localhost:5173"];
         var prodOrigins = builder.Configuration.GetSection("Cors:ProdOrigins").Get<string[]>() ?? [];
-        
+
         if (builder.Environment.IsProduction() && prodOrigins.Length == 0)
             throw new InvalidOperationException("Cors:ProdOrigins must be configured in Production.");
-        
+
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("DevCors", policy =>
@@ -22,7 +19,7 @@ internal static class CorsDependencyInitializer
                     .AllowCredentials()
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .WithExposedHeaders("X-Token-Expired");
+                    .WithExposedHeaders("X-Token-Expired", "X-Auth-Error");
             });
 
             options.AddPolicy("ProdCors", policy =>
@@ -31,8 +28,8 @@ internal static class CorsDependencyInitializer
                     .AllowCredentials()
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .WithExposedHeaders("X-Token-Expired");
+                    .WithExposedHeaders("X-Token-Expired", "X-Auth-Error");
             });
         });
     }
-}
+}  
