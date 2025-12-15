@@ -20,7 +20,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
         
         _channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
         
-        await _channel.QueueDeclareAsync(queue: "code_execution_result",
+        await _channel.QueueDeclareAsync(queue: "code_execution_results",
             durable: true,
             exclusive: false,
             autoDelete: false,
