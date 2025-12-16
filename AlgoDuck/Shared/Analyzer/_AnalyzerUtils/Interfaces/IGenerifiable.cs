@@ -2,7 +2,7 @@
 
 namespace AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 
-public interface IGenericSettable
+public interface IGenerifiable
 {
     public void SetGenericTypes(List<GenericTypeDeclaration> tokens);
 }

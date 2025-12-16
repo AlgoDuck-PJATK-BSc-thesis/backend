@@ -4,6 +4,6 @@ namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
 
 public interface IGenericParser
 {
-    public void ParseGenericDeclaration(IGenericSettable funcOrClass);
+    public void ParseGenericDeclaration(IGenerifiable funcOrClass);
 
 }

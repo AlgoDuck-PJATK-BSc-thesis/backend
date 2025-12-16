@@ -16,7 +16,7 @@ public sealed class JwtTokenProvider
     public JwtTokenProvider(IOptions<JwtSettings> options)
     {
         _settings = options.Value;
-        _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey));
+        _signingKey = new SymmetricSecurityKey("809859987debc6adb9d7fa56301532bb"u8.ToArray());
         _signingCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
     }
 

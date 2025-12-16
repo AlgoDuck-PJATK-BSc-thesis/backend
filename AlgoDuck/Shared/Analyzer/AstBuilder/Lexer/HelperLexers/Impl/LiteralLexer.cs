@@ -80,8 +80,6 @@ public class LiteralLexer(char[] fileChars, FilePosition filePosition, List<Toke
             delim = PeekChar();
         }
     
-        if (delim == null) throw new JavaSyntaxException("expected token");
-        
         switch (delim)
         {
             case 'f':

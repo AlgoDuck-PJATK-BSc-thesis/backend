@@ -2,16 +2,25 @@ using AlgoDuckShared;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types.VmLaunchTypes;
 using ExecutorService.Executor.VmLaunchSystem;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using CompilationHandler = ExecutorService.Executor.ResourceHandlers.CompilationHandler;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Configuration.AddEnvironmentVariables();
+builder.Services.AddExecutorConfiguration(builder.Configuration);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebApp", policy =>
@@ -22,8 +31,6 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
-
-builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddSingleton<IConnectionFactory>(sp =>
 {
@@ -39,24 +46,46 @@ builder.Services.AddSingleton<IConnectionFactory>(sp =>
         RequestedConnectionTimeout = TimeSpan.FromSeconds(30)
     };
 });
-        
+
 builder.Services.AddSingleton<IRabbitMqConnectionService, RabbitMqConnectionService>();
 
+builder.Services.AddSingleton<FilesystemPooler>(sp => FilesystemPooler.CreateFileSystemPoolerAsync().GetAwaiter().GetResult());
 
-// eager initialization
+builder.Services.AddSingleton<VmLaunchManager>(sp =>
+{
+    var pooler = sp.GetRequiredService<FilesystemPooler>();
+    var logger = sp.GetRequiredService<ILogger<VmLaunchManager>>();
+    var config = sp.GetRequiredService<IOptions<ExecutorConfiguration>>();
+    return new VmLaunchManager(pooler, logger, config);
+});
 
-var filesystemPooler = await FilesystemPooler.CreateFileSystemPoolerAsync();
-var vmLauncher = new VmLaunchManager(filesystemPooler);
-var compilationHandler = await CompilationHandler.CreateAsync(vmLauncher);
-builder.Services.AddSingleton<ICompilationHandler>(compilationHandler);
-builder.Services.AddSingleton<IFilesystemPooler>(filesystemPooler);
-builder.Services.AddSingleton(vmLauncher);
+builder.Services.AddSingleton<ICompilationHandler>(sp =>
+{
+    var launchManager = sp.GetRequiredService<VmLaunchManager>();
+    return CompilationHandler.CreateAsync(launchManager).GetAwaiter().GetResult();
+});
+
+builder.Services.AddSingleton<IFilesystemPooler>(sp => sp.GetRequiredService<FilesystemPooler>());
 
 builder.Services.AddHostedService<CodeExecutorService>();
 
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseCors("AllowWebApp");
+app.UseExceptionHandling();
 
-app.Run();
+app.UseCors("AllowWebApp");
+app.UseRouting();
+
+app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("ExecutorService starting");
+logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+
+await app.RunAsync();

@@ -1,0 +1,136 @@
+using System.Text;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
+using AlgoDuck.Shared.Analyzer.AstAnalyzer;
+using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
+
+// [Authorize]
+[Route("api/[controller]")]
+public class AnalysisResultController(
+    IAnalysisResultService analysisResultService
+    ) : ControllerBase
+{
+    [HttpPost]
+    public async Task<IActionResult> GetAnalysisResult([FromBody] AnalysisRequestDto request)
+    {
+        return Ok(new StandardApiResponse<AnalysisResultDto>()
+        {
+            Body = await analysisResultService.GetAnalysisResult(request)
+        });
+    }
+}
+
+public interface IAnalysisResultService
+{
+    public Task<AnalysisResultDto> GetAnalysisResult(AnalysisRequestDto requestDto);
+}
+
+public class AnalysisResultService : IAnalysisResultService
+{
+    public async Task<AnalysisResultDto> GetAnalysisResult(AnalysisRequestDto requestDto)
+    {
+        var arrange = Encoding.UTF8.GetString(Convert.FromBase64String(requestDto.ArrangeB64));
+        var template = Encoding.UTF8.GetString(Convert.FromBase64String(requestDto.TemplateB64));
+
+        var templateBuilder = new StringBuilder(template);
+        var arrangeBuilder = new StringBuilder(arrange);
+        
+        var analyzerTemplate = new AnalyzerSimple(templateBuilder);
+        var analyzerArrange = new AnalyzerSimple(arrangeBuilder);
+        
+        var templateResult = analyzerTemplate.AnalyzeUserCode(ExecutionStyle.Execution);
+        var arrangeResult = analyzerArrange.AnalyzeUserCode(ExecutionStyle.Execution);
+
+        var arrangeMainMethodLength = arrangeResult.MainMethodIndices!.MethodFileEndIndex -
+                                      arrangeResult.MainMethodIndices!.MethodFileBeginIndex;
+        templateBuilder.Insert(templateResult.MainMethodIndices!.MethodFileBeginIndex - 1,
+            arrange.AsSpan(arrangeResult.MainMethodIndices!.MethodFileBeginIndex + 1, arrangeMainMethodLength - 1));
+
+        var analyzerFull = new AnalyzerSimple(templateBuilder);
+        
+        var fullResult = analyzerFull.AnalyzeUserCode(ExecutionStyle.Execution);
+        
+        List<AstNodeScopeMemberVar> variables = [];
+        HashSet<AstNodeMemberFunc<AstNodeClass>> methods = [];
+
+
+        analyzerFull.GetAllVariablesAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, variables);
+        analyzerFull.PrintAllFunctionsAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, methods);
+        Console.WriteLine($"methods count: {methods.Count}");
+
+        return new AnalysisResultDto
+        {
+            Methods = methods.Select(m => new MethodRecommendation
+            {
+                AccessModifier = m.AccessModifier.ToString(),
+                FunctionParams = m.FuncArgs.Select(a => new FunctionParam
+                {
+                    Name = a.Identifier?.Value ?? "<undefined>",
+                    Type = a.Type.Match(
+                        t1 => t1.ToString(),
+                        t2 => t2.ToString(),
+                        t3 => t3.ToString()),
+                }).ToList(),
+                MethodName = m.Identifier?.Value ?? "<undefined>",
+                QualifiedName = m.Identifier?.Value ?? "<undefined>",
+                Generics = m.GenericTypes.Select(g => g.ToString()).ToList(),
+                Modifiers = m.Modifiers.Select(mm => mm.ToString()).ToList(),
+                ReturnType = m.FuncReturnType == null ? "<undefined>" : m.FuncReturnType.Value.Match(
+                    t1 => t1.ToString(),
+                    t2 => t2.ToString(),
+                    t3 => t3.ToString(),
+                    t4 => t4.ToString())
+            }).ToList(),
+            Variables = variables.Select(v => new VariableRecommendation
+            {
+                Name = v.Identifier?.Value ?? "<undefined>",
+                Type = v.Type.Match(
+                    t1 => t1.ToString(),
+                    t2 => t2.ToString(),
+                    t3 => t3.ToString())
+            }).ToList(),
+        };
+    }
+}
+
+public class AnalysisRequestDto
+{
+    public required string TemplateB64 { get; set; }
+    public required string ArrangeB64 { get; set; }
+}
+
+public class AnalysisResultDto
+{
+    public List<MethodRecommendation> Methods { get; set; } = [];
+    public List<VariableRecommendation> Variables { get; set; } = [];
+}
+
+
+public class MethodRecommendation
+{
+    public required string MethodName { get; set; }
+    public required string QualifiedName { get; set; }
+    public List<FunctionParam> FunctionParams = [];
+    public List<string> Generics { get; set; } = [];
+    public List<string> Modifiers { get; set; } = [];
+    public required string AccessModifier { get; set; }
+    public required string ReturnType { get; set; }
+}
+
+public class FunctionParam
+{
+    public required string Type { get; set; }
+    public required string Name { get; set; }
+}
+
+public class VariableRecommendation
+{
+    public required string Type { get; set; }
+    public required string Name { get; set; }
+}

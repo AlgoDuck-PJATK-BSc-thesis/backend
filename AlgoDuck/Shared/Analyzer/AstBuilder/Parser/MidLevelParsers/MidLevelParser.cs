@@ -23,10 +23,7 @@ public class MidLevelParser(List<Token> tokens, FilePosition filePosition, Symbo
         
     public AstNodeStatementScope ParseStatementScope()
     {
-        _symbolTableBuilder.EnterScope();
-        var astNodeStatementScope = _statementParser.ParseStatementScope();
-        _symbolTableBuilder.ExitScope();
-        return astNodeStatementScope;
+        return _statementParser.ParseStatementScope();
     }
 
     public AstNodeStatement? ParseStatement()

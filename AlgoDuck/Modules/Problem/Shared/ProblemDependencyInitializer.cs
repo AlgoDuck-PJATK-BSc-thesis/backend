@@ -6,6 +6,7 @@ using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
+using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
@@ -107,6 +108,8 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IChatService, ChatService>();
         builder.Services.AddScoped<IChatRepository, ChatRepository>();
 
+        builder.Services.AddScoped<IAnalysisResultService, AnalysisResultService>();
+        
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();

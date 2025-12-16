@@ -3,11 +3,12 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 
 namespace AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 
-public class CodeAnalysisResult(MainMethod? mainMethod, string mainClassname, bool passedValidation)
+public class CodeAnalysisResult
 {
-    public MainMethod? MainMethodIndices => mainMethod;
-    public string MainClassName => mainClassname;
-    public bool PassedValidation => passedValidation;
+    public required AstNodeMemberFunc<AstNodeClass> Main { get; set; }
+    public required MainMethod? MainMethodIndices { get; set; }
+    public required string MainClassName { get; set; }
+    public required bool PassedValidation { get; set; }
 }
 
 public class MainMethod(int begin, int end)

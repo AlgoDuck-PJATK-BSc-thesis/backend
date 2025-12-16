@@ -3,7 +3,7 @@ using ExecutorService.Executor.ResourceHandlers;
 
 namespace ExecutorService.Executor.Types.VmLaunchTypes;
 
-internal class VmConfig
+public class VmConfig
 {
     internal Guid VmId { get; set; }
     internal string? VmName { get; set; }

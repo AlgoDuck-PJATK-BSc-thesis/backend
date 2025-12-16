@@ -38,10 +38,12 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    
 }
 
 if (builder.Environment.IsProduction() && Environment.GetEnvironmentVariable("ENABLE_TLS") == "true")
@@ -54,7 +56,7 @@ app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
-app.UseMiddleware<CsrfGuard>();
+// app.UseMiddleware<CsrfGuard>();
 app.UseRateLimiter();
 
 app.UseAuthentication();
@@ -73,7 +75,7 @@ using (var scope = app.Services.CreateScope())
 
     var attempts = 0;
     const int maxAttempts = 10;
-
+    
     while (true)
     {
         try
