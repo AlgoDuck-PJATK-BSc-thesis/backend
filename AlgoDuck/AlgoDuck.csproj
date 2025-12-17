@@ -45,7 +45,6 @@
         <Folder Include="Modules\Auth\Commands\DisableTwoFactor\" />
         <Folder Include="Modules\Auth\Commands\EnableTwoFactor\" />
         <Folder Include="Modules\Auth\Commands\ExternalLogin\" />
-        <Folder Include="Modules\Auth\Commands\Logout\" />
         <Folder Include="Modules\Auth\Commands\RefreshToken\" />
         <Folder Include="Modules\Auth\Commands\RequestPasswordReset\" />
         <Folder Include="Modules\Auth\Commands\ResetPassword\" />

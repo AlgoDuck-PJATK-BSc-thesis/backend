@@ -9,25 +9,25 @@ volumes:
   redis_data:
 
 services:
-  executor:
-    build:
-      context: .
-      dockerfile: ExecutorService/Dockerfile
-    devices:
-      - /dev/kvm:/dev/kvm
-    env_file:
-      - .env
-    networks:
-      - app_network
-    group_add:
-      - ${KVM_GID}
-    depends_on:
-      - mq
-      - redis
-    develop:
-      watch:
-        - action: rebuild
-          path: ExecutorService/
+#  executor:
+#    build:
+#      context: .
+#      dockerfile: ExecutorService/Dockerfile
+#    devices:
+#      - /dev/kvm:/dev/kvm
+#    env_file:
+#      - .env
+#    networks:
+#      - app_network
+#    group_add:
+#      - ${KVM_GID}
+#    depends_on:
+#      - mq
+#      - redis
+#    develop:
+#      watch:
+#        - action: rebuild
+#          path: ExecutorService/
   
   algoduck:
     image: algoduck

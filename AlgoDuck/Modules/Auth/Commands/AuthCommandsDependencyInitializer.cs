@@ -31,6 +31,7 @@ public static class AuthCommandsDependencyInitializer
         services.AddScoped<IValidator<RefreshTokenDto>, RefreshTokenValidator>();
         services.AddScoped<IRefreshTokenHandler, RefreshTokenHandler>();
         
+        services.AddScoped<IValidator<LogoutDto>, LogoutValidator>();
         services.AddScoped<ILogoutHandler, LogoutHandler>();
 
         services.AddScoped<IValidator<StartEmailVerificationDto>, StartEmailVerificationValidator>();
@@ -66,6 +67,6 @@ public static class AuthCommandsDependencyInitializer
         services.AddScoped<IValidator<ChangeEmailConfirmDto>, ChangeEmailConfirmValidator>();
         services.AddScoped<IChangeEmailConfirmHandler, ChangeEmailConfirmHandler>();
 
-        return services;
+        return services; 
     }
 }

@@ -62,9 +62,9 @@ public sealed class StartEmailVerificationHandler : IStartEmailVerificationHandl
         var encodedToken = Uri.EscapeDataString(token);
         var encodedUserId = Uri.EscapeDataString(userId.ToString());
 
-        var returnUrl = $"{frontendBaseUrl}/auth/confirm-email?userId={encodedUserId}&token={encodedToken}";
+        var returnUrl = $"{frontendBaseUrl}/auth/email-confirmed?userId={encodedUserId}&token={encodedToken}";
         var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
 
         return $"{apiBaseUrl}/auth/email-verification?userId={encodedUserId}&token={encodedToken}&returnUrl={encodedReturnUrl}";
     }
-}
+} 
