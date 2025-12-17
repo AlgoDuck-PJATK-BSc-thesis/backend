@@ -45,8 +45,6 @@
         <Folder Include="Modules\Auth\Commands\DisableTwoFactor\" />
         <Folder Include="Modules\Auth\Commands\EnableTwoFactor\" />
         <Folder Include="Modules\Auth\Commands\ExternalLogin\" />
-        <Folder Include="Modules\Auth\Commands\GenerateApiKey\" />
-        <Folder Include="Modules\Auth\Commands\Login\" />
         <Folder Include="Modules\Auth\Commands\Logout\" />
         <Folder Include="Modules\Auth\Commands\RefreshToken\" />
         <Folder Include="Modules\Auth\Commands\RequestPasswordReset\" />
@@ -61,13 +59,11 @@
         <Folder Include="Modules\Auth\Queries\GetUserSessions\" />
         <Folder Include="Modules\Auth\Queries\SearchUsersByEmail\" />
         <Folder Include="Modules\Auth\Shared\Configuration\" />
-        <Folder Include="Modules\Auth\Shared\Email\" />
         <Folder Include="Modules\Auth\Shared\Exceptions\" />
         <Folder Include="Modules\Auth\Shared\Jwt\" />
         <Folder Include="Modules\Auth\Shared\Mappers\" />
         <Folder Include="Modules\Auth\Shared\Middleware\" />
         <Folder Include="Modules\Auth\Shared\Repositories\" />
-        <Folder Include="Modules\Auth\Shared\Utils\" />
         <Folder Include="Modules\Cohort\Commands\CohortManagement\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
         <Folder Include="Modules\User\Commands\ChangePassword\" />

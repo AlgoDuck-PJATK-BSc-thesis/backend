@@ -3,6 +3,8 @@ using AlgoDuck.Modules.Auth.Commands.Logout;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;
+using FluentValidation;
+using FluentValidation.Results;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.Logout;
@@ -13,8 +15,13 @@ public sealed class LogoutHandlerTests
     {
         var repo = new Mock<ISessionRepository>();
         var service = new SessionService(repo.Object);
-        var validator = new LogoutValidator();
-        var handler = new LogoutHandler(service, validator);
+
+        var validator = new Mock<IValidator<LogoutDto>>();
+        validator
+            .Setup(v => v.ValidateAsync(It.IsAny<LogoutDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
+        var handler = new LogoutHandler(service, validator.Object);
         return (handler, repo);
     }
 

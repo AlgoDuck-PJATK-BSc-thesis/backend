@@ -19,6 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 using SharedEmailSender = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailSender;
 using SharedEmailTransport = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailTransport;
 using SharedPostmarkEmailSender = AlgoDuck.Modules.Auth.Shared.Email.PostmarkEmailSender;
+using SharedGmailSmtpEmailSender = AlgoDuck.Modules.Auth.Shared.Email.GmailSmtpEmailSender;
 using SharedTokenServiceInterface = AlgoDuck.Modules.Auth.Shared.Interfaces.ITokenService;
 using SharedTokenService = AlgoDuck.Modules.Auth.Shared.Services.TokenService;
 
@@ -226,6 +227,56 @@ public static class AuthDependencyInitializer
 
                         using var user = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                         context.RunClaimActions(user.RootElement);
+
+                        var existingEmail = context.Identity?.FindFirst(ClaimTypes.Email)?.Value;
+                        if (string.IsNullOrWhiteSpace(existingEmail))
+                        {
+                            var emailsRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+                            emailsRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                            emailsRequest.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
+                            emailsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
+
+                            var emailsResponse = await context.Backchannel.SendAsync(emailsRequest, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+                            emailsResponse.EnsureSuccessStatusCode();
+
+                            using var emailsDoc = JsonDocument.Parse(await emailsResponse.Content.ReadAsStringAsync());
+
+                            string? bestEmail = null;
+                            var bestScore = -1;
+
+                            if (emailsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var el in emailsDoc.RootElement.EnumerateArray())
+                                {
+                                    if (!el.TryGetProperty("email", out var emailProp)) continue;
+                                    var email = emailProp.GetString();
+                                    if (string.IsNullOrWhiteSpace(email)) continue;
+
+                                    var verified = el.TryGetProperty("verified", out var verifiedProp) && verifiedProp.ValueKind == JsonValueKind.True;
+                                    var primary = el.TryGetProperty("primary", out var primaryProp) && primaryProp.ValueKind == JsonValueKind.True;
+
+                                    var score = 0;
+                                    if (verified) score += 2;
+                                    if (primary) score += 1;
+
+                                    if (score > bestScore)
+                                    {
+                                        bestScore = score;
+                                        bestEmail = email;
+                                    }
+
+                                    if (bestScore == 3)
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(bestEmail) && context.Identity is not null)
+                            {
+                                context.Identity.AddClaim(new Claim(ClaimTypes.Email, bestEmail));
+                            }
+                        }
                     }
                 };
             });
@@ -268,7 +319,32 @@ public static class AuthDependencyInitializer
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<ITokenRepository, TokenRepository>();
 
-        services.AddScoped<SharedEmailTransport, SharedPostmarkEmailSender>();
+        var emailProvider =
+            (Environment.GetEnvironmentVariable("EMAIL__PROVIDER") ?? configuration["Email:Provider"] ?? string.Empty)
+            .Trim();
+
+        var wantsSmtp = emailProvider.Equals("smtp", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmail", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmailsmtp", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmail_smtp", StringComparison.OrdinalIgnoreCase);
+
+        var hasGmailSmtp = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GMAIL__SMTP_EMAIL"))
+            && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GMAIL__SMTP_PASSWORD"));
+
+        if (wantsSmtp || (string.IsNullOrWhiteSpace(emailProvider) && hasGmailSmtp))
+        {
+            if (!hasGmailSmtp)
+            {
+                throw new InvalidOperationException("EMAIL__PROVIDER is set to SMTP/Gmail, but GMAIL__SMTP_EMAIL or GMAIL__SMTP_PASSWORD is missing.");
+            }
+
+            services.AddScoped<SharedEmailTransport, SharedGmailSmtpEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<SharedEmailTransport, SharedPostmarkEmailSender>();
+        }
+
         services.AddScoped<SharedEmailSender, EmailSender>();
 
         services.AddScoped(typeof(IPasswordHasher<>), typeof(PasswordHasher<>));
