@@ -22,21 +22,14 @@ public class PurchaseController(
         [FromBody] PurchaseRequestDto purchaseRequest,
         CancellationToken cancellationToken)
     {
-        
         var userId = User.GetUserId();
 
         if (userId.IsErr)
-        {
-            return BadRequest(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = userId.AsT1
-            });
-        }
+            return userId.ToActionResult();
         
         return Ok(new StandardApiResponse<PurchaseResultDto>
         {
-            Body = await purchaseItemService.PurchaseItemAsync(new PurchaseRequestInternalDto()
+            Body = await purchaseItemService.PurchaseItemAsync(new PurchaseRequestInternalDto
             {
                 PurchaseRequestDto = purchaseRequest,
                 RequestingUserId = userId.AsT0,

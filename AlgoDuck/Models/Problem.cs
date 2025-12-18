@@ -18,6 +18,7 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
     public Guid CategoryId { get; set; }
 
     public Guid DifficultyId { get; set; }
+    public ProblemStatus Status { get; set; } = ProblemStatus.Unverified;
 
     public virtual Category Category { get; set; } = null!;
 
@@ -78,4 +79,9 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
                         j.IndexerProperty<Guid>("ContestId").HasColumnName("contest_id");
                     });
     }
+}
+
+public enum ProblemStatus
+{
+    Verified, Unverified
 }

@@ -17,26 +17,10 @@ public class DeleteChatController(
         var userId = User.GetUserId();
 
         if (userId.IsErr)
-        {
-            return BadRequest(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = userId.AsT1
-            });
-        }
+            return userId.ToActionResult();
         
         var chatDeleteResult  = await deleteChatService.Delete(dto, cancellationToken);
-        
-        return chatDeleteResult.Match(
-            ok => Ok(new StandardApiResponse<DeleteChatDtoResult>
-            {
-                Body = ok
-            }),
-            err => Ok(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = err,
-            }));
+        return chatDeleteResult.ToActionResult();
     }
 }
 

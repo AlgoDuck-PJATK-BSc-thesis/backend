@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using AlgoDuck.Modules.Problem.Shared;
@@ -28,8 +27,7 @@ internal sealed class SubmitService(
     ) : IExecutorSubmitService, IAsyncDisposable
 {
     private IChannel? _channel;
-    private static readonly ConcurrentDictionary<Guid, ExecutionResponseRabbit> _results = new();
-    
+
     private async Task<IChannel> GetChannelAsync()
     {
         if (_channel is { IsOpen: true })
@@ -90,7 +88,6 @@ internal sealed class SubmitService(
             JavaFiles = userSolutionData.GetFileContents(),
         }));
 
-        Console.WriteLine(userSolutionData.ExecutionId);
         var props = new BasicProperties
         {
             Persistent = true

@@ -20,17 +20,10 @@ public class OwnedItemsController(
     [HttpGet]
     public async Task<IActionResult> GetOwnedItemsByUserIdAsync(CancellationToken cancellationToken)
     {
-        
         var userId = User.GetUserId();
 
         if (userId.IsErr)
-        {
-            return BadRequest(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = userId.AsT1
-            });
-        }
+            return userId.ToActionResult();
         
         return Ok(new StandardApiResponse<ICollection<ItemDto>>
         {
@@ -82,20 +75,20 @@ public class ItemDto
 
 public static class ClaimsPrincipalExtension
 {
-    public static Result<Guid, string> GetUserId(this ClaimsPrincipal claimsPrincipal)
+    public static Result<Guid, ErrorObject<string>> GetUserId(this ClaimsPrincipal claimsPrincipal)
     {
         var findFirstValue = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(findFirstValue))
         {
-            return Result<Guid, string>.Err("User ID not found");
+            return Result<Guid, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("User Id not found"));
         }
         try
         {
-            return Result<Guid, string>.Ok(Guid.Parse(findFirstValue));
+            return Result<Guid, ErrorObject<string>>.Ok(Guid.Parse(findFirstValue));
         }
         catch (FormatException)
         {
-            return Result<Guid, string>.Err("User Id is not a valid GUID");
+            return Result<Guid, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("User Id is not a valid GUID"));
         }
     }
 }

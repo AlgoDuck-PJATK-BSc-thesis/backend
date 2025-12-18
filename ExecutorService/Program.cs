@@ -1,6 +1,7 @@
 using AlgoDuckShared;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
+using ExecutorService.Executor.BackgroundWorkers;
 using ExecutorService.Executor.ResourceHandlers;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using ExecutorService.Executor.VmLaunchSystem;
@@ -67,7 +68,34 @@ builder.Services.AddSingleton<ICompilationHandler>(sp =>
 
 builder.Services.AddSingleton<IFilesystemPooler>(sp => sp.GetRequiredService<FilesystemPooler>());
 
-builder.Services.AddHostedService<CodeExecutorService>();
+builder.Services.AddHostedService<ExecutorBackgroundWorker>(sp =>
+{
+    var rabbitMqConnectionService = sp.GetRequiredService<IRabbitMqConnectionService>();
+    var manager = sp.GetRequiredService<VmLaunchManager>();
+    var logger = sp.GetRequiredService<ILogger<ExecutorBackgroundWorker>>();
+    var handler = sp.GetRequiredService<ICompilationHandler>();
+    return new ExecutorBackgroundWorker(handler, manager, rabbitMqConnectionService, logger, new ServiceData()
+    {
+        ServiceName = "Executor",
+        RequestQueueName = "code_execution_requests",
+        ResponseQueueName = "code_execution_results"
+        
+    });
+});
+
+builder.Services.AddHostedService<ValidatorBackgroundWorker>(sp =>
+{
+    var rabbitMqConnectionService = sp.GetRequiredService<IRabbitMqConnectionService>();
+    var manager = sp.GetRequiredService<VmLaunchManager>();
+    var logger = sp.GetRequiredService<ILogger<ValidatorBackgroundWorker>>();
+    var handler = sp.GetRequiredService<ICompilationHandler>();
+    return new ValidatorBackgroundWorker(handler, manager, rabbitMqConnectionService, logger, new ServiceData()
+    {
+        ServiceName = "Validator",
+        RequestQueueName = "problem_validation_requests",
+        ResponseQueueName = "problem_validation_results"
+    });
+});
 
 var app = builder.Build();
 

@@ -15,14 +15,10 @@ public class AutoSaveController(
     public async Task<IActionResult> AutoSaveCodeAsync([FromBody] AutoSaveDto autoSaveDto, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+
         if (userId.IsErr)
-        {
-            return BadRequest(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = userId.AsT1
-            });
-        }
+            return userId.ToActionResult();
+        
         autoSaveDto.UserId = userId.AsT0;
         
         await autoSaveService.AutoSaveCodeAsync(autoSaveDto, cancellationToken);
