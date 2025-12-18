@@ -78,6 +78,7 @@ internal sealed class SubmitService(
             UserSolutionData = userSolutionData
         };
         
+        
         helper.InsertTestCases(await executorSubmitRepository.GetTestCasesAsync(submission.ProblemId), userSolutionData.MainClassName);
         helper.InsertTiming();
         helper.InsertGsonImport();

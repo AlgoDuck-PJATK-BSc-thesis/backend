@@ -72,7 +72,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
-
+    
+    
     var attempts = 0;
     const int maxAttempts = 10;
     

@@ -76,6 +76,7 @@ app.UseExceptionHandling();
 app.UseCors("AllowWebApp");
 app.UseRouting();
 
+
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())

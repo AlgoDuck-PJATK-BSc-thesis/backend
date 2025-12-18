@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
@@ -64,6 +65,28 @@ public class AnalysisResultService : IAnalysisResultService
         analyzerFull.PrintAllFunctionsAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, methods);
         Console.WriteLine($"methods count: {methods.Count}");
 
+        Console.WriteLine(JsonSerializer.Serialize(methods.Select(m => new MethodRecommendation
+            {
+                AccessModifier = m.AccessModifier.ToString(),
+                FunctionParams = m.FuncArgs.Select(a => new FunctionParam
+                {
+                    Name = a.Identifier?.Value ?? "<undefined>",
+                    Type = a.Type.Match(
+                        t1 => t1.ToString(),
+                        t2 => t2.ToString(),
+                        t3 => t3.ToString()),
+                }).ToList(),
+                MethodName = m.Identifier?.Value ?? "<undefined>",
+                QualifiedName = m.Identifier?.Value ?? "<undefined>",
+                Generics = m.GenericTypes.Select(g => g.ToString()).ToList(),
+                Modifiers = m.Modifiers.Select(mm => mm.ToString()).ToList(),
+                ReturnType = m.FuncReturnType == null ? "<undefined>" : m.FuncReturnType.Value.Match(
+                    t1 => t1.ToString(),
+                    t2 => t2.ToString(),
+                    t3 => t3.ToString(),
+                    t4 => t4.ToString())
+            }).ToList()));
+        
         return new AnalysisResultDto
         {
             Methods = methods.Select(m => new MethodRecommendation
@@ -116,12 +139,13 @@ public class MethodRecommendation
 {
     public required string MethodName { get; set; }
     public required string QualifiedName { get; set; }
-    public List<FunctionParam> FunctionParams = [];
+    public List<FunctionParam> FunctionParams { get; set; } = [];
     public List<string> Generics { get; set; } = [];
     public List<string> Modifiers { get; set; } = [];
     public required string AccessModifier { get; set; }
     public required string ReturnType { get; set; }
 }
+
 
 public class FunctionParam
 {
