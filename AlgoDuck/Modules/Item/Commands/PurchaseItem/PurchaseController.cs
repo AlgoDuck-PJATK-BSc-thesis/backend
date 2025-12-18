@@ -6,6 +6,7 @@ using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Status = AlgoDuck.Shared.Http.Status;
 
 namespace AlgoDuck.Modules.Item.Commands.PurchaseItem;
 
@@ -21,12 +22,24 @@ public class PurchaseController(
         [FromBody] PurchaseRequestDto purchaseRequest,
         CancellationToken cancellationToken)
     {
+        
+        var userId = User.GetUserId();
+
+        if (userId.IsErr)
+        {
+            return BadRequest(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = userId.AsT1
+            });
+        }
+        
         return Ok(new StandardApiResponse<PurchaseResultDto>
         {
             Body = await purchaseItemService.PurchaseItemAsync(new PurchaseRequestInternalDto()
             {
                 PurchaseRequestDto = purchaseRequest,
-                RequestingUserId = User.GetUserId()
+                RequestingUserId = userId.AsT0,
             }, cancellationToken)
         });
     }

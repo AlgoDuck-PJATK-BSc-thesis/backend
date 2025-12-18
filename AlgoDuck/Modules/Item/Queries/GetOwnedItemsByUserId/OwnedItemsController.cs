@@ -20,10 +20,21 @@ public class OwnedItemsController(
     [HttpGet]
     public async Task<IActionResult> GetOwnedItemsByUserIdAsync(CancellationToken cancellationToken)
     {
+        
         var userId = User.GetUserId();
+
+        if (userId.IsErr)
+        {
+            return BadRequest(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = userId.AsT1
+            });
+        }
+        
         return Ok(new StandardApiResponse<ICollection<ItemDto>>
         {
-            Body = await ownedItemsService.GetOwnedItemsByUserIdAsync(userId, cancellationToken)
+            Body = await ownedItemsService.GetOwnedItemsByUserIdAsync(userId.AsT0, cancellationToken)
         });
     }
 }
@@ -71,17 +82,20 @@ public class ItemDto
 
 public static class ClaimsPrincipalExtension
 {
-    public static Guid GetUserId(this ClaimsPrincipal claimsPrincipal)
+    public static Result<Guid, string> GetUserId(this ClaimsPrincipal claimsPrincipal)
     {
-        var findFirstValue = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                             throw new UserNotFoundException("User id not found");
+        var findFirstValue = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(findFirstValue))
+        {
+            return Result<Guid, string>.Err("User ID not found");
+        }
         try
         {
-            return Guid.Parse(findFirstValue);
+            return Result<Guid, string>.Ok(Guid.Parse(findFirstValue));
         }
-        catch (FormatException e)
+        catch (FormatException)
         {
-            throw new UserNotFoundException($"Invalid user id {findFirstValue}");
+            return Result<Guid, string>.Err("User Id is not a valid GUID");
         }
     }
 }

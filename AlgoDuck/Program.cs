@@ -76,7 +76,6 @@ using (var scope = app.Services.CreateScope())
     
     var attempts = 0;
     const int maxAttempts = 10;
-    
     while (true)
     {
         try
