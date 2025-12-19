@@ -12,7 +12,7 @@ namespace AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 
 public class AstNodeMemberFunc<T> : IGenerifiable, IAnnotable, ITypeMember<T> where T : BaseType<T>
 {
-    private T? Owner { get; set; }
+    public T? Owner { get; set; }
     public AccessModifier AccessModifier { get; set; } = AccessModifier.Default;
     public List<MemberModifier> Modifiers { get; set; } = [];
     public List<GenericTypeDeclaration> GenericTypes { get; set; } = [];

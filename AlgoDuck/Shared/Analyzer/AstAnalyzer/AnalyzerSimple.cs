@@ -13,6 +13,7 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Lexer;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser;
 using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
+using AlgoDuck.Shared.Http;
 using ConsoleApp1.Analyzer._AnalyzerUtils.AstNodes.Types;
 using OneOf;
 
@@ -59,8 +60,125 @@ public class AnalyzerSimple
             if (workingScope == null) break;
         }
     }
-    
-    public void PrintAllFunctionsAccessibleFromScope(Scope scope, HashSet<AstNodeMemberFunc<AstNodeClass>> functions)
+
+    public Result<string, string> RecursiveResolveFunctionCall(Scope scope, string[] symbols, string staticPrefix = "",
+        string instancePrefix = "", int depth = 0)
+    {
+        if (depth >= symbols.Length)
+            return Result<string, string>.Err("no symbols to resolve");
+
+        var symbol = scope.GetSymbol(symbols[depth]);
+
+        switch (symbol)
+        {
+            case MethodSymbol<AstNodeClass> m:
+                if (depth == symbols.Length - 1)
+                {
+                    if (m.AssociatedMethod.Modifiers.Contains(MemberModifier.Static))
+                    {
+                        if (staticPrefix.Length > 0)
+                            return Result<string, string>.Ok($"{staticPrefix}.{m.Name}");
+                        if (instancePrefix.Length > 0)
+                            return Result<string, string>.Ok($"{instancePrefix}.{m.Name}");
+                        return Result<string, string>.Ok(m.Name);
+                    }
+
+                    if (m.AssociatedMethod.Owner != null)
+                    {
+                        var ownerClass = m.AssociatedMethod.Owner;
+                        if (DoesClassContainDefaultConstructor(ownerClass.TypeScope))
+                        {
+                            if (instancePrefix.Length > 0)
+                                return Result<string, string>.Ok($"{instancePrefix}.{m.Name}");
+
+                            var typeName = staticPrefix.Length > 0 ? $"{staticPrefix}.{ownerClass.Name.Value}" : ownerClass.Name.Value;
+                            return Result<string, string>.Ok($"new {typeName}().{m.Name}");
+                        }
+
+                        return Result<string, string>.Err("instance method requires default constructor");
+                    }
+
+                    return Result<string, string>.Err("unable to resolve method owner");
+                }
+
+                return Result<string, string>.Err("method cannot have child symbols");
+
+            case TypeSymbol<AstNodeClass> c:
+                if (depth >= symbols.Length - 1)
+                    return Result<string, string>.Err("type path incomplete, expected method");
+
+                var nextSymbol = c.AssociatedType!.TypeScope!.OwnScope.GetSymbol(symbols[depth + 1]);
+
+                var newStaticPrefix = staticPrefix.Length > 0 ? $"{staticPrefix}.{c.Name}" : c.Name;
+
+                switch (nextSymbol)
+                {
+                    case TypeSymbol<AstNodeClass> c2:
+                    {
+                        if (c2.AssociatedType?.TypeScope?.OwnerMember == null)
+                            return Result<string, string>.Err("unable to resolve symbol");
+
+                        var isNextStatic = c2.AssociatedType.TypeScope.OwnerMember.ClassModifiers
+                            .Contains(MemberModifier.Static);
+
+                        if (isNextStatic)
+                        {
+                            return RecursiveResolveFunctionCall(c.AssociatedType.TypeScope.OwnScope, symbols,
+                                newStaticPrefix, instancePrefix, depth + 1);
+                        }
+
+                        if (!DoesClassContainDefaultConstructor(c.AssociatedType.TypeScope))
+                            return Result<string, string>.Err(
+                                "non-static nested class requires default constructor on parent");
+
+                        var newInstancePrefix = $"new {newStaticPrefix}()";
+                        return RecursiveResolveFunctionCall(
+                            c.AssociatedType.TypeScope.OwnScope, symbols,
+                            "", newInstancePrefix, depth + 1);
+                    }
+                    case MethodSymbol<AstNodeClass> m2:
+                        if (m2.AssociatedMethod.Modifiers.Contains(MemberModifier.Static))
+                        {
+                            return RecursiveResolveFunctionCall(
+                                c.AssociatedType.TypeScope.OwnScope, symbols,
+                                newStaticPrefix, instancePrefix, depth + 1);
+                        }
+
+                        if (DoesClassContainDefaultConstructor(c.AssociatedType.TypeScope))
+                        {
+                            var newInstancePrefix = instancePrefix.Length > 0 ? $"{instancePrefix}.new {c.Name}()" : $"new {newStaticPrefix}()";
+
+                            return RecursiveResolveFunctionCall(
+                                c.AssociatedType.TypeScope.OwnScope, symbols,
+                                "", newInstancePrefix, depth + 1);
+                        }
+
+                        return Result<string, string>.Err("instance method requires default constructor");
+
+                    default:
+                        return Result<string, string>.Err("unable to resolve symbol");
+                }
+
+            default:
+                return Result<string, string>.Err("symbol not found");
+        }
+    }
+
+    private static bool DoesClassContainDefaultConstructor(AstNodeTypeScope<AstNodeClass>? classScope)
+    {
+        if (classScope == null) return false;
+        var constructors = classScope.TypeMembers
+            .Where(tm => tm.ClassMember is { IsT0: true, AsT0: not null })
+            .Select(tm => tm.ClassMember.AsT0)
+            .Where(m => m.IsConstructor)
+            .ToList();
+
+        return constructors.Any(m => m.FuncArgs.Count == 0) ||
+               constructors.Count == 0; /*Check if available default constructor*/
+    }
+
+    public void PrintAllFunctionsAccessibleFromScope(Scope scope,
+        Dictionary<AstNodeMemberFunc<AstNodeClass>, string> functions)
     {
         var workingScope = scope;
         while (true)
@@ -68,7 +186,7 @@ public class AnalyzerSimple
             workingScope = workingScope.Parent;
             if (workingScope == null) break;
 
-            
+
             var classes = workingScope.GetTypes<AstNodeClass>()
                 .Where(t => t.AssociatedType is AstNodeClass)
                 .Select(t => (t.AssociatedType as AstNodeClass)!)
@@ -84,21 +202,23 @@ public class AnalyzerSimple
                         && func.FuncArgs.Count == 0) || constructors.Count == 0;
                 })
                 .ToList();
-            
-            
+
+
             workingScope
                 .GetMethods<AstNodeClass>()
                 .Select(ms => ms.AssociatedMethod)
-                .ToList().ForEach(ms => functions.Add(ms));
+                .ToList().ForEach(ms => functions[ms] = ms.Identifier!.Value!);
 
             foreach (var cls in classes)
             {
-                ProcessNestedClasses(cls, functions);
+                Console.WriteLine(cls);
+                ProcessNestedClasses(cls, cls.Name.Value!, functions);
             }
         }
     }
 
-    private void ProcessNestedClasses(AstNodeClass parentClass, HashSet<AstNodeMemberFunc<AstNodeClass>> functions)
+    private void ProcessNestedClasses(AstNodeClass parentClass, string prefix,
+        Dictionary<AstNodeMemberFunc<AstNodeClass>, string> functions)
     {
         if (parentClass.TypeScope == null) return;
         var astNodeClasses = parentClass.TypeScope.TypeMembers
@@ -126,20 +246,20 @@ public class AnalyzerSimple
             .Where(tm => tm.ClassMember is
                 { IsT0: true, AsT0.AccessModifier: AccessModifier.Public or AccessModifier.Default })
             .Select(tm => tm.ClassMember.AsT0)
-            .ToList().ForEach(tm => functions.Add(tm));
+            .ToList().ForEach(tm => functions[tm] = $"{prefix}.{tm.Identifier!.Value!}");
 
         foreach (var nestedClass in nestedClasses)
         {
-            ProcessNestedClasses(nestedClass, functions);
+            ProcessNestedClasses(nestedClass, $"{prefix}.{nestedClass.Name.Value}", functions);
         }
     }
 
-    public void PrintAllFunctionSymbolsRoot<T>() where T :  BaseType<T>
+    public void PrintAllFunctionSymbolsRoot<T>() where T : BaseType<T>
     {
         PrintAllFunctionSymbol<T>(_userProgramRoot.SymbolTableBuilder.GlobalScope);
     }
 
-    private static void PrintAllFunctionSymbol<T>(Scope currentScope) where T :  BaseType<T>
+    private static void PrintAllFunctionSymbol<T>(Scope currentScope) where T : BaseType<T>
     {
         currentScope.GetMethods<T>().ForEach(m => Console.WriteLine(m.AssociatedMethod.Identifier?.Value));
         currentScope.Children.ForEach(PrintAllFunctionSymbol<T>);
@@ -151,7 +271,7 @@ public class AnalyzerSimple
         var mainClass = GetMainClass();
         Console.WriteLine(mainClass.Name.Value);
         var andGetFunc = FindAndGetFunc(_baselineMainSignature, mainClass);
-        Console.WriteLine(andGetFunc == null) ;
+        Console.WriteLine(andGetFunc == null);
         var main = andGetFunc ??
                    InsertEntrypointMethod(mainClass);
         var validatedTemplateFunctions = executionStyle != ExecutionStyle.Submission || ValidateTemplateFunctions();
@@ -289,7 +409,7 @@ public class AnalyzerSimple
             FindAndCompareClass(nested.Class!, ComparisonStyle.Strict, comparedClass));
     }
 
-    private static bool FindAndCompareFunc<T>(AstNodeMemberFunc<T> baselineFunc, T toBeSearched) where T :  BaseType<T>
+    private static bool FindAndCompareFunc<T>(AstNodeMemberFunc<T> baselineFunc, T toBeSearched) where T : BaseType<T>
     {
         return (toBeSearched.TypeScope?.TypeMembers ?? [])
             .Where(func => func.ClassMember is { IsT0: true, AsT0: not null })
@@ -310,7 +430,7 @@ public class AnalyzerSimple
             .FirstOrDefault(func => ValidateFunctionSignature(baselineFunc, func!));
     }
 
-    private static bool FindAndCompareVariable<T>(AstNodeMemberVar<T> baseline, T toBeSearched) where T :  BaseType<T>
+    private static bool FindAndCompareVariable<T>(AstNodeMemberVar<T> baseline, T toBeSearched) where T : BaseType<T>
     {
         return (toBeSearched.TypeScope?.TypeMembers ?? [])
             .Where(v => v.ClassMember.IsT1)
@@ -454,7 +574,6 @@ public class AnalyzerSimple
     private static bool ValidateFunctionSignature<T>(AstNodeMemberFunc<T> baseline, AstNodeMemberFunc<T> compared)
         where T : BaseType<T>
     {
-
         if (baseline.AccessModifier != compared.AccessModifier)
         {
             return false;

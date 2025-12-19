@@ -54,6 +54,12 @@ public sealed class ValidatorBackgroundWorker(
         {
             _logger.LogError(ex, "{ServiceName}: Job {JobId} failed", _serviceData.ServiceName, request?.JobId);
 
+            var status = ex switch
+            {
+                VmQueryTimedOutException => SubmitExecuteRequestRabbitStatus.TimedOut,
+                _ => SubmitExecuteRequestRabbitStatus.Failed
+            };
+            
             var errorResult = new VmExecutionResponse
             {
                 Err = GetUserFriendlyError(ex)
@@ -61,7 +67,7 @@ public sealed class ValidatorBackgroundWorker(
 
             if (request != null)
             {
-                await PublishResultAsync(request.JobId, errorResult);
+                await PublishResultAsync(request.JobId, errorResult, status);
             }
         }
     }
@@ -128,14 +134,14 @@ public sealed class ValidatorBackgroundWorker(
         await PublishToResultsQueueAsync(statusMessage);
     }
 
-    private async Task PublishResultAsync(Guid jobId, VmExecutionResponse result)
+    private async Task PublishResultAsync(Guid jobId, VmExecutionResponse result, SubmitExecuteRequestRabbitStatus status = SubmitExecuteRequestRabbitStatus.Completed)
     {
         var resultMessage = new ExecutionResponseRabbit
         {
             Out = result.Out,
             Err = result.Err,
             JobId = jobId,
-            Status = SubmitExecuteRequestRabbitStatus.Completed
+            Status = status
         };
 
         await PublishToResultsQueueAsync(resultMessage);
@@ -148,6 +154,7 @@ public sealed class ValidatorBackgroundWorker(
         var json = JsonSerializer.Serialize(message, JsonOptions);
         var body = Encoding.UTF8.GetBytes(json);
 
+        Console.WriteLine($"publishing to the results queue: {_serviceData.ResponseQueueName}");
         await Channel.BasicPublishAsync(
             exchange: "",
             routingKey: _serviceData.ResponseQueueName,

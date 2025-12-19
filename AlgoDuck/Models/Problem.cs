@@ -7,7 +7,7 @@ namespace AlgoDuck.Models;
 
 public partial class Problem : IEntityTypeConfiguration<Problem>
 {
-    public Guid ProblemId { get; set; }
+    public Guid ProblemId { get; set; } = Guid.NewGuid();
 
     public string ProblemTitle { get; set; } = null!;
 

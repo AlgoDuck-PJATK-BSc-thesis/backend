@@ -1,21 +1,19 @@
-public class Main {
-    private static class Node {
-        int data;
-        Node next;
-        Node prev;
-
-        public Node(int data) {
-            this.data = data;
-            this.next = null;
-            this.prev = null;
-        }
-    }
-
-    public static boolean hasCycle(Node start) {
-        // Implement the tortoise and hare algorithm here
-        return false;
+import com.google.gson.Gson;
+public class Solution{
+    // your problem setup goes here
+    public static int[] TwoSum(int[] arr, int target){
+            return null;
     }
     public static void main(String[] args){
-        System.out.println("Hello world!");
+        Gson ac0343358157744f98e1e54ae59b44237_gson = new Gson();
+
+        //your arrange goes here
+        int[] arg1 = {1,2,3,4,5};
+        int arg2 = 7;
+        
+        int[] expected = {1,4};
+        
+        var a4326ef21_8145_4ece_91ab_f66938a2cb06 = Solution.TwoSum(arg1,arg2);
+        System.out.println("ctr-e20918c0-abd2-4698-8bb8-adddd711aa00-answ: " + " tc_id:4326ef21-8145-4ece-91ab-f66938a2cb06 " + ac0343358157744f98e1e54ae59b44237_gson.toJson(expected).equals(ac0343358157744f98e1e54ae59b44237_gson.toJson(a4326ef21_8145_4ece_91ab_f66938a2cb06)));
     }
 }

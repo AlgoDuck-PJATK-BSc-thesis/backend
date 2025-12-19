@@ -58,41 +58,25 @@ public class AnalysisResultService : IAnalysisResultService
         var fullResult = analyzerFull.AnalyzeUserCode(ExecutionStyle.Execution);
         
         List<AstNodeScopeMemberVar> variables = [];
-        HashSet<AstNodeMemberFunc<AstNodeClass>> methods = [];
-
-
+        Dictionary<AstNodeMemberFunc<AstNodeClass>, string> methods = [];
+        
         analyzerFull.GetAllVariablesAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, variables);
         analyzerFull.PrintAllFunctionsAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, methods);
-        Console.WriteLine($"methods count: {methods.Count}");
 
-        Console.WriteLine(JsonSerializer.Serialize(methods.Select(m => new MethodRecommendation
-            {
-                AccessModifier = m.AccessModifier.ToString(),
-                FunctionParams = m.FuncArgs.Select(a => new FunctionParam
-                {
-                    Name = a.Identifier?.Value ?? "<undefined>",
-                    Type = a.Type.Match(
-                        t1 => t1.ToString(),
-                        t2 => t2.ToString(),
-                        t3 => t3.ToString()),
-                }).ToList(),
-                MethodName = m.Identifier?.Value ?? "<undefined>",
-                QualifiedName = m.Identifier?.Value ?? "<undefined>",
-                Generics = m.GenericTypes.Select(g => g.ToString()).ToList(),
-                Modifiers = m.Modifiers.Select(mm => mm.ToString()).ToList(),
-                ReturnType = m.FuncReturnType == null ? "<undefined>" : m.FuncReturnType.Value.Match(
-                    t1 => t1.ToString(),
-                    t2 => t2.ToString(),
-                    t3 => t3.ToString(),
-                    t4 => t4.ToString())
-            }).ToList()));
+
+        var list = methods
+            .Where(m => !m.Key.IsConstructor)
+            .Select(m => analyzerFull.RecursiveResolveFunctionCall(fullResult.Main.FuncScope!.OwnScope, m.Value.Split('.')))
+            .ToList();
+        Console.WriteLine(list.Count);
+        list.ForEach(lm => Console.WriteLine(lm));
         
         return new AnalysisResultDto
         {
             Methods = methods.Select(m => new MethodRecommendation
             {
-                AccessModifier = m.AccessModifier.ToString(),
-                FunctionParams = m.FuncArgs.Select(a => new FunctionParam
+                AccessModifier = m.Key.AccessModifier.ToString(),
+                FunctionParams = m.Key.FuncArgs.Select(a => new FunctionParam
                 {
                     Name = a.Identifier?.Value ?? "<undefined>",
                     Type = a.Type.Match(
@@ -100,11 +84,11 @@ public class AnalysisResultService : IAnalysisResultService
                         t2 => t2.ToString(),
                         t3 => t3.ToString()),
                 }).ToList(),
-                MethodName = m.Identifier?.Value ?? "<undefined>",
-                QualifiedName = m.Identifier?.Value ?? "<undefined>",
-                Generics = m.GenericTypes.Select(g => g.ToString()).ToList(),
-                Modifiers = m.Modifiers.Select(mm => mm.ToString()).ToList(),
-                ReturnType = m.FuncReturnType == null ? "<undefined>" : m.FuncReturnType.Value.Match(
+                MethodName = m.Key.Identifier?.Value ?? "<undefined>",
+                QualifiedName = m.Value,
+                Generics = m.Key.GenericTypes.Select(g => g.ToString()).ToList(),
+                Modifiers = m.Key.Modifiers.Select(mm => mm.ToString()).ToList(),
+                ReturnType = m.Key.FuncReturnType == null ? "<undefined>" : m.Key.FuncReturnType.Value.Match(
                     t1 => t1.ToString(),
                     t2 => t2.ToString(),
                     t3 => t3.ToString(),
@@ -121,6 +105,7 @@ public class AnalysisResultService : IAnalysisResultService
         };
     }
 }
+
 
 public class AnalysisRequestDto
 {

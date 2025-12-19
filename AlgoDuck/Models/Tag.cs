@@ -7,7 +7,7 @@ namespace AlgoDuck.Models;
 
 public partial class Tag : IEntityTypeConfiguration<Tag>
 {
-    public Guid TagId { get; set; }
+    public Guid TagId { get; set; } = Guid.NewGuid();
 
     public string TagName { get; set; } = null!;
 
