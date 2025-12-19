@@ -14,7 +14,9 @@ using AlgoDuck.Modules.Auth.Shared.Jwt;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using SharedEmailSender = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailSender;
 using SharedEmailTransport = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailTransport;
@@ -297,6 +299,131 @@ public static class AuthDependencyInitializer
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
+            });
+        }
+
+        var microsoft = configuration.GetSection("Authentication:Microsoft");
+        if (!string.IsNullOrWhiteSpace(microsoft["ClientId"]) || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTID")))
+        {
+            services.AddAuthentication().AddOpenIdConnect("Microsoft", o =>
+            {
+                o.ClientId = Req(microsoft["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTID"), "Authentication:Microsoft:ClientId or AUTHENTICATION__MICROSOFT__CLIENTID");
+                o.ClientSecret = Req(microsoft["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTSECRET"), "Authentication:Microsoft:ClientSecret or AUTHENTICATION__MICROSOFT__CLIENTSECRET");
+                o.Authority = microsoft["Authority"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__AUTHORITY") ?? "https://login.microsoftonline.com/common/v2.0";
+                o.CallbackPath = microsoft["CallbackPath"] ?? "/api/auth/oauth/microsoft";
+                o.ResponseType = OpenIdConnectResponseType.Code;
+                o.ResponseMode = OpenIdConnectResponseMode.Query;
+                o.UsePkce = true;
+                o.SaveTokens = true;
+                o.GetClaimsFromUserInfoEndpoint = true;
+                o.Scope.Add("email");
+                o.SignInScheme = IdentityConstants.ExternalScheme;
+
+                o.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                o.NonceCookie.SameSite = SameSiteMode.Lax;
+
+                if (environment.IsProduction())
+                {
+                    o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                    o.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
+                }
+
+                var authority = o.Authority ?? string.Empty;
+                var isMultiTenant =
+                    authority.Contains("/common", StringComparison.OrdinalIgnoreCase) ||
+                    authority.Contains("/organizations", StringComparison.OrdinalIgnoreCase) ||
+                    authority.Contains("/consumers", StringComparison.OrdinalIgnoreCase);
+
+                if (isMultiTenant)
+                {
+                    o.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidAudience = o.ClientId,
+                        ValidateLifetime = true,
+                        IssuerValidator = (issuer, token, parameters) =>
+                        {
+                            if (string.IsNullOrWhiteSpace(issuer))
+                            {
+                                throw new SecurityTokenInvalidIssuerException("Issuer is missing.");
+                            }
+
+                            if (issuer.StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase) &&
+                                issuer.EndsWith("/v2.0", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return issuer;
+                            }
+
+                            throw new SecurityTokenInvalidIssuerException($"Invalid issuer: {issuer}");
+                        }
+                    };
+                }
+
+                o.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        if (context.Properties.Items.TryGetValue("prompt", out var prompt))
+                        {
+                            var p = (prompt ?? string.Empty).Trim();
+                            if (p == "select_account" || p == "login")
+                            {
+                                context.ProtocolMessage.Prompt = p;
+                            }
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        var identity = context.Principal?.Identity as ClaimsIdentity;
+                        if (identity is null)
+                        {
+                            return Task.CompletedTask;
+                        }
+
+                        var oid = identity.FindFirst("oid")?.Value;
+                        var sub = identity.FindFirst("sub")?.Value;
+
+                        if (!string.IsNullOrWhiteSpace(oid))
+                        {
+                            var existing = identity.FindFirst(ClaimTypes.NameIdentifier);
+                            if (existing is null || (!string.IsNullOrWhiteSpace(sub) && existing.Value == sub))
+                            {
+                                if (existing is not null)
+                                {
+                                    identity.RemoveClaim(existing);
+                                }
+                                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, oid));
+                            }
+                        }
+
+                        var email =
+                            identity.FindFirst(ClaimTypes.Email)?.Value ??
+                            identity.FindFirst("email")?.Value ??
+                            identity.FindFirst("preferred_username")?.Value ??
+                            identity.FindFirst("upn")?.Value ??
+                            string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(email) && identity.FindFirst(ClaimTypes.Email) is null)
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Email, email));
+                        }
+
+                        var name =
+                            identity.FindFirst(ClaimTypes.Name)?.Value ??
+                            identity.FindFirst("name")?.Value ??
+                            string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(email) && identity.FindFirst(ClaimTypes.Name) is null)
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Name, email));
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
             });
         }
 

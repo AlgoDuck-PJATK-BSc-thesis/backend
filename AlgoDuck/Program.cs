@@ -12,8 +12,18 @@ using AlgoDuck.Shared.Middleware;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Shared.Utilities.DependencyInitializers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/keys"))
+    .SetApplicationName("AlgoDuck");
+
+builder.Services.Configure<HostOptions>(o =>
+{
+    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+});
 
 // general top level stuff
 GeneralDependencyInitializer.Initialize(builder);

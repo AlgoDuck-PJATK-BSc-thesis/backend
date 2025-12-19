@@ -33,7 +33,8 @@ public sealed class OAuthLoginEndpoint : ControllerBase
     public IActionResult Start(
         [FromRoute] string provider,
         [FromQuery] string? returnUrl = null,
-        [FromQuery] string? errorUrl = null)
+        [FromQuery] string? errorUrl = null,
+        [FromQuery] string? prompt = null)
     {
         var scheme = ToScheme(provider);
         if (scheme is null)
@@ -52,6 +53,15 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         {
             RedirectUri = redirectUri
         };
+
+        if (providerKey == "microsoft")
+        {
+            var p = (prompt ?? string.Empty).Trim();
+            if (p == "select_account" || p == "login")
+            {
+                props.Items["prompt"] = p;
+            }
+        }
 
         return Challenge(props, scheme);
     }
@@ -83,6 +93,7 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         var principal = externalAuth.Principal;
 
         var externalUserId =
+            principal.FindFirstValue("oid") ??
             principal.FindFirstValue(ClaimTypes.NameIdentifier) ??
             principal.FindFirstValue("sub") ??
             string.Empty;
@@ -90,11 +101,14 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         var email =
             principal.FindFirstValue(ClaimTypes.Email) ??
             principal.FindFirstValue("email") ??
+            principal.FindFirstValue("preferred_username") ??
+            principal.FindFirstValue("upn") ??
             string.Empty;
 
         var displayName =
             principal.FindFirstValue(ClaimTypes.Name) ??
             principal.FindFirstValue("name") ??
+            principal.FindFirstValue("preferred_username") ??
             principal.FindFirstValue("urn:github:login") ??
             email;
 
@@ -180,6 +194,7 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         if (p is "google") return "Google";
         if (p is "github") return "GitHub";
         if (p is "facebook") return "Facebook";
+        if (p is "microsoft") return "Microsoft";
         return null;
     }
 }
