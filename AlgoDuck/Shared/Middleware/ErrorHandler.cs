@@ -44,7 +44,8 @@ public class ErrorHandler
             await response.WriteAsJsonAsync(new StandardApiResponse
             {
                 Status = Status.Error,
-                Message = message
+                Message = message,
+                Body = null
             });
         }
     }
