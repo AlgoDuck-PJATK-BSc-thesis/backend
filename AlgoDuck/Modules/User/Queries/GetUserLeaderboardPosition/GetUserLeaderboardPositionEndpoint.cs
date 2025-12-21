@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AlgoDuck.Modules.User.Queries.GetUserLeaderboardPosition;
 
 [ApiController]
-[Route("user/leaderboard")]
+[Route("api/user/leaderboard")]
 [Authorize]
 public sealed class GetUserLeaderboardPositionEndpoint : ControllerBase
 {

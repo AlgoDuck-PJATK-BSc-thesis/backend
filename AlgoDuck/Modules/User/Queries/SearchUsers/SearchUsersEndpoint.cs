@@ -23,11 +23,7 @@ public sealed class SearchUsersEndpoint : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] SearchUsersDto request, CancellationToken cancellationToken)
     {
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            return BadRequest(validationResult.Errors);
-        }
+        await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var result = await _handler.HandleAsync(request, cancellationToken);
         return Ok(result);

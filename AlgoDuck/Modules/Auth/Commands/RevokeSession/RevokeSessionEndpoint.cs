@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AlgoDuck.Modules.Auth.Commands.RevokeSession;
 
 [ApiController]
-[Route("auth/sessions")]
+[Route("api/auth/sessions")]
 [Authorize]
 public sealed class RevokeSessionEndpoint : ControllerBase
 {
@@ -27,6 +27,6 @@ public sealed class RevokeSessionEndpoint : ControllerBase
 
         await _handler.HandleAsync(userId, dto, cancellationToken);
 
-        return NoContent();
+        return Ok();
     }
 }

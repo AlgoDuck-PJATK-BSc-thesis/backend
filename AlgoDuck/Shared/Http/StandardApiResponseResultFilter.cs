@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Reflection;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -70,11 +72,13 @@ public sealed class StandardApiResponseResultFilter : IAsyncResultFilter
                 return;
             }
 
+            var (normalizedValue, messageOverride) = Normalize(value, statusCode);
+
             var wrapped = new StandardApiResponse<object?>
             {
                 Status = statusCode >= 400 ? Status.Error : Status.Success,
-                Message = statusCode >= 400 ? ExtractMessage(value, statusCode) : string.Empty,
-                Body = value
+                Message = statusCode >= 400 ? (messageOverride ?? ExtractMessage(normalizedValue, statusCode)) : string.Empty,
+                Body = normalizedValue
             };
 
             context.Result = new ObjectResult(wrapped)
@@ -105,11 +109,13 @@ public sealed class StandardApiResponseResultFilter : IAsyncResultFilter
                 return;
             }
 
+            var (normalizedValue, messageOverride) = Normalize(value, statusCode);
+
             var wrapped = new StandardApiResponse<object?>
             {
                 Status = statusCode >= 400 ? Status.Error : Status.Success,
-                Message = statusCode >= 400 ? ExtractMessage(value, statusCode) : string.Empty,
-                Body = value
+                Message = statusCode >= 400 ? (messageOverride ?? ExtractMessage(normalizedValue, statusCode)) : string.Empty,
+                Body = normalizedValue
             };
 
             context.Result = new JsonResult(wrapped)
@@ -122,6 +128,63 @@ public sealed class StandardApiResponseResultFilter : IAsyncResultFilter
         }
 
         await next();
+    }
+
+    private static (object? normalizedValue, string? messageOverride) Normalize(object? value, int statusCode)
+    {
+        if (statusCode == StatusCodes.Status400BadRequest && TryConvertValidationFailures(value, out var dict))
+        {
+            return (dict, "Validation failed.");
+        }
+
+        return (value, null);
+    }
+
+    private static bool TryConvertValidationFailures(object? value, out Dictionary<string, string[]> dict)
+    {
+        dict = new Dictionary<string, string[]>();
+
+        if (value is null) return false;
+
+        if (value is IEnumerable<ValidationFailure> failures)
+        {
+            dict = failures
+                .GroupBy(f => string.IsNullOrWhiteSpace(f.PropertyName) ? "general" : f.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(f => f.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToArray()
+                );
+
+            return true;
+        }
+
+        if (value is IEnumerable enumerable && value is not string)
+        {
+            var list = new List<ValidationFailure>();
+
+            foreach (var item in enumerable)
+            {
+                if (item is ValidationFailure vf)
+                {
+                    list.Add(vf);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            dict = list
+                .GroupBy(f => string.IsNullOrWhiteSpace(f.PropertyName) ? "general" : f.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(f => f.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToArray()
+                );
+
+            return true;
+        }
+
+        return false;
     }
 
     private static bool IsAlreadyStandardApiResponse(object? value)

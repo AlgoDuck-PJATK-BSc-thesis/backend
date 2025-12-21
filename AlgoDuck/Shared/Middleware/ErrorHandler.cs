@@ -1,6 +1,7 @@
 using System.Net;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
+using FluentValidation;
 
 namespace AlgoDuck.Shared.Middleware;
 
@@ -29,8 +30,22 @@ public class ErrorHandler
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var message = "Unexpected error";
             var code = "internal_error";
+            object? body = null;
 
-            if (error is AppException appEx)
+            if (error is ValidationException validationEx)
+            {
+                statusCode = StatusCodes.Status400BadRequest;
+                message = "Validation failed.";
+                code = "validation_error";
+
+                body = validationEx.Errors
+                    .GroupBy(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "general" : e.PropertyName)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(e => e.ErrorMessage).Distinct().ToArray()
+                    );
+            }
+            else if (error is AppException appEx)
             {
                 statusCode = appEx.StatusCode;
                 message = appEx.Message;
@@ -40,12 +55,12 @@ public class ErrorHandler
             _logger.LogError(error, "Unhandled exception: {Code} {Message}", code, message);
 
             response.StatusCode = statusCode;
-            
+
             await response.WriteAsJsonAsync(new StandardApiResponse
             {
                 Status = Status.Error,
                 Message = message,
-                Body = null
+                Body = body
             });
         }
     }
