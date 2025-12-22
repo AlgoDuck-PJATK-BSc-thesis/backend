@@ -34,7 +34,7 @@ public sealed class UpdateUsernameEndpoint : ControllerBase
 
         await _handler.HandleAsync(userId, dto, cancellationToken);
 
-        return NoContent();
+        return Ok();
     }
 
     private Guid GetUserId()

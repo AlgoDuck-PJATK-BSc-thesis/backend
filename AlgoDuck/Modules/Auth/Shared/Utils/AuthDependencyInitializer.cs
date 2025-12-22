@@ -11,6 +11,7 @@ using AlgoDuck.Modules.Auth.Shared.Repositories;
 using AlgoDuck.Modules.Auth.Shared.Services;
 using AlgoDuck.Modules.Auth.Shared.Validators;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -174,6 +175,46 @@ public static class AuthDependencyInitializer
                             context.Response.Headers["X-Auth-Error"] = "token_expired";
                         }
                         return Task.CompletedTask;
+                    },
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+
+                        if (context.Response.HasStarted)
+                        {
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json; charset=utf-8";
+
+                        var msg = context.Response.Headers.TryGetValue("X-Token-Expired", out var expired) && expired == "true"
+                            ? "Access token expired."
+                            : "Unauthorized.";
+
+                        await context.Response.WriteAsJsonAsync(new StandardApiResponse
+                        {
+                            Status =  AlgoDuck.Shared.Http.Status.Error,
+                            Message = msg,
+                            Body = null
+                        });
+                    },
+                    OnForbidden = async context =>
+                    {
+                        if (context.Response.HasStarted)
+                        {
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "application/json; charset=utf-8";
+
+                        await context.Response.WriteAsJsonAsync(new StandardApiResponse
+                        {
+                            Status = AlgoDuck.Shared.Http.Status.Error,
+                            Message = "Forbidden.",
+                            Body = null
+                        });
                     }
                 };
             });
@@ -342,7 +383,7 @@ public static class AuthDependencyInitializer
                         ValidateAudience = true,
                         ValidAudience = o.ClientId,
                         ValidateLifetime = true,
-                        IssuerValidator = (issuer, token, parameters) =>
+                        IssuerValidator = (issuer, _, _) =>
                         {
                             if (string.IsNullOrWhiteSpace(issuer))
                             {

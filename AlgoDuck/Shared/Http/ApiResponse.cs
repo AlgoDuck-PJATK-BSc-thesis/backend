@@ -12,6 +12,7 @@ internal class StandardApiResponse<T>
 internal class StandardApiResponse
 {
     public Status Status { get; set; } = Status.Success;
+    public object? Body { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 

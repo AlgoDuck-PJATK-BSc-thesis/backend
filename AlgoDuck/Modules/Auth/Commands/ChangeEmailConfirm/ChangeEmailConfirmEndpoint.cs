@@ -25,6 +25,6 @@ public sealed class ChangeEmailConfirmEndpoint : ControllerBase
 
         await _handler.HandleAsync(dto, cancellationToken);
 
-        return NoContent();
+        return Ok();
     }
 }

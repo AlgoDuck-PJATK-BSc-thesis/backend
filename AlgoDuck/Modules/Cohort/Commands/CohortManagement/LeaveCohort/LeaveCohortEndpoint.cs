@@ -27,6 +27,6 @@ public sealed class LeaveCohortEndpoint : ControllerBase
         }
 
         await _handler.HandleAsync(userId, cancellationToken);
-        return NoContent();
+        return Ok();
     }
 }

@@ -111,7 +111,8 @@ public sealed class CsrfGuard
             await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
             {
                 Status = Status.Error,
-                Message = "CSRF validation failed."
+                Message = "CSRF validation failed.",
+                Body = null
             });
             return;
         }
