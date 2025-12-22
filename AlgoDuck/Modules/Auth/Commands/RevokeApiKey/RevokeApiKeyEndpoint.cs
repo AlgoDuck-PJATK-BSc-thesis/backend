@@ -17,7 +17,7 @@ public sealed class RevokeApiKeyEndpoint : ControllerBase
 
     [HttpDelete]
     [Authorize]
-    public async Task<IActionResult> Revoke(Guid id, [FromBody] RevokeApiKeyDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Revoke(Guid id, CancellationToken cancellationToken)
     {
         var userId = GetUserIdFromClaims(User);
         if (userId is null)
@@ -25,7 +25,7 @@ public sealed class RevokeApiKeyEndpoint : ControllerBase
             return Unauthorized(new { message = "User is not authenticated." });
         }
 
-        await _handler.HandleAsync(userId.Value, id, dto, cancellationToken);
+        await _handler.HandleAsync(userId.Value, id, cancellationToken);
 
         return Ok(new { message = "API key has been revoked." });
     }

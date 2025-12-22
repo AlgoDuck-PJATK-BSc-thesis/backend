@@ -58,7 +58,7 @@ public sealed class RegisterHandler : IRegisterHandler
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
         var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
 
-        await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email!, confirmationLink, cancellationToken);
+        await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email, confirmationLink, cancellationToken);
 
         return new AuthUserDto
         {
@@ -71,14 +71,24 @@ public sealed class RegisterHandler : IRegisterHandler
 
     private string BuildEmailConfirmationLink(Guid userId, string token)
     {
+        var apiBaseUrl =
+            _configuration["App:PublicApiUrl"] ??
+            "http://localhost:8080";
+
         var frontendBaseUrl =
+            _configuration["App:FrontendUrl"] ??
             _configuration["CORS:DevOrigins:0"] ??
-            _configuration["CORS__DEVORIGINS__0"] ??
             "http://localhost:5173";
+
+        apiBaseUrl = apiBaseUrl.TrimEnd('/');
+        frontendBaseUrl = frontendBaseUrl.TrimEnd('/');
 
         var encodedToken = Uri.EscapeDataString(token);
         var encodedUserId = Uri.EscapeDataString(userId.ToString());
 
-        return $"{frontendBaseUrl}/auth/confirm-email?userId={encodedUserId}&token={encodedToken}";
+        var returnUrl = $"{frontendBaseUrl}/auth/email-confirmed?userId={encodedUserId}&token={encodedToken}";
+        var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+
+        return $"{apiBaseUrl}/auth/email-verification?userId={encodedUserId}&token={encodedToken}&returnUrl={encodedReturnUrl}";
     }
 }

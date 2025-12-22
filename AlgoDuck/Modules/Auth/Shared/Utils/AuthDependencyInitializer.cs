@@ -7,19 +7,22 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands;
 using AlgoDuck.Modules.Auth.Queries;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
-using AlgoDuck.Modules.Auth.Shared.Jwt;
-using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Repositories;
 using AlgoDuck.Modules.Auth.Shared.Services;
 using AlgoDuck.Modules.Auth.Shared.Validators;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using SharedEmailSender = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailSender;
 using SharedEmailTransport = AlgoDuck.Modules.Auth.Shared.Interfaces.IEmailTransport;
 using SharedPostmarkEmailSender = AlgoDuck.Modules.Auth.Shared.Email.PostmarkEmailSender;
+using SharedGmailSmtpEmailSender = AlgoDuck.Modules.Auth.Shared.Email.GmailSmtpEmailSender;
 using SharedTokenServiceInterface = AlgoDuck.Modules.Auth.Shared.Interfaces.ITokenService;
 using SharedTokenService = AlgoDuck.Modules.Auth.Shared.Services.TokenService;
 
@@ -27,78 +30,77 @@ namespace AlgoDuck.Modules.Auth.Shared.Utils;
 
 public static class AuthDependencyInitializer
 {
-    public static IServiceCollection AddAuthModule(this IServiceCollection services, IWebHostEnvironment environment)
-    {
-        services.AddScoped<TokenUtility>();
-
-        services.AddScoped<EmailValidator>();
-        services.AddScoped<PasswordValidator>();
-        services.AddScoped<ApiKeyValidator>();
-        services.AddScoped<PermissionValidator>();
-        services.AddScoped<TokenValidator>();
-
-        services.AddScoped<IAuthRepository, AuthRepository>();
-        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
-        services.AddScoped<IPermissionsRepository, PermissionsRepository>();
-        services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<ITokenRepository, TokenRepository>();
-
-        services.AddScoped<SharedEmailTransport, SharedPostmarkEmailSender>();
-        services.AddScoped<SharedEmailSender, EmailSender>();
-
-        services.AddScoped(typeof(IPasswordHasher<>), typeof(PasswordHasher<>));
-
-        services.AddScoped<IPermissionsService, PermissionsService>();
-        services.AddScoped<SharedTokenServiceInterface, SharedTokenService>();
-        services.AddScoped<ITwoFactorService, TwoFactorService>();
-        services.AddScoped<IApiKeyService, ApiKeyService>();
-        services.AddScoped<IAuthValidator, AuthValidator>();
-        services.AddScoped<SessionService>();
-        services.AddScoped<ExternalAuthService>();
-        
-        services.AddScoped<IExternalAuthProvider, DevExternalAuthProvider>();
-
-        services.AddAuthCommands();
-        services.AddAuthQueries();
-
-        return services;
-    }
-    
     private static string Req(string? v, string key)
     {
         if (string.IsNullOrWhiteSpace(v)) throw new InvalidOperationException($"Missing configuration: {key}");
         return v;
     }
 
-    internal static void Initialize(WebApplicationBuilder builder)
+    public static IServiceCollection AddAuthModule(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
-        builder.Services.AddAuthModule(builder.Environment);
+        services.AddOptions<JwtSettings>()
+            .Bind(configuration.GetSection("Jwt"))
+            .PostConfigure(s =>
+            {
+                if (string.IsNullOrWhiteSpace(s.SigningKey))
+                {
+                    var fallback = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+                    if (!string.IsNullOrWhiteSpace(fallback))
+                    {
+                        s.SigningKey = fallback;
+                    }
+                }
 
-        
-        var jwtConfig = builder.Configuration.GetSection("Jwt");
-        var jwtKey = jwtConfig["Key"] ?? throw new InvalidOperationException("Jwt:Key is missing.");
+                if (string.IsNullOrWhiteSpace(s.SigningKey) && environment.IsProduction())
+                {
+                    throw new InvalidOperationException("Jwt:SigningKey is missing. Set env var Jwt__SigningKey (recommended) or JWT_SIGNING_KEY (fallback).");
+                }
+
+                if (string.IsNullOrWhiteSpace(s.Issuer)) s.Issuer = "algoduck";
+                if (string.IsNullOrWhiteSpace(s.Audience)) s.Audience = "algoduck-client";
+                if (s.AccessTokenMinutes <= 0) s.AccessTokenMinutes = 15;
+                if (s.RefreshTokenMinutes <= 0) s.RefreshTokenMinutes = 60 * 24 * 7;
+                if (string.IsNullOrWhiteSpace(s.AccessTokenCookieName)) s.AccessTokenCookieName = "jwt";
+                if (string.IsNullOrWhiteSpace(s.RefreshTokenCookieName)) s.RefreshTokenCookieName = "refresh_token";
+                if (string.IsNullOrWhiteSpace(s.CsrfCookieName)) s.CsrfCookieName = "csrf_token";
+                if (string.IsNullOrWhiteSpace(s.CsrfHeaderName)) s.CsrfHeaderName = "X-CSRF-Token";
+            })
+            .Validate(s => !environment.IsProduction() || s.SigningKey.Length >= 32, "Jwt signing key must be at least 32 characters.")
+            .ValidateOnStart();
+
+        var jwtConfig = configuration.GetSection("Jwt");
+
+        var jwtKey =
+            jwtConfig["SigningKey"] ??
+            jwtConfig["Key"] ??
+            Environment.GetEnvironmentVariable("JWT_SIGNING_KEY") ??
+            string.Empty;
+
+        if (string.IsNullOrWhiteSpace(jwtKey) && environment.IsProduction())
+        {
+            throw new InvalidOperationException("Jwt signing key is missing. Set env var Jwt__SigningKey (recommended) or JWT_SIGNING_KEY (fallback).");
+        }
+
         var jwtIssuer = jwtConfig["Issuer"] ?? "algoduck";
         var jwtAudience = jwtConfig["Audience"] ?? "algoduck-client";
 
-        var validateIssuer = jwtConfig.GetValue("ValidateIssuer", builder.Environment.IsProduction());
-        var validateAudience = jwtConfig.GetValue("ValidateAudience", builder.Environment.IsProduction());
+        var validateIssuer = jwtConfig.GetValue("ValidateIssuer", environment.IsProduction());
+        var validateAudience = jwtConfig.GetValue("ValidateAudience", environment.IsProduction());
         var validateLifetime = jwtConfig.GetValue("ValidateLifetime", true);
         var clockSkewSeconds = jwtConfig.GetValue("ClockSkewSeconds", 60);
 
-        var jwtCookieName = jwtConfig.GetValue<string>("JwtCookieName") ?? "jwt";
+        var jwtCookieName =
+            jwtConfig.GetValue<string>("JwtCookieName") ??
+            jwtConfig.GetValue<string>("AccessTokenCookieName") ??
+            "jwt";
 
-        builder.Services
-            .AddOptions<JwtSettings>()
-            .Bind(builder.Configuration.GetSection("Jwt"))
-            .Validate(s => !string.IsNullOrWhiteSpace(s.Issuer))
-            .Validate(s => !string.IsNullOrWhiteSpace(s.Audience))
-            .ValidateOnStart();
+        services.AddAuthorization();
 
-        builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+        services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
                 options.User.RequireUniqueEmail = true;
 
-                if (builder.Environment.IsProduction())
+                if (environment.IsProduction())
                 {
                     options.Password.RequiredLength = 12;
                     options.Password.RequireDigit = true;
@@ -124,7 +126,7 @@ public static class AuthDependencyInitializer
             .AddEntityFrameworkStores<ApplicationCommandDbContext>()
             .AddDefaultTokenProviders();
 
-        builder.Services.AddAuthentication(options =>
+        services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -145,15 +147,24 @@ public static class AuthDependencyInitializer
                     NameClaimType = ClaimTypes.NameIdentifier,
                     RoleClaimType = ClaimTypes.Role
                 };
+
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
                     {
-                        if (context.Request.Cookies.TryGetValue(jwtCookieName, out var token) &&
-                            !string.IsNullOrEmpty(token))
+                        if (context.Request.Cookies.TryGetValue(jwtCookieName, out var token) && !string.IsNullOrWhiteSpace(token))
                         {
                             context.Token = token;
+                            return Task.CompletedTask;
                         }
+
+                        var accessToken = context.Request.Query["access_token"].ToString();
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
                         return Task.CompletedTask;
                     },
                     OnAuthenticationFailed = context =>
@@ -161,38 +172,76 @@ public static class AuthDependencyInitializer
                         if (context.Exception is SecurityTokenExpiredException)
                         {
                             context.Response.Headers["X-Token-Expired"] = "true";
+                            context.Response.Headers["X-Auth-Error"] = "token_expired";
                         }
                         return Task.CompletedTask;
+                    },
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+
+                        if (context.Response.HasStarted)
+                        {
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json; charset=utf-8";
+
+                        var msg = context.Response.Headers.TryGetValue("X-Token-Expired", out var expired) && expired == "true"
+                            ? "Access token expired."
+                            : "Unauthorized.";
+
+                        await context.Response.WriteAsJsonAsync(new StandardApiResponse
+                        {
+                            Status =  AlgoDuck.Shared.Http.Status.Error,
+                            Message = msg,
+                            Body = null
+                        });
+                    },
+                    OnForbidden = async context =>
+                    {
+                        if (context.Response.HasStarted)
+                        {
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "application/json; charset=utf-8";
+
+                        await context.Response.WriteAsJsonAsync(new StandardApiResponse
+                        {
+                            Status = AlgoDuck.Shared.Http.Status.Error,
+                            Message = "Forbidden.",
+                            Body = null
+                        });
                     }
                 };
-            })
-            .AddGoogle("Google", o =>
+            });
+
+        var google = configuration.GetSection("Authentication:Google");
+        if (!string.IsNullOrWhiteSpace(google["ClientId"]) || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTID")))
+        {
+            services.AddAuthentication().AddGoogle("Google", o =>
             {
-                var g = builder.Configuration.GetSection("Authentication:Google");
-                o.ClientId =
-                    Req(g["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTID"),
-                        "Authentication:Google:ClientId or AUTHENTICATION__GOOGLE__CLIENTID");
-                o.ClientSecret =
-                    Req(g["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTSECRET"),
-                        "Authentication:Google:ClientSecret or AUTHENTICATION__GOOGLE__CLIENTSECRET");
-                o.CallbackPath = g["CallbackPath"] ?? "/api/auth/oauth/google";
+                o.ClientId = Req(google["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTID"), "Authentication:Google:ClientId or AUTHENTICATION__GOOGLE__CLIENTID");
+                o.ClientSecret = Req(google["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GOOGLE__CLIENTSECRET"), "Authentication:Google:ClientSecret or AUTHENTICATION__GOOGLE__CLIENTSECRET");
+                o.CallbackPath = google["CallbackPath"] ?? "/api/auth/oauth/google";
                 o.SaveTokens = true;
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                if (builder.Environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
-            })
-            .AddOAuth("GitHub", o =>
+            });
+        }
+
+        var github = configuration.GetSection("Authentication:GitHub");
+        if (!string.IsNullOrWhiteSpace(github["ClientId"]) || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTID")))
+        {
+            services.AddAuthentication().AddOAuth("GitHub", o =>
             {
-                var gh = builder.Configuration.GetSection("Authentication:GitHub");
-                o.ClientId =
-                    Req(gh["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTID"),
-                        "Authentication:GitHub:ClientId or AUTHENTICATION__GITHUB__CLIENTID");
-                o.ClientSecret =
-                    Req(
-                        gh["ClientSecret"] ??
-                        Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTSECRET"),
-                        "Authentication:GitHub:ClientSecret or AUTHENTICATION__GITHUB__CLIENTSECRET");
-                o.CallbackPath = gh["CallbackPath"] ?? "/api/auth/oauth/github";
+                o.ClientId = Req(github["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTID"), "Authentication:GitHub:ClientId or AUTHENTICATION__GITHUB__CLIENTID");
+                o.ClientSecret = Req(github["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__GITHUB__CLIENTSECRET"), "Authentication:GitHub:ClientSecret or AUTHENTICATION__GITHUB__CLIENTSECRET");
+                o.CallbackPath = github["CallbackPath"] ?? "/api/auth/oauth/github";
                 o.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
                 o.TokenEndpoint = "https://github.com/login/oauth/access_token";
                 o.UserInformationEndpoint = "https://api.github.com/user";
@@ -200,7 +249,7 @@ public static class AuthDependencyInitializer
                 o.Scope.Add("user:email");
                 o.SaveTokens = true;
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                if (builder.Environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
                 o.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
                 o.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
@@ -216,79 +265,279 @@ public static class AuthDependencyInitializer
                         request.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
                         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
 
-                        var response = await context.Backchannel.SendAsync(
-                            request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+                        var response = await context.Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
                         response.EnsureSuccessStatusCode();
 
                         using var user = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                         context.RunClaimActions(user.RootElement);
 
-                        var email = context.Identity?.FindFirst(ClaimTypes.Email)?.Value;
-                        if (string.IsNullOrWhiteSpace(email))
+                        var existingEmail = context.Identity?.FindFirst(ClaimTypes.Email)?.Value;
+                        if (string.IsNullOrWhiteSpace(existingEmail))
                         {
-                            var emailsReq =
-                                new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
-                            emailsReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                            emailsReq.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
-                            emailsReq.Headers.Authorization =
-                                new AuthenticationHeaderValue("Bearer", context.AccessToken);
+                            var emailsRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+                            emailsRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                            emailsRequest.Headers.UserAgent.ParseAdd("AlgoDuckOAuth");
+                            emailsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", context.AccessToken);
 
-                            var emailsRes = await context.Backchannel.SendAsync(
-                                emailsReq, HttpCompletionOption.ResponseHeadersRead,
-                                context.HttpContext.RequestAborted);
-                            if (emailsRes.IsSuccessStatusCode)
+                            var emailsResponse = await context.Backchannel.SendAsync(emailsRequest, HttpCompletionOption.ResponseHeadersRead, context.HttpContext.RequestAborted);
+                            emailsResponse.EnsureSuccessStatusCode();
+
+                            using var emailsDoc = JsonDocument.Parse(await emailsResponse.Content.ReadAsStringAsync());
+
+                            string? bestEmail = null;
+                            var bestScore = -1;
+
+                            if (emailsDoc.RootElement.ValueKind == JsonValueKind.Array)
                             {
-                                var json = await emailsRes.Content.ReadAsStringAsync();
-                                var arr = JsonDocument.Parse(json).RootElement;
-                                var best = arr.EnumerateArray()
-                                    .Where(e => e.GetProperty("verified").GetBoolean())
-                                    .OrderByDescending(e => e.GetProperty("primary").GetBoolean())
-                                    .Select(e => e.GetProperty("email").GetString())
-                                    .FirstOrDefault();
-                                if (!string.IsNullOrWhiteSpace(best))
+                                foreach (var el in emailsDoc.RootElement.EnumerateArray())
                                 {
-                                    context.Identity?.AddClaim(new Claim(ClaimTypes.Email, best));
+                                    if (!el.TryGetProperty("email", out var emailProp)) continue;
+                                    var email = emailProp.GetString();
+                                    if (string.IsNullOrWhiteSpace(email)) continue;
+
+                                    var verified = el.TryGetProperty("verified", out var verifiedProp) && verifiedProp.ValueKind == JsonValueKind.True;
+                                    var primary = el.TryGetProperty("primary", out var primaryProp) && primaryProp.ValueKind == JsonValueKind.True;
+
+                                    var score = 0;
+                                    if (verified) score += 2;
+                                    if (primary) score += 1;
+
+                                    if (score > bestScore)
+                                    {
+                                        bestScore = score;
+                                        bestEmail = email;
+                                    }
+
+                                    if (bestScore == 3)
+                                    {
+                                        break;
+                                    }
                                 }
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(bestEmail) && context.Identity is not null)
+                            {
+                                context.Identity.AddClaim(new Claim(ClaimTypes.Email, bestEmail));
                             }
                         }
                     }
                 };
-            })
-            .AddFacebook("Facebook", o =>
+            });
+        }
+
+        var facebook = configuration.GetSection("Authentication:Facebook");
+        if (!string.IsNullOrWhiteSpace(facebook["AppId"]) || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPID")))
+        {
+            services.AddAuthentication().AddFacebook("Facebook", o =>
             {
-                var fb = builder.Configuration.GetSection("Authentication:Facebook");
-                var appId = Req(
-                    fb["AppId"] ?? fb["ClientId"] ??
-                    Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPID"),
-                    "Authentication:Facebook:AppId/ClientId or AUTHENTICATION__FACEBOOK__APPID");
-                var appSecret =
-                    Req(
-                        fb["AppSecret"] ?? fb["ClientSecret"] ??
-                        Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPSECRET"),
-                        "Authentication:Facebook:AppSecret/ClientSecret or AUTHENTICATION__FACEBOOK__APPSECRET");
-                o.AppId = appId;
-                o.AppSecret = appSecret;
-                o.CallbackPath = fb["CallbackPath"] ?? "/api/auth/oauth/facebook";
+                o.AppId = Req(facebook["AppId"] ?? facebook["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPID"), "Authentication:Facebook:AppId/ClientId or AUTHENTICATION__FACEBOOK__APPID");
+                o.AppSecret = Req(facebook["AppSecret"] ?? facebook["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__FACEBOOK__APPSECRET"), "Authentication:Facebook:AppSecret/ClientSecret or AUTHENTICATION__FACEBOOK__APPSECRET");
+                o.CallbackPath = facebook["CallbackPath"] ?? "/api/auth/oauth/facebook";
                 o.SaveTokens = true;
                 o.Scope.Add("email");
                 o.Fields.Add("email");
                 o.Fields.Add("name");
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                if (builder.Environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
             });
-        
-        builder.Services.AddAuthorization();
-        
-        builder.Services.AddScoped<SharedTokenServiceInterface, SharedTokenService>();
+        }
+
+        var microsoft = configuration.GetSection("Authentication:Microsoft");
+        if (!string.IsNullOrWhiteSpace(microsoft["ClientId"]) || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTID")))
+        {
+            services.AddAuthentication().AddOpenIdConnect("Microsoft", o =>
+            {
+                o.ClientId = Req(microsoft["ClientId"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTID"), "Authentication:Microsoft:ClientId or AUTHENTICATION__MICROSOFT__CLIENTID");
+                o.ClientSecret = Req(microsoft["ClientSecret"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__CLIENTSECRET"), "Authentication:Microsoft:ClientSecret or AUTHENTICATION__MICROSOFT__CLIENTSECRET");
+                o.Authority = microsoft["Authority"] ?? Environment.GetEnvironmentVariable("AUTHENTICATION__MICROSOFT__AUTHORITY") ?? "https://login.microsoftonline.com/common/v2.0";
+                o.CallbackPath = microsoft["CallbackPath"] ?? "/api/auth/oauth/microsoft";
+                o.ResponseType = OpenIdConnectResponseType.Code;
+                o.ResponseMode = OpenIdConnectResponseMode.Query;
+                o.UsePkce = true;
+                o.SaveTokens = true;
+                o.GetClaimsFromUserInfoEndpoint = true;
+                o.Scope.Add("email");
+                o.SignInScheme = IdentityConstants.ExternalScheme;
+
+                o.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                o.NonceCookie.SameSite = SameSiteMode.Lax;
+
+                if (environment.IsProduction())
+                {
+                    o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                    o.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
+                }
+
+                var authority = o.Authority ?? string.Empty;
+                var isMultiTenant =
+                    authority.Contains("/common", StringComparison.OrdinalIgnoreCase) ||
+                    authority.Contains("/organizations", StringComparison.OrdinalIgnoreCase) ||
+                    authority.Contains("/consumers", StringComparison.OrdinalIgnoreCase);
+
+                if (isMultiTenant)
+                {
+                    o.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidAudience = o.ClientId,
+                        ValidateLifetime = true,
+                        IssuerValidator = (issuer, _, _) =>
+                        {
+                            if (string.IsNullOrWhiteSpace(issuer))
+                            {
+                                throw new SecurityTokenInvalidIssuerException("Issuer is missing.");
+                            }
+
+                            if (issuer.StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase) &&
+                                issuer.EndsWith("/v2.0", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return issuer;
+                            }
+
+                            throw new SecurityTokenInvalidIssuerException($"Invalid issuer: {issuer}");
+                        }
+                    };
+                }
+
+                o.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        if (context.Properties.Items.TryGetValue("prompt", out var prompt))
+                        {
+                            var p = (prompt ?? string.Empty).Trim();
+                            if (p == "select_account" || p == "login")
+                            {
+                                context.ProtocolMessage.Prompt = p;
+                            }
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        var identity = context.Principal?.Identity as ClaimsIdentity;
+                        if (identity is null)
+                        {
+                            return Task.CompletedTask;
+                        }
+
+                        var oid = identity.FindFirst("oid")?.Value;
+                        var sub = identity.FindFirst("sub")?.Value;
+
+                        if (!string.IsNullOrWhiteSpace(oid))
+                        {
+                            var existing = identity.FindFirst(ClaimTypes.NameIdentifier);
+                            if (existing is null || (!string.IsNullOrWhiteSpace(sub) && existing.Value == sub))
+                            {
+                                if (existing is not null)
+                                {
+                                    identity.RemoveClaim(existing);
+                                }
+                                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, oid));
+                            }
+                        }
+
+                        var email =
+                            identity.FindFirst(ClaimTypes.Email)?.Value ??
+                            identity.FindFirst("email")?.Value ??
+                            identity.FindFirst("preferred_username")?.Value ??
+                            identity.FindFirst("upn")?.Value ??
+                            string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(email) && identity.FindFirst(ClaimTypes.Email) is null)
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Email, email));
+                        }
+
+                        var name =
+                            identity.FindFirst(ClaimTypes.Name)?.Value ??
+                            identity.FindFirst("name")?.Value ??
+                            string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(email) && identity.FindFirst(ClaimTypes.Name) is null)
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Name, email));
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+        }
+
+        services.AddScoped<JwtTokenProvider>();
+        services.AddScoped<TokenParser>();
+        services.AddScoped<TokenGenerator>();
+        services.AddScoped<TokenRefreshService>();
+
+        services.AddScoped<TokenUtility>();
+
+        services.AddScoped<EmailValidator>();
+        services.AddScoped<PasswordValidator>();
+        services.AddScoped<ApiKeyValidator>();
+        services.AddScoped<PermissionValidator>();
+        services.AddScoped<TokenValidator>();
+
+        services.AddScoped<IAuthRepository, AuthRepository>();
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+        services.AddScoped<IPermissionsRepository, PermissionsRepository>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<ITokenRepository, TokenRepository>();
+
+        var emailProvider =
+            (Environment.GetEnvironmentVariable("EMAIL__PROVIDER") ?? configuration["Email:Provider"] ?? string.Empty)
+            .Trim();
+
+        var wantsSmtp = emailProvider.Equals("smtp", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmail", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmailsmtp", StringComparison.OrdinalIgnoreCase)
+            || emailProvider.Equals("gmail_smtp", StringComparison.OrdinalIgnoreCase);
+
+        var hasGmailSmtp = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GMAIL__SMTP_EMAIL"))
+            && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GMAIL__SMTP_PASSWORD"));
+
+        if (wantsSmtp || (string.IsNullOrWhiteSpace(emailProvider) && hasGmailSmtp))
+        {
+            if (!hasGmailSmtp)
+            {
+                throw new InvalidOperationException("EMAIL__PROVIDER is set to SMTP/Gmail, but GMAIL__SMTP_EMAIL or GMAIL__SMTP_PASSWORD is missing.");
+            }
+
+            services.AddScoped<SharedEmailTransport, SharedGmailSmtpEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<SharedEmailTransport, SharedPostmarkEmailSender>();
+        }
+
+        services.AddScoped<SharedEmailSender, EmailSender>();
+
+        services.AddScoped(typeof(IPasswordHasher<>), typeof(PasswordHasher<>));
+
+        services.AddScoped<IPermissionsService, PermissionsService>();
+        services.AddScoped<SharedTokenServiceInterface, SharedTokenService>();
+        services.AddScoped<ITwoFactorService, TwoFactorService>();
+        services.AddScoped<IApiKeyService, ApiKeyService>();
+        services.AddScoped<IAuthValidator, AuthValidator>();
+        services.AddScoped<SessionService>();
+        services.AddScoped<ExternalAuthService>();
+
+        if (environment.IsDevelopment())
+        {
+            services.AddScoped<IExternalAuthProvider, DevExternalAuthProvider>();
+        }
+
+        services.AddAuthCommands();
+        services.AddAuthQueries();
+
+        return services;
     }
 
-    public static IApplicationBuilder UseAuthModule(this IApplicationBuilder app)
+    public static void Initialize(WebApplicationBuilder builder)
     {
-        app.UseMiddleware<AuthExceptionMiddleware>();
-        app.UseMiddleware<TokenValidationMiddleware>();
-        app.UseMiddleware<ApiKeyValidationMiddleware>();
-
-        return app;
+        builder.Services.AddAuthModule(builder.Configuration, builder.Environment);
     }
 }

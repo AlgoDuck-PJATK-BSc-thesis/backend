@@ -60,7 +60,7 @@ public sealed class UserRepository : IUserRepository
             .Take(take)
             .ToListAsync(cancellationToken);
     }
-    
+
     public async Task<IReadOnlyList<ApplicationUser>> SearchAsync(
         string query,
         int page,
@@ -73,10 +73,22 @@ public sealed class UserRepository : IUserRepository
 
         if (!string.IsNullOrWhiteSpace(normalized))
         {
-            var like = "%" + normalized.ToLower() + "%";
-            q = q.Where(u =>
-                (u.UserName != null && EF.Functions.ILike(u.UserName, like)) ||
-                (u.Email != null && EF.Functions.ILike(u.Email, like)));
+            var lower = normalized.ToLowerInvariant();
+
+            if (_queryDbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            {
+                q = q.Where(u =>
+                    (u.UserName != null && u.UserName.ToLower().Contains(lower)) ||
+                    (u.Email != null && u.Email.ToLower().Contains(lower)));
+            }
+            else
+            {
+                var like = "%" + lower + "%";
+
+                q = q.Where(u =>
+                    (u.UserName != null && EF.Functions.ILike(u.UserName, like)) ||
+                    (u.Email != null && EF.Functions.ILike(u.Email, like)));
+            }
         }
 
         q = q

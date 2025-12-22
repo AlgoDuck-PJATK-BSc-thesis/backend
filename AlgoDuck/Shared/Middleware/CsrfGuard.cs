@@ -13,10 +13,13 @@ public sealed class CsrfGuard
 
     private static readonly HashSet<string> AllowUnauthenticatedPosts = new(StringComparer.OrdinalIgnoreCase)
     {
-        "/api/auth/login-start",
-        "/api/auth/login-verify",
-        "/api/auth/refresh",
-        "/api/auth/email/confirm"
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/twofactor/verify-login",
+        "/api/auth/external-login",
+        "/api/auth/password-reset/request",
+        "/api/auth/password-reset/reset",
+        "/api/auth/email-verification/start"
     };
 
     private readonly RequestDelegate _next;
@@ -79,16 +82,21 @@ public sealed class CsrfGuard
             return;
         }
 
-        var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
+        var cookieRaw = ctx.Request.Cookies[_jwt.CsrfCookieName];
         var headerRaw = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
-        
+
+        string? cookieVal = null;
+        if (!string.IsNullOrEmpty(cookieRaw))
+        {
+            cookieVal = Uri.UnescapeDataString(cookieRaw);
+        }
+
         string? headerVal = null;
         if (!string.IsNullOrEmpty(headerRaw))
         {
             headerVal = Uri.UnescapeDataString(headerRaw);
         }
 
-        
         if (!TimeSafeEquals(cookieVal, headerVal))
         {
             _logger.LogWarning(
@@ -103,7 +111,8 @@ public sealed class CsrfGuard
             await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
             {
                 Status = Status.Error,
-                Message = "CSRF validation failed."
+                Message = "CSRF validation failed.",
+                Body = null
             });
             return;
         }

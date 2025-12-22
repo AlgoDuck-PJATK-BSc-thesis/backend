@@ -30,7 +30,7 @@ public static class AuthCommandsDependencyInitializer
 
         services.AddScoped<IValidator<RefreshTokenDto>, RefreshTokenValidator>();
         services.AddScoped<IRefreshTokenHandler, RefreshTokenHandler>();
-
+        
         services.AddScoped<IValidator<LogoutDto>, LogoutValidator>();
         services.AddScoped<ILogoutHandler, LogoutHandler>();
 
@@ -48,17 +48,14 @@ public static class AuthCommandsDependencyInitializer
 
         services.AddScoped<IValidator<VerifyTwoFactorLoginDto>, VerifyTwoFactorLoginValidator>();
         services.AddScoped<IVerifyTwoFactorLoginHandler, VerifyTwoFactorLoginHandler>();
-
-        services.AddScoped<IValidator<EnableTwoFactorDto>, EnableTwoFactorValidator>();
+        
         services.AddScoped<IEnableTwoFactorHandler, EnableTwoFactorHandler>();
-
-        services.AddScoped<IValidator<DisableTwoFactorDto>, DisableTwoFactorValidator>();
+        
         services.AddScoped<IDisableTwoFactorHandler, DisableTwoFactorHandler>();
 
         services.AddScoped<IValidator<GenerateApiKeyDto>, GenerateApiKeyValidator>();
         services.AddScoped<IGenerateApiKeyHandler, GenerateApiKeyHandler>();
-
-        services.AddScoped<IValidator<RevokeApiKeyDto>, RevokeApiKeyValidator>();
+        
         services.AddScoped<IRevokeApiKeyHandler, RevokeApiKeyHandler>();
 
         services.AddScoped<IValidator<ExternalLoginDto>, ExternalLoginValidator>();
@@ -70,6 +67,6 @@ public static class AuthCommandsDependencyInitializer
         services.AddScoped<IValidator<ChangeEmailConfirmDto>, ChangeEmailConfirmValidator>();
         services.AddScoped<IChangeEmailConfirmHandler, ChangeEmailConfirmHandler>();
 
-        return services;
+        return services; 
     }
 }

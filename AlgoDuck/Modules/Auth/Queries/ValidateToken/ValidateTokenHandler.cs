@@ -29,19 +29,17 @@ public sealed class ValidateTokenHandler : IValidateTokenHandler
             var principal = _jwtTokenProvider.ValidateToken(dto.AccessToken);
 
             var userId = GetGuidClaim(principal, ClaimTypes.NameIdentifier) ?? GetGuidClaim(principal, "sub");
-            var sessionId = GetGuidClaim(principal, "session_id");
+            var sessionId = GetGuidClaim(principal, "sid") ?? GetGuidClaim(principal, "session_id");
             var expiresAt = GetExpiresAt(principal);
 
-            var result = new ValidateTokenResult
+            return Task.FromResult(new ValidateTokenResult
             {
                 IsValid = true,
                 IsExpired = expiresAt.HasValue && expiresAt.Value <= DateTimeOffset.UtcNow,
                 UserId = userId,
                 SessionId = sessionId,
                 ExpiresAt = expiresAt
-            };
-
-            return Task.FromResult(result);
+            });
         }
         catch (SecurityTokenExpiredException)
         {
@@ -85,7 +83,6 @@ public sealed class ValidateTokenHandler : IValidateTokenHandler
             return null;
         }
 
-        var epoch = DateTimeOffset.FromUnixTimeSeconds(seconds);
-        return epoch;
+        return DateTimeOffset.FromUnixTimeSeconds(seconds);
     }
 }

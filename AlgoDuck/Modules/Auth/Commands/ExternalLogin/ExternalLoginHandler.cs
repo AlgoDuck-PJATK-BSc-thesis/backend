@@ -110,6 +110,11 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
             return "Facebook";
         }
 
+        if (normalized is "microsoft" or "microsoft-oauth")
+        {
+            return "Microsoft";
+        }
+
         return null;
     }
 }

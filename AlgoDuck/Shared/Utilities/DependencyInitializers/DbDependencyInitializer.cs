@@ -1,7 +1,4 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Shared.Jwt;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -34,19 +31,6 @@ internal static class DbDependencyInitializer
 
         builder.Services.AddScoped<DataSeedingService>();
 
-        builder.Services
-            .AddIdentityCore<ApplicationUser>(options =>
-            {
-                options.User.RequireUniqueEmail = true;
-            })
-            .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<ApplicationCommandDbContext>()
-            .AddDefaultTokenProviders();
-
-        builder.Services.AddScoped<RoleManager<IdentityRole<Guid>>>();
-        builder.Services.AddScoped<UserManager<ApplicationUser>>();
-
-        builder.Services.AddScoped<JwtTokenProvider>();
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
             var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";

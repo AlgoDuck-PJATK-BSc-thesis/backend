@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
+using FluentValidationException = FluentValidation.ValidationException;
+using AuthValidationException = AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException;
 
 namespace AlgoDuck.Modules.Auth.Shared.Middleware;
 
@@ -25,42 +27,27 @@ public sealed class AuthExceptionMiddleware
         catch (AuthException ex)
         {
             _logger.LogWarning(ex, "Auth error with code {Code}.", ex.Code);
-            await WriteAuthErrorAsync(context, ex);
+            await WriteAuthErrorAsync(context, ex.Message, GetStatusCode(ex), ex.Code);
         }
-        catch (Exception ex)
+        catch (FluentValidationException ex)
         {
-            _logger.LogError(ex, "Unexpected error.");
-            await WriteUnexpectedErrorAsync(context);
+            var msg = ex.Errors?.Select(e => e.ErrorMessage).FirstOrDefault() ?? "Validation failed.";
+            _logger.LogWarning(ex, "Validation error.");
+            await WriteAuthErrorAsync(context, msg, HttpStatusCode.BadRequest, "validation_error");
         }
     }
 
-    private static async Task WriteAuthErrorAsync(HttpContext context, AuthException exception)
-    {
-        var statusCode = GetStatusCode(exception);
-        var response = new StandardApiResponse
-        {
-            Status = Status.Error,
-            Message = exception.Message
-        };
-
-        context.Response.StatusCode = (int)statusCode;
-        context.Response.ContentType = "application/json";
-        context.Response.Headers["X-Auth-Error"] = exception.Code;
-
-        var payload = JsonSerializer.Serialize(response);
-        await context.Response.WriteAsync(payload);
-    }
-
-    private static async Task WriteUnexpectedErrorAsync(HttpContext context)
+    private static async Task WriteAuthErrorAsync(HttpContext context, string message, HttpStatusCode status, string code)
     {
         var response = new StandardApiResponse
         {
             Status = Status.Error,
-            Message = "An unexpected error occurred."
+            Message = message
         };
 
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        context.Response.StatusCode = (int)status;
         context.Response.ContentType = "application/json";
+        context.Response.Headers["X-Auth-Error"] = code;
 
         var payload = JsonSerializer.Serialize(response);
         await context.Response.WriteAsync(payload);
@@ -68,26 +55,10 @@ public sealed class AuthExceptionMiddleware
 
     private static HttpStatusCode GetStatusCode(AuthException exception)
     {
-        if (exception is PermissionException)
-        {
-            return HttpStatusCode.Forbidden;
-        }
-
-        if (exception is ValidationException)
-        {
-            return HttpStatusCode.BadRequest;
-        }
-
-        if (exception is EmailVerificationException or TwoFactorException or TokenException)
-        {
-            return HttpStatusCode.Unauthorized;
-        }
-
-        if (exception is ApiKeyException)
-        {
-            return HttpStatusCode.Unauthorized;
-        }
-
+        if (exception is PermissionException) return HttpStatusCode.Forbidden;
+        if (exception is AuthValidationException) return HttpStatusCode.BadRequest;
+        if (exception is EmailVerificationException or TwoFactorException or TokenException) return HttpStatusCode.Unauthorized;
+        if (exception is ApiKeyException) return HttpStatusCode.Unauthorized;
         return HttpStatusCode.BadRequest;
     }
 }

@@ -133,8 +133,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("text")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PhoneNumber")
@@ -291,7 +290,8 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("created_by_user_id");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1109,7 +1109,7 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.Cohort", "Cohort")
                         .WithMany("ApplicationUsers")
                         .HasForeignKey("CohortId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("user_cohort_ref");
 
                     b.Navigation("Cohort");

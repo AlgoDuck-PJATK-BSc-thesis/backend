@@ -6,4 +6,5 @@ public interface ICohortRepository
     Task<bool> ExistsAsync(Guid cohortId, CancellationToken cancellationToken);
     Task<bool> UserBelongsToCohortAsync(Guid userId, Guid cohortId, CancellationToken cancellationToken);
     Task<IReadOnlyList<Models.Cohort>> GetForUserAsync(Guid userId, CancellationToken cancellationToken);
+    Task AddAsync(Models.Cohort cohort, CancellationToken cancellationToken);
 }

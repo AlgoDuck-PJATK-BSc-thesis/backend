@@ -17,7 +17,7 @@ public sealed class EnableTwoFactorEndpoint : ControllerBase
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult> Enable([FromBody] EnableTwoFactorDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Enable(CancellationToken cancellationToken)
     {
         var userId = GetUserIdFromClaims(User);
         if (userId is null)
@@ -25,7 +25,7 @@ public sealed class EnableTwoFactorEndpoint : ControllerBase
             return Unauthorized(new { message = "User is not authenticated." });
         }
 
-        await _handler.HandleAsync(userId.Value, dto, cancellationToken);
+        await _handler.HandleAsync(userId.Value, cancellationToken);
 
         return Ok(new { message = "Two-factor authentication has been enabled." });
     }

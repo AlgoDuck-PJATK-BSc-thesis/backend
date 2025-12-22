@@ -1,4 +1,5 @@
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
+using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
 
@@ -8,13 +9,16 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
 {
     private readonly IValidator<CreateCohortDto> _validator;
     private readonly IUserRepository _userRepository;
+    private readonly ICohortRepository _cohortRepository;
 
     public CreateCohortHandler(
         IValidator<CreateCohortDto> validator,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICohortRepository cohortRepository)
     {
         _validator = validator;
         _userRepository = userRepository;
+        _cohortRepository = cohortRepository;
     }
 
     public async Task<CreateCohortResultDto> HandleAsync(Guid userId, CreateCohortDto dto, CancellationToken cancellationToken)
@@ -44,8 +48,9 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
             CreatedByUserId = userId
         };
 
-        user.CohortId = cohort.CohortId;
+        await _cohortRepository.AddAsync(cohort, cancellationToken);
 
+        user.CohortId = cohort.CohortId;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         return new CreateCohortResultDto

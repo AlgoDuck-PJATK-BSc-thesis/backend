@@ -1,6 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 using RabbitMQ.Client;
 
 namespace AlgoDuckShared;
@@ -8,7 +11,6 @@ namespace AlgoDuckShared;
 public class SubmitExecuteRequestRabbit
 {
     public Guid JobId { get; set; }
-    public required Guid ProblemId { get; set; }
     public required Dictionary<string, string> JavaFiles { get; set; }
 }
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -17,9 +19,37 @@ public enum SubmitExecuteRequestRabbitStatus
     Queued,
     Compiling,
     Executing,
+    
     Completed,
-    Failed,
-    TimedOut 
+    CompilationFailure,
+    RuntimeError,
+    ServiceFailure,
+    Timeout 
+}
+
+
+public static class SubmitExecuteRequestRabbitStatusExtensions
+{
+    public static bool IsTerminalStatus(this SubmitExecuteRequestRabbitStatus status)
+    {
+        return status switch
+        {
+            SubmitExecuteRequestRabbitStatus.Completed or SubmitExecuteRequestRabbitStatus.CompilationFailure
+                or SubmitExecuteRequestRabbitStatus.RuntimeError or SubmitExecuteRequestRabbitStatus.ServiceFailure
+                or SubmitExecuteRequestRabbitStatus.Timeout => true,
+            _ => false
+        };
+    }
+    
+    public static bool IsIntermediateStatus(this SubmitExecuteRequestRabbitStatus status)
+    {
+        return status switch
+        {
+            SubmitExecuteRequestRabbitStatus.Queued or SubmitExecuteRequestRabbitStatus.Compiling
+                or SubmitExecuteRequestRabbitStatus.Executing => true,
+            _ => false
+        };
+    }
 }
 
 public class ExecutionResponseRabbit
@@ -32,26 +62,49 @@ public class ExecutionResponseRabbit
 
 public interface IRabbitMqConnectionService
 {
-    public Task<IConnection> GetConnection();
+    Task<IConnection> GetConnection(CancellationToken cancellationToken = default);
 }
 
-public sealed class RabbitMqConnectionService(IConnectionFactory factory) : IRabbitMqConnectionService, IAsyncDisposable
+public sealed class RabbitMqConnectionService(
+    IConnectionFactory factory,
+    ILogger<RabbitMqConnectionService> logger) : IRabbitMqConnectionService, IAsyncDisposable
 {
     private IConnection? _connection;
     private readonly SemaphoreSlim _connectionLock = new(1, 1);
-    public async Task<IConnection> GetConnection()
+
+    private static readonly ResiliencePipeline<IConnection> RetryPipeline = new ResiliencePipelineBuilder<IConnection>()
+        .AddRetry(new RetryStrategyOptions<IConnection>
+        {
+            MaxRetryAttempts = 10,
+            BackoffType = DelayBackoffType.Exponential,
+            Delay = TimeSpan.FromSeconds(2),
+            MaxDelay = TimeSpan.FromSeconds(60),
+            UseJitter = true
+        })
+        .Build();
+
+    public async Task<IConnection> GetConnection(CancellationToken cancellationToken = default)
     {
         if (_connection is { IsOpen: true })
         {
             return _connection;
         }
-        await _connectionLock.WaitAsync();
+
+        await _connectionLock.WaitAsync(cancellationToken);
         try
         {
-            if (_connection is not { IsOpen: true })
+            if (_connection is { IsOpen: true })
             {
-                _connection = await factory.CreateConnectionAsync();
+                return _connection;
             }
+
+            _connection = await RetryPipeline.ExecuteAsync(async ct =>
+            {
+                logger.LogInformation("Attempting to connect to RabbitMQ...");
+                return await factory.CreateConnectionAsync(ct);
+            }, cancellationToken);
+
+            logger.LogInformation("Successfully connected to RabbitMQ");
             return _connection;
         }
         finally
@@ -62,7 +115,10 @@ public sealed class RabbitMqConnectionService(IConnectionFactory factory) : IRab
 
     public async ValueTask DisposeAsync()
     {
-        if (_connection != null) await _connection.DisposeAsync();
+        if (_connection != null)
+        {
+            await _connection.DisposeAsync();
+        }
     }
 }
 

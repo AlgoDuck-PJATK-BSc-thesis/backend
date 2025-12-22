@@ -15,8 +15,8 @@ public class SessionServiceTests
         var userId = Guid.NewGuid();
         var sessions = new List<Session>
         {
-            new Session { SessionId = Guid.NewGuid(), UserId = userId },
-            new Session { SessionId = Guid.NewGuid(), UserId = userId }
+            new Session { SessionId = Guid.NewGuid(), UserId = userId, RefreshTokenHash = "h", RefreshTokenSalt = "s", CreatedAtUtc = DateTime.UtcNow, ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) },
+            new Session { SessionId = Guid.NewGuid(), UserId = userId, RefreshTokenHash = "h2", RefreshTokenSalt = "s2", CreatedAtUtc = DateTime.UtcNow, ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) }
         };
 
         repositoryMock
@@ -76,7 +76,7 @@ public class SessionServiceTests
 
         repositoryMock
             .Setup(x => x.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Session)null);
+            .ReturnsAsync((Session?)null);
 
         var service = new SessionService(repositoryMock.Object);
 
@@ -97,7 +97,11 @@ public class SessionServiceTests
         var session = new Session
         {
             SessionId = sessionId,
-            UserId = otherUserId
+            UserId = otherUserId,
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            CreatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10)
         };
 
         repositoryMock
@@ -124,7 +128,11 @@ public class SessionServiceTests
         {
             SessionId = sessionId,
             UserId = userId,
-            RevokedAtUtc = revokedAt
+            RevokedAtUtc = revokedAt,
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            CreatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10)
         };
 
         repositoryMock
@@ -151,7 +159,11 @@ public class SessionServiceTests
         {
             SessionId = sessionId,
             UserId = userId,
-            RevokedAtUtc = null
+            RevokedAtUtc = null,
+            RefreshTokenHash = "h",
+            RefreshTokenSalt = "s",
+            CreatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10)
         };
 
         repositoryMock
@@ -205,9 +217,9 @@ public class SessionServiceTests
 
         var sessions = new List<Session>
         {
-            new Session { SessionId = currentSessionId, UserId = userId, RevokedAtUtc = null },
-            new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = now },
-            new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = now }
+            new Session { SessionId = currentSessionId, UserId = userId, RevokedAtUtc = null, RefreshTokenHash = "h", RefreshTokenSalt = "s", CreatedAtUtc = now, ExpiresAtUtc = now.AddMinutes(10) },
+            new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = now, RefreshTokenHash = "h2", RefreshTokenSalt = "s2", CreatedAtUtc = now, ExpiresAtUtc = now.AddMinutes(10) },
+            new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = now, RefreshTokenHash = "h3", RefreshTokenSalt = "s3", CreatedAtUtc = now, ExpiresAtUtc = now.AddMinutes(10) }
         };
 
         repositoryMock
@@ -229,9 +241,9 @@ public class SessionServiceTests
         var userId = Guid.NewGuid();
         var currentSessionId = Guid.NewGuid();
 
-        var activeOtherSession1 = new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = null };
-        var activeOtherSession2 = new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = null };
-        var currentSession = new Session { SessionId = currentSessionId, UserId = userId, RevokedAtUtc = null };
+        var activeOtherSession1 = new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = null, RefreshTokenHash = "h", RefreshTokenSalt = "s", CreatedAtUtc = DateTime.UtcNow, ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) };
+        var activeOtherSession2 = new Session { SessionId = Guid.NewGuid(), UserId = userId, RevokedAtUtc = null, RefreshTokenHash = "h2", RefreshTokenSalt = "s2", CreatedAtUtc = DateTime.UtcNow, ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) };
+        var currentSession = new Session { SessionId = currentSessionId, UserId = userId, RevokedAtUtc = null, RefreshTokenHash = "h3", RefreshTokenSalt = "s3", CreatedAtUtc = DateTime.UtcNow, ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10) };
 
         var sessions = new List<Session>
         {

@@ -17,11 +17,20 @@ public sealed class GetUserRankingsHandler : IGetUserRankingsHandler
         var skip = (query.Page - 1) * query.PageSize;
         var take = query.PageSize;
 
-        var users = await _dbContext.Users
+        var page = await _dbContext.Users
             .OrderByDescending(u => u.Experience)
             .ThenBy(u => u.UserName)
             .Skip(skip)
             .Take(take)
+            .Select(u => new
+            {
+                u.Id,
+                u.UserName,
+                u.Experience
+            })
+            .ToListAsync(cancellationToken);
+
+        var result = page
             .Select((u, index) => new UserRankingDto
             {
                 UserId = u.Id,
@@ -29,8 +38,9 @@ public sealed class GetUserRankingsHandler : IGetUserRankingsHandler
                 Experience = u.Experience,
                 Rank = skip + index + 1
             })
-            .ToListAsync(cancellationToken);
+            .ToList()
+            .AsReadOnly();
 
-        return users;
+        return result;
     }
 }

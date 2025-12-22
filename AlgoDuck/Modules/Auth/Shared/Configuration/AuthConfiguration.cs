@@ -1,4 +1,3 @@
-using System;
 using AlgoDuck.Modules.Auth.Shared.Constants;
 
 namespace AlgoDuck.Modules.Auth.Shared.Configuration;

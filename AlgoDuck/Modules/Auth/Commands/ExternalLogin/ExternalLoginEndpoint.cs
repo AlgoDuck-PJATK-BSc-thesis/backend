@@ -1,5 +1,6 @@
-using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -27,7 +28,7 @@ public sealed class ExternalLoginEndpoint : ControllerBase
     {
         AuthResponse authResponse = await _handler.HandleAsync(dto, cancellationToken);
 
-        SetAuthCookies(authResponse);
+        AuthCookieWriter.SetAuthCookies(Response, _jwtSettings, authResponse);
 
         return Ok(new
         {
@@ -37,43 +38,5 @@ public sealed class ExternalLoginEndpoint : ControllerBase
             accessTokenExpiresAt = authResponse.AccessTokenExpiresAt,
             refreshTokenExpiresAt = authResponse.RefreshTokenExpiresAt
         });
-    }
-
-    private void SetAuthCookies(AuthResponse authResponse)
-    {
-        var cookieDomain = _jwtSettings.CookieDomain;
-        var expires = authResponse.RefreshTokenExpiresAt.UtcDateTime;
-        var secure = !string.IsNullOrWhiteSpace(cookieDomain);
-
-        var jwtCookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Strict,
-            Domain = string.IsNullOrWhiteSpace(cookieDomain) ? null : cookieDomain,
-            Expires = expires
-        };
-
-        var refreshCookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = secure,
-            SameSite = SameSiteMode.Strict,
-            Domain = string.IsNullOrWhiteSpace(cookieDomain) ? null : cookieDomain,
-            Expires = expires
-        };
-
-        var csrfCookieOptions = new CookieOptions
-        {
-            HttpOnly = false,
-            Secure = secure,
-            SameSite = SameSiteMode.Strict,
-            Domain = string.IsNullOrWhiteSpace(cookieDomain) ? null : cookieDomain,
-            Expires = expires
-        };
-
-        Response.Cookies.Append(_jwtSettings.AccessTokenCookieName, authResponse.AccessToken, jwtCookieOptions);
-        Response.Cookies.Append(_jwtSettings.RefreshTokenCookieName, authResponse.RefreshToken, refreshCookieOptions);
-        Response.Cookies.Append(_jwtSettings.CsrfCookieName, authResponse.CsrfToken, csrfCookieOptions);
     }
 }

@@ -48,10 +48,10 @@ public class TwoFactorServiceTests
         var loggerMock = new Mock<ILogger<TwoFactorService>>();
         var service = new TwoFactorService(cache, emailSenderMock.Object, loggerMock.Object);
         var user = CreateUser();
-        string capturedCode = null;
+        string? capturedCode = null;
 
         emailSenderMock
-            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email!, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, string, string, CancellationToken>((_, _, code, _) => capturedCode = code)
             .Returns(Task.CompletedTask);
 
@@ -60,10 +60,10 @@ public class TwoFactorServiceTests
         Assert.False(string.IsNullOrWhiteSpace(challengeId));
         Assert.True(expiresAt > DateTimeOffset.UtcNow);
         Assert.NotNull(capturedCode);
-        Assert.Equal(6, capturedCode.Length);
+        Assert.Equal(6, capturedCode!.Length);
         Assert.All(capturedCode, c => Assert.InRange(c, '0', '9'));
 
-        emailSenderMock.Verify(x => x.SendTwoFactorCodeAsync(user.Id, user.Email, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        emailSenderMock.Verify(x => x.SendTwoFactorCodeAsync(user.Id, user.Email!, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -89,10 +89,10 @@ public class TwoFactorServiceTests
         var loggerMock = new Mock<ILogger<TwoFactorService>>();
         var service = new TwoFactorService(cache, emailSenderMock.Object, loggerMock.Object);
         var user = CreateUser();
-        string sentCode = null;
+        string? sentCode = null;
 
         emailSenderMock
-            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email!, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, string, string, CancellationToken>((_, _, code, _) => sentCode = code)
             .Returns(Task.CompletedTask);
 
@@ -115,22 +115,22 @@ public class TwoFactorServiceTests
         var loggerMock = new Mock<ILogger<TwoFactorService>>();
         var service = new TwoFactorService(cache, emailSenderMock.Object, loggerMock.Object);
         var user = CreateUser();
-        string sentCode = null;
+        string? sentCode = null;
 
         emailSenderMock
-            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email!, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, string, string, CancellationToken>((_, _, code, _) => sentCode = code)
             .Returns(Task.CompletedTask);
 
         var (challengeId, _) = await service.SendLoginCodeAsync(user, CancellationToken.None);
 
-        var firstResult = await service.VerifyLoginCodeAsync(challengeId, sentCode, CancellationToken.None);
+        var firstResult = await service.VerifyLoginCodeAsync(challengeId, sentCode!, CancellationToken.None);
 
         Assert.True(firstResult.ok);
         Assert.Equal(user.Id, firstResult.userId);
         Assert.Null(firstResult.error);
 
-        var secondResult = await service.VerifyLoginCodeAsync(challengeId, sentCode, CancellationToken.None);
+        var secondResult = await service.VerifyLoginCodeAsync(challengeId, sentCode!, CancellationToken.None);
 
         Assert.False(secondResult.ok);
         Assert.Equal(Guid.Empty, secondResult.userId);
@@ -145,10 +145,10 @@ public class TwoFactorServiceTests
         var loggerMock = new Mock<ILogger<TwoFactorService>>();
         var service = new TwoFactorService(cache, emailSenderMock.Object, loggerMock.Object);
         var user = CreateUser();
-        string sentCode = null;
+        string? sentCode = null;
 
         emailSenderMock
-            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SendTwoFactorCodeAsync(user.Id, user.Email!, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, string, string, CancellationToken>((_, _, code, _) => sentCode = code)
             .Returns(Task.CompletedTask);
 

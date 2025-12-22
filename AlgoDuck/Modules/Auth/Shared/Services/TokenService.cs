@@ -38,7 +38,8 @@ public sealed class TokenService : ITokenService
 
     public async Task<AuthResponse> GenerateAuthTokensAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        var accessToken = _jwtTokenProvider.CreateAccessToken(user, out var accessExpiresAt);
+        var sessionId = Guid.NewGuid();
+        var accessToken = _jwtTokenProvider.CreateAccessToken(user, sessionId, out var accessExpiresAt);
 
         var rawRefresh = GenerateRefreshToken();
         var saltBytes = HashingHelper.GenerateSalt();
@@ -53,7 +54,7 @@ public sealed class TokenService : ITokenService
 
         var session = new Session
         {
-            SessionId = Guid.NewGuid(),
+            SessionId = sessionId,
             RefreshTokenHash = hashB64,
             RefreshTokenSalt = saltB64,
             RefreshTokenPrefix = refreshPrefix,
@@ -128,7 +129,7 @@ public sealed class TokenService : ITokenService
         await _sessionRepository.AddAsync(newSession, cancellationToken);
         await _sessionRepository.SaveChangesAsync(cancellationToken);
 
-        var accessToken = _jwtTokenProvider.CreateAccessToken(user, out var accessExpiresAt);
+        var accessToken = _jwtTokenProvider.CreateAccessToken(user, newId, out var accessExpiresAt);
 
         return AuthMapper.ToRefreshResult(
             newSession,
