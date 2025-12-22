@@ -73,7 +73,7 @@ public abstract class RabbitMqBackgroundWorker(
         if (Channel == null) throw new InvalidOperationException("Channel not initialized");
         
         var consumer = new AsyncEventingBasicConsumer(Channel);
-        consumer.ReceivedAsync += HandleMessageAsync;
+        consumer.ReceivedAsync += async (sender, ea) => await HandleMessageAsync(sender, ea, ct);
 
         await Channel.BasicConsumeAsync(
             queue: serviceData.RequestQueueName,
@@ -82,15 +82,15 @@ public abstract class RabbitMqBackgroundWorker(
             cancellationToken: ct);
     }
     
-    private async Task HandleMessageAsync(object sender, BasicDeliverEventArgs ea)
+    private async Task HandleMessageAsync(object sender, BasicDeliverEventArgs ea, CancellationToken cancellationToken = default)
     {
         try
         {
-            await ProcessMessageAsync(ea);
+            await ProcessMessageAsync(ea, cancellationToken);
             
             if (Channel != null)
             {
-                await Channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
+                await Channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: cancellationToken);
             }
         }
         catch (Exception ex)
@@ -99,12 +99,12 @@ public abstract class RabbitMqBackgroundWorker(
             
             if (Channel != null)
             {
-                await Channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
+                await Channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false, cancellationToken: cancellationToken);
             }
         }
     }
     
-    protected abstract Task ProcessMessageAsync(BasicDeliverEventArgs ea);
+    protected abstract Task ProcessMessageAsync(BasicDeliverEventArgs ea, CancellationToken cancellationToken = default);
     
     protected virtual BasicQosOptions GetQosOptions() => new();
     

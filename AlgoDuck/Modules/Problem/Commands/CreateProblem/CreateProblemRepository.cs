@@ -65,14 +65,14 @@ public class CreateProblemRepository(
         await dbContext.Problems.AddAsync(problem, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await s3Client.PutXmlObjectAsync($"problems/{problem.ProblemId}/test-cases.xml", new TestCaseS3WrapperObject
+        await s3Client.PostXmlObjectAsync($"problems/{problem.ProblemId}/test-cases.xml", new TestCaseS3WrapperObject
         {
             ProblemId = problem.ProblemId,
             TestCases = partialTestCasesS3
         }, cancellationToken);
 
 
-        await s3Client.PutXmlObjectAsync(
+        await s3Client.PostXmlObjectAsync(
             $"problems/{problem.ProblemId}/infos/{SupportedLanguage.En.GetDisplayName().ToLowerInvariant()}.xml",
             new ProblemS3PartialInfo
             {

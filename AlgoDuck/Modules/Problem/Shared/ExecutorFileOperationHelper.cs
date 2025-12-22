@@ -162,7 +162,7 @@ public class ExecutorFileOperationHelper
     
     private void InsertAtStartOfMainMethod(string codeToBeInserted)
     {
-        UserSolutionData.FileContents.Insert(UserSolutionData.MainMethod!.MethodFileBeginIndex -1, codeToBeInserted);
+        UserSolutionData.FileContents.Insert(UserSolutionData.MainMethod!.MethodFileBeginIndex + 1, codeToBeInserted);
         UserSolutionData.MainMethod!.MethodFileEndIndex += codeToBeInserted.Length;
     }
     

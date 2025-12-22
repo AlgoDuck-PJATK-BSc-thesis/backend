@@ -57,7 +57,7 @@ public sealed class GetUserActivityHandlerTests
         var statusId = Guid.NewGuid();
         var createdAt = DateTime.UtcNow;
 
-        var problem = new Problem
+        var problem = new Models.Problem
         {
             ProblemId = problemId,
             ProblemTitle = "Two Sum",

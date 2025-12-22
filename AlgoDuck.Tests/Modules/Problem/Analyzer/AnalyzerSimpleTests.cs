@@ -40,11 +40,5 @@ public class Main {
         Assert.NotNull(result.MainMethodIndices);
     }
 
-    // [Theory]
-    // [InlineData("public static void main(String[] args){}")]
-    // [InlineData("public static void main(String... args){}")]
-    // public void ValidateFunctionSignature_WithValidMainSignatures_ReturnsTrue(string signature)
-    // {
-    //     // Test that various valid main method signatures are recognized
-    // }
+
 }

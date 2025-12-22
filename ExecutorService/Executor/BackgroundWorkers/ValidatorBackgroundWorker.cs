@@ -26,7 +26,7 @@ public sealed class ValidatorBackgroundWorker(
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    protected override async Task ProcessMessageAsync(BasicDeliverEventArgs ea)
+    protected override async Task ProcessMessageAsync(BasicDeliverEventArgs ea, CancellationToken cancellationToken = default)
     {
         SubmitExecuteRequestRabbit? request = null;
 
@@ -56,8 +56,8 @@ public sealed class ValidatorBackgroundWorker(
 
             var status = ex switch
             {
-                VmQueryTimedOutException => SubmitExecuteRequestRabbitStatus.TimedOut,
-                _ => SubmitExecuteRequestRabbitStatus.Failed
+                VmQueryTimedOutException => SubmitExecuteRequestRabbitStatus.Timeout,
+                _ => SubmitExecuteRequestRabbitStatus.ServiceFailure
             };
             
             var errorResult = new VmExecutionResponse
@@ -154,7 +154,6 @@ public sealed class ValidatorBackgroundWorker(
         var json = JsonSerializer.Serialize(message, JsonOptions);
         var body = Encoding.UTF8.GetBytes(json);
 
-        Console.WriteLine($"publishing to the results queue: {_serviceData.ResponseQueueName}");
         await Channel.BasicPublishAsync(
             exchange: "",
             routingKey: _serviceData.ResponseQueueName,

@@ -42,9 +42,9 @@ public abstract class LexerCore(char[] fileChars, FilePosition filePosition, Lis
         return null;
     }
     
-    protected Token CreateToken(TokenType type, string? value = null)
+    protected Token CreateToken(TokenType type, int startingPos, string? value = null)
     {
-        return new Token(type, _filePosition.GetFilePos() - 1, value);
+        return new Token(type, startingPos, value);
     }
     protected char ConsumeChar()
     {

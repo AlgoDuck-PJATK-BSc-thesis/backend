@@ -200,7 +200,7 @@ public class DataSeedingService(
                 var objectPath = $"problems/{testCaseS3Partial.ProblemId}/test-cases.xml";
                 if (!await s3Client.ObjectExistsAsync(objectPath))
                 {
-                    await s3Client.PutXmlObjectAsync(objectPath,
+                    await s3Client.PostXmlObjectAsync(objectPath,
                         testCaseS3Partial);
                 }
             }
@@ -422,7 +422,7 @@ public class DataSeedingService(
                 var objectPath = $"problems/{template.ProblemId}/template.xml";
                 if (!await s3Client.ObjectExistsAsync(objectPath))
                 {
-                    await s3Client.PutXmlObjectAsync(objectPath,
+                    await s3Client.PostXmlObjectAsync(objectPath,
                         template);
                 }
             }
@@ -452,7 +452,7 @@ public class DataSeedingService(
                 var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName().ToLowerInvariant()}.xml";
                 if (!await s3Client.ObjectExistsAsync(objectPath))
                 {
-                    await s3Client.PutXmlObjectAsync(objectPath,
+                    await s3Client.PostXmlObjectAsync(objectPath,
                         info);
                 }
             }

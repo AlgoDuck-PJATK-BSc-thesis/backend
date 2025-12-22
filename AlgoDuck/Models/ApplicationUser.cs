@@ -35,6 +35,8 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
 
     public virtual ICollection<PurchasedTestCase> PurchasedTestCases { get; set; } = new List<PurchasedTestCase>();
+    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
 
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {

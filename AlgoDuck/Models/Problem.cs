@@ -30,6 +30,9 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
 
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
     public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
+    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
+    
     
 
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();

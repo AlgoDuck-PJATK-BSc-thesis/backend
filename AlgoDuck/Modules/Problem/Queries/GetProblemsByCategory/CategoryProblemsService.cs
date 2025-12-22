@@ -12,6 +12,5 @@ public class CategoryProblemsService(
     public async Task<ICollection<ProblemDisplayDto>> GetAllProblemsForCategoryAsync(string categoryName)
     {
         return await categoryProblemsRepository.GetAllProblemsForCategoryAsync(categoryName);
-        throw new NotImplementedException();
     }
 }

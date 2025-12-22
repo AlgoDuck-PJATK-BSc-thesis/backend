@@ -79,6 +79,7 @@ public sealed class ProblemValidationResultChannelReadWorker(
                 key: new RedisKey(response.JobId.ToString()),
                 value: JsonSerializer.Serialize(jobData),
                 expiry: TimeSpan.FromMinutes(3));
+            
             await hubContext.Clients.Group(response.JobId.ToString()).SendAsync(
                 method: "ValidationStatusUpdated",
                 arg1: validationResponse,
@@ -171,8 +172,8 @@ public sealed class ProblemValidationResultChannelReadWorker(
             SubmitExecuteRequestRabbitStatus.Compiling => ValidationResponseStatus.Pending,
             SubmitExecuteRequestRabbitStatus.Executing => ValidationResponseStatus.Pending,
             SubmitExecuteRequestRabbitStatus.Completed => ValidationResponseStatus.Succeeded,
-            SubmitExecuteRequestRabbitStatus.Failed => ValidationResponseStatus.Failed,
-            SubmitExecuteRequestRabbitStatus.TimedOut => ValidationResponseStatus.Failed,
+            SubmitExecuteRequestRabbitStatus.ServiceFailure => ValidationResponseStatus.Failed,
+            SubmitExecuteRequestRabbitStatus.Timeout => ValidationResponseStatus.Failed,
             _ => throw new ArgumentOutOfRangeException()
         };
     }

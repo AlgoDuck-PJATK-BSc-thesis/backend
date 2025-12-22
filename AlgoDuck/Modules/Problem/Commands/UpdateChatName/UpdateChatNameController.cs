@@ -1,13 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 
 [Authorize]
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class UpdateChatNameController(
     IUpdateChatNameService updateChatNameService
     ) : ControllerBase
@@ -15,30 +16,27 @@ public class UpdateChatNameController(
     [HttpPut]
     public async Task<IActionResult> UpdateChatName([FromBody] UpdateChatNameDto updateChatNameDto, CancellationToken cancellationToken)
     {
+        var userId = User.GetUserId();
         
+        if (userId.IsErr)
+            return userId.ToActionResult();
+
+        updateChatNameDto.UserId = userId.AsT0;
+            
         var res = await updateChatNameService.UpdateChatName(updateChatNameDto, cancellationToken);
-        return res.Match(
-            ok => Ok(new StandardApiResponse<UpdateChatNameResult>
-            {
-                Body = ok
-            }),
-            err => Ok(new StandardApiResponse
-            {
-                Status = Status.Error,
-                Message = err
-            }));
+        return res.ToActionResult();
     }
 }
 
 public class UpdateChatNameDto{
-    public required string ChatName { get; set; }
+    [MaxLength(128)]
+    [MinLength(3)]
     public required string NewChatName { get; set; }
-    public required Guid ProblemId { get; set; }
+    public required Guid ChatId { get; set; }
     internal Guid UserId { get; set; }
 }
 
 public class UpdateChatNameResult
 {
     public required string NewChatName { get; set; }
-    public required int MessagesUpdated { get; set; }
 }

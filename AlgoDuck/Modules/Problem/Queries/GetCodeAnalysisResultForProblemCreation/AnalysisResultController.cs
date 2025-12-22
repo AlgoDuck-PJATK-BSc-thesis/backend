@@ -68,8 +68,6 @@ public class AnalysisResultService : IAnalysisResultService
             .Where(m => !m.Key.IsConstructor)
             .Select(m => analyzerFull.RecursiveResolveFunctionCall(fullResult.Main.FuncScope!.OwnScope, m.Value.Split('.')))
             .ToList();
-        Console.WriteLine(list.Count);
-        list.ForEach(lm => Console.WriteLine(lm));
         
         return new AnalysisResultDto
         {

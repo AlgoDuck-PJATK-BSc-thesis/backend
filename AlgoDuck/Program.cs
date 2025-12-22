@@ -93,6 +93,7 @@ app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
 app.UseMiddleware<AuthExceptionMiddleware>();
 
+
 app.UseStatusCodePages(async statusContext =>
 {
     var http = statusContext.HttpContext;

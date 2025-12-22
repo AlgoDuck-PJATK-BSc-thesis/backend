@@ -50,10 +50,15 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTab
         return tokens[filePos];
     }
     
-    protected  bool CheckTokenType(TokenType tokenType, int offset = 0)
+    protected bool CheckTokenType(TokenType tokenType, int offset = 0)
     {
         var peekedToken = PeekToken(offset);
-        return peekedToken is not null && peekedToken.Type == tokenType;
+        if (peekedToken == null)
+        {
+            throw new JavaSyntaxException($"{tokenType.ToString()} expected, nothing found");
+        }
+        return peekedToken.Type == tokenType;
+        
     }
     protected Token TryConsume()
     {

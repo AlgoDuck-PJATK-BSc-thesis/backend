@@ -44,8 +44,6 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
 
     public virtual DbSet<Session> Sessions { get; set; }
 
-    public virtual DbSet<Status> Statuses { get; set; }
-
     public virtual DbSet<Tag> Tags { get; set; }
 
     public virtual DbSet<TestCase> TestCases { get; set; }
@@ -55,6 +53,8 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
     public virtual DbSet<UserSolution> UserSolutions { get; set; }
     public virtual DbSet<PurchasedTestCase> PurchasedTestCases { get; set; }
     public virtual DbSet<TestingResult> TestingResults { get; set; }
+    public virtual DbSet<UserSolutionSnapshot> UserSolutionSnapshots { get; set; }
+    public virtual DbSet<CodeExecutionStatistics> CodeExecutionStatisticss { get; set; }
     public virtual DbSet<UserAchievement> UserAchievements { get; set; }
     public virtual DbSet<AssistantChat> AssistantChats { get; set; }
     public virtual DbSet<AssistanceMessage> AssistanceMessages { get; set; }

@@ -33,7 +33,7 @@ public class AssistantMessageFragment : IEntityTypeConfiguration<AssistantMessag
         builder.HasOne(e => e.Message)
             .WithMany(e => e.Fragments)
             .HasForeignKey(e => e.MessageId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
