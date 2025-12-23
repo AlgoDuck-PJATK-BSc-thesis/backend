@@ -1,10 +1,11 @@
+using System.Security.Claims;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.User.Queries.GetVerifiedEmail;
 
 [ApiController]
-[Route("api/users")]
 [Authorize]
 public sealed class GetVerifiedEmailController : ControllerBase
 {
@@ -15,10 +16,39 @@ public sealed class GetVerifiedEmailController : ControllerBase
         _handler = handler;
     }
 
-    [HttpGet("{userId:guid}/email-status")]
-    public async Task<ActionResult<GetVerifiedEmailResultDto>> Get(Guid userId, CancellationToken cancellationToken)
+    [HttpGet("api/users/{userId:guid}/email-status")]
+    public async Task<IActionResult> Get(Guid userId, CancellationToken cancellationToken)
     {
         var result = await _handler.HandleAsync(userId, cancellationToken);
-        return Ok(result);
+
+        return Ok(new StandardApiResponse<GetVerifiedEmailResultDto>
+        {
+            Status = Status.Success,
+            Body = result,
+            Message = ""
+        });
+    }
+
+    [HttpGet("api/user/email")]
+    public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "Unauthorized"
+            });
+        }
+
+        var result = await _handler.HandleAsync(userId, cancellationToken);
+
+        return Ok(new StandardApiResponse<GetVerifiedEmailResultDto>
+        {
+            Status = Status.Success,
+            Body = result,
+            Message = ""
+        });
     }
 }

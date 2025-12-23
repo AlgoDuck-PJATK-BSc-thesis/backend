@@ -19,6 +19,7 @@ public sealed class StatisticsService : IStatisticsService
     public async Task<StatisticsSummary> GetStatisticsAsync(Guid userId, CancellationToken cancellationToken)
     {
         var userSolutions = _queryDbContext.UserSolutions
+            .AsNoTracking()
             .Include(s => s.Status)
             .Where(s => s.UserId == userId);
 
@@ -76,18 +77,17 @@ public sealed class StatisticsService : IStatisticsService
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var query = _queryDbContext.UserSolutions
+        var problemIds = await _queryDbContext.UserSolutions
+            .AsNoTracking()
             .Include(s => s.Status)
             .Where(
                 s =>
                     s.UserId == userId
                     && s.Status.StatusName == StatisticsConstants.StatusAccepted
             )
-            .Select(s => s.ProblemId)
-            .Distinct()
-            .OrderBy(id => id);
-
-        var problemIds = await query
+            .GroupBy(s => s.ProblemId)
+            .Select(g => g.Key)
+            .OrderBy(id => id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
