@@ -29,7 +29,6 @@ public class LexerSimple :
     {
         while (PeekChar() != null)
         {
-            // TODO when you have the time rewrite this to work on a peeked token and make CreateToken do the actual consuming
             var consumedChar = ConsumeChar();
             switch (consumedChar)
             {
@@ -59,6 +58,9 @@ public class LexerSimple :
                     break;
                 case ';':
                     _tokens.Add(CreateToken(TokenType.Semi));
+                    break;
+                case ':':
+                    HandleColon();
                     break;
                 case '.':
                     _tokens.Add(CreateToken(TokenType.Dot));
@@ -105,6 +107,12 @@ public class LexerSimple :
                 case '!':
                     HandleNegation();
                     break;
+                case '~':
+                    _tokens.Add(CreateToken(TokenType.Tilde));
+                    break;
+                case '@':
+                    _tokens.Add(CreateToken(TokenType.At));
+                    break;
                 default:
                     HandleDefaultCase(consumedChar);
                     break;
@@ -114,10 +122,22 @@ public class LexerSimple :
         return _tokens;
     }
 
+    private void HandleColon()
+    {
+        if (CheckForChar(':'))
+        {
+            ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.DoubleColon));
+        }
+        else
+        {
+            _tokens.Add(CreateToken(TokenType.Colon));
+        }
+    }
 
     private void HandleNegation()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Neq));
@@ -126,16 +146,16 @@ public class LexerSimple :
         {
             _tokens.Add(CreateToken(TokenType.Negation));
         }
-        
     }
     
     private void HandleOr()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.BitOrAssign));
-        }else if (CheckForChar('|'))
+        }
+        else if (CheckForChar('|'))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.LogOr));
@@ -148,14 +168,15 @@ public class LexerSimple :
 
     private void HandleAnd()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.BitAndAssign));
-        }else if (CheckForChar('|'))
+        }
+        else if (CheckForChar('&'))
         {
-            _tokens.Add(CreateToken(TokenType.LogAnd));
             ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.LogAnd));
         }
         else
         {
@@ -166,7 +187,7 @@ public class LexerSimple :
 
     private void HandleXor()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.BitXorAssign));
@@ -179,7 +200,7 @@ public class LexerSimple :
     
     private void HandleMul()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.MulAssign));
@@ -193,7 +214,7 @@ public class LexerSimple :
 
     private void HandleMod()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.ModAssign));
@@ -206,19 +227,23 @@ public class LexerSimple :
     
     private void HandleOpenChevron()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Le));
-        }else if (CheckForChar('<', 1))
+        }
+        else if (CheckForChar('<'))
         {
             ConsumeChar();
-            if (CheckForChar('=', 2))
+            if (CheckForChar('='))
             {
                 ConsumeChar();
                 _tokens.Add(CreateToken(TokenType.LBitShiftAssign));
             }
-            _tokens.Add(CreateToken(TokenType.LBitShift));
+            else
+            {
+                _tokens.Add(CreateToken(TokenType.LBitShift));
+            }
         }
         else
         {
@@ -228,28 +253,36 @@ public class LexerSimple :
     
     private void HandleCloseChevron()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Ge));
-        }else if (CheckForChar('>', 1))
+        }
+        else if (CheckForChar('>'))
         {
             ConsumeChar();
-            if (CheckForChar('=', 2))
+            if (CheckForChar('='))
             {
                 ConsumeChar();
                 _tokens.Add(CreateToken(TokenType.RBitShiftAssign));
-            }else if (CheckForChar('>', 2))
+            }
+            else if (CheckForChar('>'))
             {   
                 ConsumeChar();
-                if (CheckForChar('=', 3))
+                if (CheckForChar('='))
                 {
                     ConsumeChar();
                     _tokens.Add(CreateToken(TokenType.UrBitShiftAssign));
                 }
-                _tokens.Add(CreateToken(TokenType.UrBitShift));
+                else
+                {
+                    _tokens.Add(CreateToken(TokenType.UrBitShift));
+                }
             }
-            _tokens.Add(CreateToken(TokenType.RBitShift));
+            else
+            {
+                _tokens.Add(CreateToken(TokenType.RBitShift));
+            }
         }
         else
         {
@@ -259,14 +292,15 @@ public class LexerSimple :
     
     private void HandleForwardSlash()
     {
-        if (CheckForChar('/', 1))
+        if (CheckForChar('/'))
         {
             ConsumeComment();
-        }else if (CheckForChar('*', 1))
+        }
+        else if (CheckForChar('*'))
         {
             ConsumeMultiLineComment();
         }
-        else if (CheckForChar('=', 1))
+        else if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.DivAssign));
@@ -279,7 +313,7 @@ public class LexerSimple :
 
     private void HandleEqual()
     {
-        if (CheckForChar('=', 1))
+        if (CheckForChar('='))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Eq));
@@ -292,12 +326,14 @@ public class LexerSimple :
 
     private void HandlePlus()
     {
-        if (CheckForChar('+', 1))
+        if (CheckForChar('+'))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Increment));
-        }else if (CheckForChar('=', 1))
+        }
+        else if (CheckForChar('='))
         {
+            ConsumeChar();
             _tokens.Add(CreateToken(TokenType.PlusAssign));
         }
         else
@@ -308,13 +344,20 @@ public class LexerSimple :
     
     private void HandleMinus()
     {
-        if (CheckForChar('-', 1))
+        if (CheckForChar('-'))
         {
             ConsumeChar();
             _tokens.Add(CreateToken(TokenType.Decrement));
-        }else if (CheckForChar('=', 1))
+        }
+        else if (CheckForChar('='))
         {
+            ConsumeChar();
             _tokens.Add(CreateToken(TokenType.MinusAssign));
+        }
+        else if (CheckForChar('>'))
+        {
+            ConsumeChar();
+            _tokens.Add(CreateToken(TokenType.Arrow));
         }
         else
         {
@@ -328,10 +371,11 @@ public class LexerSimple :
         {
             _tokens.Add(ConsumeNumericLit(consumedChar));
         }
-        else if (char.IsLetter(consumedChar))
+        else if (char.IsLetter(consumedChar) || consumedChar == '_')
         {
             _tokens.Add(ConsumeKeyword(consumedChar));
-        }else if (char.IsWhiteSpace(consumedChar))
+        }
+        else if (char.IsWhiteSpace(consumedChar))
         {
             // just skip
         }

@@ -508,6 +508,9 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("problem_title");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.HasKey("ProblemId")
                         .HasName("problem_pk");
 
@@ -788,7 +791,6 @@ namespace AlgoDuck.Migrations
 
                     b.HasIndex("UserSolutionId");
 
-                    b.ToTable("TestingResults");
                     b.ToTable("TestingResults");
                 });
 
@@ -1501,9 +1503,9 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("AssistantChats");
-
                     b.Navigation("ApiKeys");
+
+                    b.Navigation("AssistantChats");
 
                     b.Navigation("Messages");
 

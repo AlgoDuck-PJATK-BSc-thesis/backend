@@ -21,10 +21,10 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTab
 
     protected bool SkipIfOfType(TokenType expectedTokenType)
     {
-        return TryConsumeIfOfType(expectedTokenType, out var _);
+        return TryConsumeTokenOfType(expectedTokenType, out var _);
     }
 
-    protected bool TryConsumeIfOfType(TokenType expectedTokenType, out Token? token)
+    protected bool TryConsumeTokenOfType(TokenType expectedTokenType, out Token? token)
     {
         token = null;
         if (!CheckTokenType(expectedTokenType)) return false;

@@ -16,7 +16,7 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition, Symbol
     private readonly FilePosition _filePosition = filePosition;
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
     
-    public void ParseGenericDeclaration(IGenericSettable funcOrClass)
+    public void ParseGenericDeclaration(IGenerifiable funcOrClass)
     {
         if (!CheckTokenType(TokenType.OpenChevron))
         {

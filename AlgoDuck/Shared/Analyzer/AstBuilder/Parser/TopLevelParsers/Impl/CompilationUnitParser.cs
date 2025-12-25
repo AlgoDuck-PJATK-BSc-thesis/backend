@@ -15,19 +15,16 @@ public class CompilationUnitParser(List<Token> tokens, FilePosition filePosition
     {
         var compilationUnit = new AstNodeCompilationUnit();
         var topLevelStatementParser = new TopLevelStatementParser(_tokens, _filePosition, _symbolTableBuilder);
-        
-        if (CheckTokenType(TokenType.Package))
-        {
-            ConsumeIfOfType("not gonna happen, put here for readability", TokenType.Package);
-            AstNodePackage package = new();
-            topLevelStatementParser.ParseImportsAndPackages(package);
-            compilationUnit.Package = package;
-        }
 
-        while (CheckTokenType(TokenType.Import))
+        if (TryConsumeTokenOfType(TokenType.Package, out var _))
         {
-            ConsumeIfOfType("not gonna happen, put here for readability", TokenType.Import);
-            AstNodeImport import = new();
+            compilationUnit.Package = new AstNodePackage();
+            topLevelStatementParser.ParseImportsAndPackages(compilationUnit.Package);
+        }
+        
+        while (TryConsumeTokenOfType(TokenType.Import, out var _))
+        {
+            var import = new AstNodeImport();
             topLevelStatementParser.ParseImportsAndPackages(import);
             compilationUnit.Imports.Add(import);
         }

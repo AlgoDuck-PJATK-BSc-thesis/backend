@@ -14,11 +14,17 @@ public class ParserSimple : IParser
 {
     public AstNodeProgram ParseProgram(List<List<Token>> compilationUnits)
     {
-        AstNodeProgram program = new();
-        var symbolTableBuild = new SymbolTableBuilder();
-        foreach (var compilationUnit in compilationUnits)
+        compilationUnits.First().ForEach(t =>
         {
-            var compilationUnitParser = new TopLevelParser(compilationUnit, symbolTableBuild);
+            Console.WriteLine($"{t.Type}: {t.FilePos}");
+        });
+        var program = new AstNodeProgram
+        {
+            SymbolTableBuilder = new SymbolTableBuilder()
+        };
+        
+        foreach (var compilationUnitParser in compilationUnits.Select(compilationUnit => new TopLevelParser(compilationUnit, program.SymbolTableBuilder)))
+        {
             program.ProgramCompilationUnits.Add(compilationUnitParser.ParseCompilationUnit());
         }
 

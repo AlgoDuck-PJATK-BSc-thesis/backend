@@ -3,6 +3,7 @@ using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
+using AlgoDuck.Modules.Problem.Commands.CreateProblem;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.User.Shared.Utils;
@@ -38,6 +39,7 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -54,7 +56,7 @@ app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorHandler>();
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
-app.UseMiddleware<CsrfGuard>();
+// app.UseMiddleware<CsrfGuard>();
 app.UseRateLimiter();
 
 app.UseAuthentication();
@@ -65,15 +67,16 @@ app.MapControllers();
 app.MapHub<CohortChatHub>("/hubs/cohort-chat");
 app.MapHub<AssistantHub>("/api/hubs/assistant");
 app.MapHub<ExecutionStatusHub>("/api/hubs/execution-status");
+app.MapHub<CreateProblemUpdatesHub>("/api/hubs/validation-status");
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
-
+    
+    
     var attempts = 0;
     const int maxAttempts = 10;
-
     while (true)
     {
         try

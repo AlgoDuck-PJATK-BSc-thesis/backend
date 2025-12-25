@@ -8,7 +8,7 @@ namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
 public interface IExecutorDryRunService
 {
-    internal Task<SubmitExecuteResponse> DryRunUserCodeAsync(SubmitExecuteRequest request);
+    internal Task<SubmitExecuteResponse> DryRunUserCodeAsync(DryRunExecuteRequest request);
 }
 
 internal class DryRunService(
@@ -16,7 +16,7 @@ internal class DryRunService(
     ) : IExecutorDryRunService
 {
     
-    public async Task<SubmitExecuteResponse> DryRunUserCodeAsync(SubmitExecuteRequest request)
+    public async Task<SubmitExecuteResponse> DryRunUserCodeAsync(DryRunExecuteRequest request)
     {
         var userSolutionData = new UserSolutionData
         {

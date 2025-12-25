@@ -9,13 +9,18 @@ namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 public class DryRunController(IExecutorDryRunService executorService) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> SubmitCode([FromBody] SubmitExecuteRequest executeRequest)
+    public async Task<IActionResult> ExecuteCode([FromBody] DryRunExecuteRequest executeRequest)
     {
         return Ok(new StandardApiResponse<SubmitExecuteResponse>
         {
             Body = await executorService.DryRunUserCodeAsync(executeRequest)
         });
     }
+}
+
+public class DryRunExecuteRequest
+{
+    public required string CodeB64 { get; set; }
 }
 
 public class SubmitExecuteRequest

@@ -1,7 +1,6 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace AlgoDuck.Models;
 
@@ -38,7 +37,7 @@ public class AssistantMessageFragment : IEntityTypeConfiguration<AssistantMessag
     }
 }
 
-[JsonConverter(typeof(StringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FragmentType
 {
     Text, Code

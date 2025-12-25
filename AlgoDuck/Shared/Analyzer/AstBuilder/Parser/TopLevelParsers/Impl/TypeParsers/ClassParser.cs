@@ -22,17 +22,22 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier != null)
         {
-            nodeClass.ClassAccessModifier = accessModifier.Value;
+            nodeClass.AccessModifier = accessModifier.Value;
             ConsumeToken();
         }
 
+        while (PeekToken()?.Type == TokenType.At)
+        {
+            nodeClass.AddAnnotation(ParseAnnotation());
+        }
+        
         nodeClass.ClassModifiers = ParseModifiers(legalModifiers);
 
         nodeClass.IsAbstract = nodeClass.ClassModifiers.Contains(MemberModifier.Abstract);
         
         ConsumeIfOfType("class", TokenType.Class);
 
-        nodeClass.Identifier = ConsumeIfOfType("class name", TokenType.Ident);
+        nodeClass.Name = ConsumeIfOfType("class name", TokenType.Ident);
 
         ParseGenericDeclaration(nodeClass);
 
@@ -40,12 +45,13 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         
         ParseImplementsKeyword(nodeClass);
 
-        _symbolTableBuilder.DefineSymbol(new TypeSymbol
+        _symbolTableBuilder.DefineSymbol(new TypeSymbol<AstNodeClass>
         {
-            Name = nodeClass.Identifier.Value!,
+            AssociatedType = nodeClass,
+            Name = nodeClass.Name.Value!,
         });
         
-        nodeClass.ClassScope = ParseClassScope(nodeClass);
+        nodeClass.TypeScope = ParseClassScope(nodeClass);
         return nodeClass;
     }
     
@@ -54,6 +60,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         _symbolTableBuilder.EnterScope();
         var classScope = new AstNodeTypeScope<AstNodeClass>
         {
+            OwnScope = _symbolTableBuilder.CurrentScope,
             OwnerMember = clazz,
             ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos
         };
