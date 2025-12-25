@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AlgoDuck.Shared.Http;
 using StackExchange.Redis;
 
 namespace AlgoDuck.Shared.S3;
@@ -19,14 +20,23 @@ public class AwsS3ClientCached(
         return await GetFromCacheOrInsert($"{path}-exists", async () => await awsS3Client.ObjectExistsAsync(path, cancellationToken));
     }
 
-    public async Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
     {
-        await awsS3Client.PutXmlObjectAsync(path, obj, cancellationToken);
+        return await awsS3Client.PostXmlObjectAsync(path, obj, cancellationToken);
     }
 
     public async Task PostRawFile(IFormFile file, S3BucketType bucketType, CancellationToken cancellationToken = default)
     {
         await awsS3Client.PostRawFile(file, bucketType, cancellationToken);
+    }
+
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, CancellationToken cancellationToken = default)
+    {
+        if ((await redis.StringGetAsync(path)).HasValue)
+        {
+            await redis.KeyDeleteAsync(path);
+        }
+        return await awsS3Client.DeleteDocumentAsync(path, cancellationToken);
     }
 
     private async Task<TResult?> GetFromCacheOrInsert<TResult>(

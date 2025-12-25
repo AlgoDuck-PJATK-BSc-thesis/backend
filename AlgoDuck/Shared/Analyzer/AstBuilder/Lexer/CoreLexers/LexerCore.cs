@@ -19,18 +19,19 @@ public abstract class LexerCore(char[] fileChars, FilePosition filePosition, Lis
 
         return consumed.ToString();
     }
-    
+
     protected bool IsLegalChar(char? peekedChar, int[][] legalCharRanges)
     {
         if (peekedChar == null) return false;
-        var peekedCharNum = (int) peekedChar;
+        var peekedCharNum = (int)peekedChar;
         return legalCharRanges.Any(legalRange => peekedCharNum >= legalRange[0] && peekedCharNum <= legalRange[1]);
     }
-    
+
     protected bool CheckForChar(char checkedChar, int offset = 0)
     {
         return PeekChar(offset) == checkedChar;
     }
+
     protected char? PeekChar(int offset = 0)
     {
         var accessIndex = offset + _filePosition.GetFilePos();
@@ -41,11 +42,12 @@ public abstract class LexerCore(char[] fileChars, FilePosition filePosition, Lis
 
         return null;
     }
-    
-    protected Token CreateToken(TokenType type, string? value = null)
+
+    protected Token CreateToken(TokenType type, int startingPos, string? value = null)
     {
-        return new Token(type, _filePosition.GetFilePos() - 1, value);
+        return new Token(type, startingPos, value);
     }
+
     protected char ConsumeChar()
     {
         var currPos = _filePosition.GetFilePos();

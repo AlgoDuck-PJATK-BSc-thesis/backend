@@ -211,7 +211,6 @@ public class AnalyzerSimple
 
             foreach (var cls in classes)
             {
-                Console.WriteLine(cls);
                 ProcessNestedClasses(cls, cls.Name.Value!, functions);
             }
         }
@@ -261,7 +260,6 @@ public class AnalyzerSimple
 
     private static void PrintAllFunctionSymbol<T>(Scope currentScope) where T : BaseType<T>
     {
-        currentScope.GetMethods<T>().ForEach(m => Console.WriteLine(m.AssociatedMethod.Identifier?.Value));
         currentScope.Children.ForEach(PrintAllFunctionSymbol<T>);
     }
 
@@ -269,9 +267,7 @@ public class AnalyzerSimple
     public CodeAnalysisResult AnalyzeUserCode(ExecutionStyle executionStyle)
     {
         var mainClass = GetMainClass();
-        Console.WriteLine(mainClass.Name.Value);
         var andGetFunc = FindAndGetFunc(_baselineMainSignature, mainClass);
-        Console.WriteLine(andGetFunc == null);
         var main = andGetFunc ??
                    InsertEntrypointMethod(mainClass);
         var validatedTemplateFunctions = executionStyle != ExecutionStyle.Submission || ValidateTemplateFunctions();
@@ -287,7 +283,6 @@ public class AnalyzerSimple
 
     private AstNodeMemberFunc<AstNodeClass> InsertEntrypointMethod(AstNodeClass astNodeClass)
     {
-        Console.WriteLine("inserting");
         var endOfEntrypointClassOffset = astNodeClass.TypeScope!.ScopeEndOffset;
         _userCode!.Insert(endOfEntrypointClassOffset, BaselineMainCode);
         astNodeClass.TypeScope.ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length;
@@ -296,7 +291,7 @@ public class AnalyzerSimple
         insertedMainFuncNode.FuncScope = new AstNodeStatementScope
         {
             OwnScope = astNodeClass.TypeScope.OwnScope,
-            ScopeBeginOffset = endOfEntrypointClassOffset + BaselineMainCode.Length,
+            ScopeBeginOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 2, // -2 for '{}'
             ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length,
         };
 
@@ -425,7 +420,6 @@ public class AnalyzerSimple
             .Select(func => func.ClassMember.AsT0 as AstNodeMemberFunc<T>)
             .ToList();
 
-        Console.WriteLine(astNodeMemberFuncs.Count);
         return astNodeMemberFuncs
             .FirstOrDefault(func => ValidateFunctionSignature(baselineFunc, func!));
     }

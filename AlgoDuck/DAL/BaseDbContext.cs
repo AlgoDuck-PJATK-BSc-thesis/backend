@@ -43,9 +43,6 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
     public virtual DbSet<Rarity> Rarities { get; set; }
 
     public virtual DbSet<Session> Sessions { get; set; }
-
-    public virtual DbSet<Status> Statuses { get; set; }
-
     public virtual DbSet<Tag> Tags { get; set; }
 
     public virtual DbSet<TestCase> TestCases { get; set; }
@@ -58,7 +55,8 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
     public virtual DbSet<UserAchievement> UserAchievements { get; set; }
     public virtual DbSet<AssistantChat> AssistantChats { get; set; }
     public virtual DbSet<AssistanceMessage> AssistanceMessages { get; set; }
-
+    public virtual DbSet<UserSolutionSnapshot> UserSolutionSnapshots { get; set; }
+    public virtual DbSet<CodeExecutionStatistics> CodeExecutionStatisticss { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

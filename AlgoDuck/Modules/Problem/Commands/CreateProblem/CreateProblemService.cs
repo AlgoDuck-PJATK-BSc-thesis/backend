@@ -110,7 +110,6 @@ public class CreateProblemService(
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {
             JobId = solutionData.ExecutionId,
-            ProblemId = Guid.Empty,
             JavaFiles = solutionData.GetFileContents(),
         }));
 

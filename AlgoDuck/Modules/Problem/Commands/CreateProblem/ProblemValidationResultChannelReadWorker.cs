@@ -171,8 +171,8 @@ public sealed class ProblemValidationResultChannelReadWorker(
             SubmitExecuteRequestRabbitStatus.Compiling => ValidationResponseStatus.Pending,
             SubmitExecuteRequestRabbitStatus.Executing => ValidationResponseStatus.Pending,
             SubmitExecuteRequestRabbitStatus.Completed => ValidationResponseStatus.Succeeded,
-            SubmitExecuteRequestRabbitStatus.Failed => ValidationResponseStatus.Failed,
-            SubmitExecuteRequestRabbitStatus.TimedOut => ValidationResponseStatus.Failed,
+            SubmitExecuteRequestRabbitStatus.ServiceFailure => ValidationResponseStatus.Failed,            
+            SubmitExecuteRequestRabbitStatus.Timeout => ValidationResponseStatus.Failed,
             _ => throw new ArgumentOutOfRangeException()
         };
     }

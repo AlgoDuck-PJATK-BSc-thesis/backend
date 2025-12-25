@@ -34,7 +34,8 @@ public partial class ApplicationUser : IdentityUser<Guid>,  IEntityTypeConfigura
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
     public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
-
+    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

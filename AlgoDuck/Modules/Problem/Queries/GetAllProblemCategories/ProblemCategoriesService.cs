@@ -12,6 +12,5 @@ public class ProblemCategoriesService(
     public async Task<IEnumerable<CategoryDto>> GetAllAsync()
     {
         return await repository.GetAllAsync();
-        throw new NotImplementedException();
     }
 }

@@ -17,12 +17,11 @@ public class DeleteChatRepository(
     public async Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto,
         CancellationToken cancellationToken = default)
     {
-        var chatsDeleted = await dbContext.AssistantChats.Where(e =>
-                e.ProblemId == dto.ProblemId && e.UserId == dto.UserId && e.Name == dto.ChatName)
+        var chatsDeleted = await dbContext.AssistantChats.Where(e => e.Id == dto.ChatId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 
         var messagesDeleted = await dbContext.AssistanceMessages
-            .Where(e => e.ProblemId == dto.ProblemId && e.UserId == dto.UserId && e.ChatName == dto.ChatName)
+            .Where(e => e.ChatId == dto.ChatId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 
         if (chatsDeleted == 0)

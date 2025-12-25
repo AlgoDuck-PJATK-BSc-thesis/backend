@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -7,26 +8,29 @@ namespace AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
 
 [Authorize]
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class DeleteChatController(
     IDeleteChatService deleteChatService
-    ) : ControllerBase
+) : ControllerBase
 {
-    public async Task<IActionResult> DeleteChat([FromBody] DeleteChatDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteChat([FromQuery] Guid chatId, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
 
         if (userId.IsErr)
             return userId.ToActionResult();
         
-        var chatDeleteResult  = await deleteChatService.Delete(dto, cancellationToken);
+        var chatDeleteResult  = await deleteChatService.Delete(new DeleteChatDto()
+        {
+            ChatId = chatId,
+            UserId = userId.AsT0
+        }, cancellationToken);
         return chatDeleteResult.ToActionResult();
     }
 }
 
 public class DeleteChatDto{
-    public required string ChatName { get; set; }
-    public required Guid ProblemId { get; set; }
+    public required Guid ChatId { get; set; }
     internal Guid UserId { get; set; }
 }
 

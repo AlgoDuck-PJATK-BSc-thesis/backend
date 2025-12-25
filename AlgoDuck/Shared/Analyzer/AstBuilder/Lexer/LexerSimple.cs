@@ -36,37 +36,37 @@ public class LexerSimple :
                     HandleForwardSlash();
                     break;
                 case '{':
-                    _tokens.Add(CreateToken(TokenType.OpenCurly));
+                    _tokens.Add(CreateToken(TokenType.OpenCurly, _filePosition.GetFilePos() - 1));
                     break;
                 case '}':
-                    _tokens.Add(CreateToken(TokenType.CloseCurly));
+                    _tokens.Add(CreateToken(TokenType.CloseCurly, _filePosition.GetFilePos() - 1));
                     break;
                 case '[':
-                    _tokens.Add(CreateToken(TokenType.OpenBrace));
+                    _tokens.Add(CreateToken(TokenType.OpenBrace, _filePosition.GetFilePos() - 1));
                     break;
                 case ']':
-                    _tokens.Add(CreateToken(TokenType.CloseBrace));
+                    _tokens.Add(CreateToken(TokenType.CloseBrace, _filePosition.GetFilePos() - 1));
                     break;
                 case '(':
-                    _tokens.Add(CreateToken(TokenType.OpenParen));
+                    _tokens.Add(CreateToken(TokenType.OpenParen, _filePosition.GetFilePos() - 1));
                     break;
                 case ')':
-                    _tokens.Add(CreateToken(TokenType.CloseParen));
+                    _tokens.Add(CreateToken(TokenType.CloseParen, _filePosition.GetFilePos() - 1));
                     break;
                 case '=':
                     HandleEqual();
                     break;
                 case ';':
-                    _tokens.Add(CreateToken(TokenType.Semi));
+                    _tokens.Add(CreateToken(TokenType.Semi, _filePosition.GetFilePos() - 1));
                     break;
                 case ':':
                     HandleColon();
                     break;
                 case '.':
-                    _tokens.Add(CreateToken(TokenType.Dot));
+                    _tokens.Add(CreateToken(TokenType.Dot, _filePosition.GetFilePos() - 1));
                     break;
                 case ',':
-                    _tokens.Add(CreateToken(TokenType.Comma));
+                    _tokens.Add(CreateToken(TokenType.Comma, _filePosition.GetFilePos() - 1));
                     break;
                 case '"':
                     _tokens.Add(ConsumeStringLit());
@@ -93,7 +93,7 @@ public class LexerSimple :
                     HandleCloseChevron();                    
                     break;
                 case '?':
-                    _tokens.Add(CreateToken(TokenType.Wildcard));
+                    _tokens.Add(CreateToken(TokenType.Wildcard, _filePosition.GetFilePos() - 1));
                     break;
                 case '&':
                     HandleAnd();
@@ -108,10 +108,10 @@ public class LexerSimple :
                     HandleNegation();
                     break;
                 case '~':
-                    _tokens.Add(CreateToken(TokenType.Tilde));
+                    _tokens.Add(CreateToken(TokenType.Tilde, _filePosition.GetFilePos() - 1));
                     break;
                 case '@':
-                    _tokens.Add(CreateToken(TokenType.At));
+                    _tokens.Add(CreateToken(TokenType.At, _filePosition.GetFilePos() - 1));
                     break;
                 default:
                     HandleDefaultCase(consumedChar);
@@ -124,113 +124,129 @@ public class LexerSimple :
 
     private void HandleColon()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar(':'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.DoubleColon));
+            _tokens.Add(CreateToken(TokenType.DoubleColon, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Colon));
+            _tokens.Add(CreateToken(TokenType.Colon, startPos));
         }
     }
 
     private void HandleNegation()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Neq));
+            _tokens.Add(CreateToken(TokenType.Neq, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Negation));
+            _tokens.Add(CreateToken(TokenType.Negation, startPos));
         }
     }
     
     private void HandleOr()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.BitOrAssign));
+            _tokens.Add(CreateToken(TokenType.BitOrAssign, startPos));
         }
         else if (CheckForChar('|'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.LogOr));
+            _tokens.Add(CreateToken(TokenType.LogOr, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.BitOr));
+            _tokens.Add(CreateToken(TokenType.BitOr, startPos));
         }
     }
 
     private void HandleAnd()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.BitAndAssign));
+            _tokens.Add(CreateToken(TokenType.BitAndAssign, startPos));
         }
         else if (CheckForChar('&'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.LogAnd));
+            _tokens.Add(CreateToken(TokenType.LogAnd, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.BitAnd));
+            _tokens.Add(CreateToken(TokenType.BitAnd, startPos));
         }
     }
 
 
     private void HandleXor()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.BitXorAssign));
+            _tokens.Add(CreateToken(TokenType.BitXorAssign, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.BitXor));
+            _tokens.Add(CreateToken(TokenType.BitXor, startPos));
         }
     }
     
     private void HandleMul()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.MulAssign));
+            _tokens.Add(CreateToken(TokenType.MulAssign, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Mul));
+            _tokens.Add(CreateToken(TokenType.Mul, startPos));
         }
     }
 
 
     private void HandleMod()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.ModAssign));
+            _tokens.Add(CreateToken(TokenType.ModAssign, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Mod));
+            _tokens.Add(CreateToken(TokenType.Mod, startPos));
         }
     }
     
     private void HandleOpenChevron()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Le));
+            _tokens.Add(CreateToken(TokenType.Le, startPos));
         }
         else if (CheckForChar('<'))
         {
@@ -238,25 +254,27 @@ public class LexerSimple :
             if (CheckForChar('='))
             {
                 ConsumeChar();
-                _tokens.Add(CreateToken(TokenType.LBitShiftAssign));
+                _tokens.Add(CreateToken(TokenType.LBitShiftAssign, startPos));
             }
             else
             {
-                _tokens.Add(CreateToken(TokenType.LBitShift));
+                _tokens.Add(CreateToken(TokenType.LBitShift, startPos));
             }
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.OpenChevron));
+            _tokens.Add(CreateToken(TokenType.OpenChevron, startPos));
         }
     }
     
     private void HandleCloseChevron()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Ge));
+            _tokens.Add(CreateToken(TokenType.Ge, startPos));
         }
         else if (CheckForChar('>'))
         {
@@ -264,7 +282,7 @@ public class LexerSimple :
             if (CheckForChar('='))
             {
                 ConsumeChar();
-                _tokens.Add(CreateToken(TokenType.RBitShiftAssign));
+                _tokens.Add(CreateToken(TokenType.RBitShiftAssign, startPos));
             }
             else if (CheckForChar('>'))
             {   
@@ -272,26 +290,27 @@ public class LexerSimple :
                 if (CheckForChar('='))
                 {
                     ConsumeChar();
-                    _tokens.Add(CreateToken(TokenType.UrBitShiftAssign));
+                    _tokens.Add(CreateToken(TokenType.UrBitShiftAssign, startPos));
                 }
                 else
                 {
-                    _tokens.Add(CreateToken(TokenType.UrBitShift));
+                    _tokens.Add(CreateToken(TokenType.UrBitShift, startPos));
                 }
             }
             else
             {
-                _tokens.Add(CreateToken(TokenType.RBitShift));
+                _tokens.Add(CreateToken(TokenType.RBitShift, startPos));
             }
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.CloseChevron));
+            _tokens.Add(CreateToken(TokenType.CloseChevron, startPos));
         }    
     }
     
     private void HandleForwardSlash()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
         if (CheckForChar('/'))
         {
             ConsumeComment();
@@ -303,65 +322,71 @@ public class LexerSimple :
         else if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.DivAssign));
+            _tokens.Add(CreateToken(TokenType.DivAssign, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Div));
+            _tokens.Add(CreateToken(TokenType.Div, startPos));
         }
     }
 
     private void HandleEqual()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Eq));
+            _tokens.Add(CreateToken(TokenType.Eq, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Assign));
+            _tokens.Add(CreateToken(TokenType.Assign, startPos));
         }
     }
 
     private void HandlePlus()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('+'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Increment));
+            _tokens.Add(CreateToken(TokenType.Increment, startPos));
         }
         else if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.PlusAssign));
+            _tokens.Add(CreateToken(TokenType.PlusAssign, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Plus));
+            _tokens.Add(CreateToken(TokenType.Plus, startPos));
         }  
     }
     
     private void HandleMinus()
     {
+        var startPos = _filePosition.GetFilePos() - 1;
+        
         if (CheckForChar('-'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Decrement));
+            _tokens.Add(CreateToken(TokenType.Decrement, startPos));
         }
         else if (CheckForChar('='))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.MinusAssign));
+            _tokens.Add(CreateToken(TokenType.MinusAssign, startPos));
         }
         else if (CheckForChar('>'))
         {
             ConsumeChar();
-            _tokens.Add(CreateToken(TokenType.Arrow));
+            _tokens.Add(CreateToken(TokenType.Arrow, startPos));
         }
         else
         {
-            _tokens.Add(CreateToken(TokenType.Minus));
+            _tokens.Add(CreateToken(TokenType.Minus, startPos));
         } 
     }
 

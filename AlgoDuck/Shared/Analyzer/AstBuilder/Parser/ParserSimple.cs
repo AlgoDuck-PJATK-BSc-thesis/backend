@@ -14,10 +14,6 @@ public class ParserSimple : IParser
 {
     public AstNodeProgram ParseProgram(List<List<Token>> compilationUnits)
     {
-        compilationUnits.First().ForEach(t =>
-        {
-            Console.WriteLine($"{t.Type}: {t.FilePos}");
-        });
         var program = new AstNodeProgram
         {
             SymbolTableBuilder = new SymbolTableBuilder()
