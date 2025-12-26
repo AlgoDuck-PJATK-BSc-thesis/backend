@@ -13,7 +13,7 @@ using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Commands.Chat.SendMessage;
 
-public class SendMessageHandlerTests
+public sealed class SendMessageHandlerTests
 {
     private static IOptions<S3Settings> CreateS3Options()
     {
@@ -105,9 +105,17 @@ public class SendMessageHandlerTests
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
 
-        cohortRepositoryMock.Verify(x => x.UserBelongsToCohortAsync(userId, dto.CohortId, It.IsAny<CancellationToken>()), Times.Once);
-        chatModerationServiceMock.Verify(x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        chatMessageRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Never);
+        cohortRepositoryMock.Verify(
+            x => x.UserBelongsToCohortAsync(userId, dto.CohortId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        chatModerationServiceMock.Verify(
+            x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        chatMessageRepositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -305,7 +313,12 @@ public class SendMessageHandlerTests
         Assert.Equal(ChatMediaType.Image, result.MediaType);
         Assert.Equal($"https://algoduck-content-test.s3.eu-central-1.amazonaws.com/{key}", result.MediaUrl);
 
-        chatModerationServiceMock.Verify(x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        chatMessageRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
+        chatModerationServiceMock.Verify(
+            x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        chatMessageRepositoryMock.Verify(
+            x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

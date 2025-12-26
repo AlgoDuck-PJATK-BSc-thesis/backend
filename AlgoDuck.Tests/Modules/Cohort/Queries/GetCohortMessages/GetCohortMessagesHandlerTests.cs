@@ -13,7 +13,7 @@ using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortMessages;
 
-public class GetCohortMessagesHandlerTests
+public sealed class GetCohortMessagesHandlerTests
 {
     private static IOptions<S3Settings> CreateS3Options()
     {
@@ -130,7 +130,7 @@ public class GetCohortMessagesHandlerTests
             .Setup(r => r.GetPagedForCohortAsync(
                 cohortId,
                 dto.BeforeCreatedAt,
-                dto.PageSize.Value + 1,
+                dto.PageSize!.Value + 1,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Message>());
 
@@ -209,7 +209,7 @@ public class GetCohortMessagesHandlerTests
             .Setup(r => r.GetPagedForCohortAsync(
                 cohortId,
                 dto.BeforeCreatedAt,
-                dto.PageSize.Value + 1,
+                dto.PageSize!.Value + 1,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Message> { message1, message2, message3 });
 
@@ -230,7 +230,7 @@ public class GetCohortMessagesHandlerTests
                 Username = "other",
                 S3AvatarUrl = "url2"
             });
-
+ 
         var handler = new GetCohortMessagesHandler(
             validatorMock.Object,
             cohortRepositoryMock.Object,
@@ -289,7 +289,7 @@ public class GetCohortMessagesHandlerTests
             .Setup(r => r.GetPagedForCohortAsync(
                 cohortId,
                 dto.BeforeCreatedAt,
-                dto.PageSize.Value + 1,
+                dto.PageSize!.Value + 1,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Message> { message });
 
