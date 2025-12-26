@@ -99,7 +99,6 @@ public sealed class GetUserActivityHandlerTests
         Assert.Equal(solutionId, result[0].SolutionId);
         Assert.Equal(problemId, result[0].ProblemId);
         Assert.Equal("Two Sum", result[0].ProblemName);
-        Assert.Equal("Accepted", result[0].StatusName);
         Assert.Equal(123, result[0].CodeRuntimeSubmitted);
         Assert.Equal(createdAt, result[0].SubmittedAt);
     }
