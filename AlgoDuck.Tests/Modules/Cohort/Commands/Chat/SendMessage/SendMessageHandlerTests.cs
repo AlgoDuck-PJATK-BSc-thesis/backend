@@ -5,14 +5,35 @@ using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
+using AlgoDuck.Shared.S3;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Commands.Chat.SendMessage;
 
 public class SendMessageHandlerTests
 {
+    private static IOptions<S3Settings> CreateS3Options()
+    {
+        return Options.Create(new S3Settings
+        {
+            ContentBucketSettings = new S3BucketSettings
+            {
+                Region = "eu-central-1",
+                BucketName = "algoduck-content-test",
+                Type = S3BucketType.Content
+            },
+            DataBucketSettings = new S3BucketSettings
+            {
+                Region = "eu-central-1",
+                BucketName = "algoduck-data-test",
+                Type = S3BucketType.Data
+            }
+        });
+    }
+
     [Fact]
     public async Task HandleAsync_WhenDtoIsInvalid_ThenThrowsCohortValidationException()
     {
@@ -41,7 +62,8 @@ public class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -77,7 +99,8 @@ public class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -123,7 +146,8 @@ public class SendMessageHandlerTests
             CohortId = cohortId,
             UserId = userId,
             Message1 = dto.Content,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            MediaType = (int)ChatMediaType.Text
         };
 
         chatMessageRepositoryMock
@@ -146,7 +170,8 @@ public class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
@@ -203,12 +228,84 @@ public class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         await Assert.ThrowsAsync<ChatValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
 
         chatMessageRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Never);
         profileServiceMock.Verify(x => x.GetProfileAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenImageMessageValid_ThenReturnsMediaUrlAndSkipsModeration()
+    {
+        var validatorMock = new Mock<IValidator<SendMessageDto>>();
+        var cohortRepositoryMock = new Mock<ICohortRepository>();
+        var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
+        var chatModerationServiceMock = new Mock<IChatModerationService>();
+        var profileServiceMock = new Mock<IProfileService>();
+
+        var userId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var key = "chat/cohorts/test/image.png";
+
+        var dto = new SendMessageDto
+        {
+            CohortId = cohortId,
+            MediaType = ChatMediaType.Image,
+            MediaKey = key,
+            MediaContentType = "image/png"
+        };
+
+        validatorMock
+            .Setup(x => x.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
+        cohortRepositoryMock
+            .Setup(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var saved = new Message
+        {
+            MessageId = Guid.NewGuid(),
+            CohortId = cohortId,
+            UserId = userId,
+            Message1 = "",
+            CreatedAt = DateTime.UtcNow,
+            MediaType = (int)ChatMediaType.Image,
+            MediaKey = key,
+            MediaContentType = "image/png"
+        };
+
+        chatMessageRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(saved);
+
+        profileServiceMock
+            .Setup(x => x.GetProfileAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserProfileDto
+            {
+                UserId = userId,
+                Username = "me",
+                S3AvatarUrl = "url"
+            });
+
+        var handler = new SendMessageHandler(
+            validatorMock.Object,
+            cohortRepositoryMock.Object,
+            chatMessageRepositoryMock.Object,
+            chatModerationServiceMock.Object,
+            profileServiceMock.Object,
+            CreateS3Options());
+
+        var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
+
+        Assert.Equal(ChatMediaType.Image, result.MediaType);
+        Assert.Equal($"https://algoduck-content-test.s3.eu-central-1.amazonaws.com/{key}", result.MediaUrl);
+
+        chatModerationServiceMock.Verify(x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        chatMessageRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

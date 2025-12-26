@@ -52,7 +52,8 @@ public sealed class GetCohortByIdHandler : IGetCohortByIdHandler
             Name = cohort.Name,
             IsActive = cohort.IsActive,
             CreatedByUserId = cohort.CreatedByUserId,
-            IsMember = isMember
+            IsMember = isMember,
+            JoinCode = isMember ? cohort.JoinCode : null
         };
     }
 }

@@ -2,16 +2,38 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.Queries.GetCohortMessages;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
+using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
+using AlgoDuck.Shared.S3;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortMessages;
 
 public class GetCohortMessagesHandlerTests
 {
+    private static IOptions<S3Settings> CreateS3Options()
+    {
+        return Options.Create(new S3Settings
+        {
+            ContentBucketSettings = new S3BucketSettings
+            {
+                Region = "eu-central-1",
+                BucketName = "algoduck-content-test",
+                Type = S3BucketType.Content
+            },
+            DataBucketSettings = new S3BucketSettings
+            {
+                Region = "eu-central-1",
+                BucketName = "algoduck-data-test",
+                Type = S3BucketType.Data
+            }
+        });
+    }
+
     [Fact]
     public async Task HandleAsync_WhenRequestInvalid_ThenThrowsCohortValidationException()
     {
@@ -36,7 +58,8 @@ public class GetCohortMessagesHandlerTests
             validatorMock.Object,
             cohortRepositoryMock.Object,
             chatRepositoryMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(Guid.NewGuid(), dto, CancellationToken.None));
@@ -71,7 +94,8 @@ public class GetCohortMessagesHandlerTests
             validatorMock.Object,
             cohortRepositoryMock.Object,
             chatRepositoryMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -114,7 +138,8 @@ public class GetCohortMessagesHandlerTests
             validatorMock.Object,
             cohortRepositoryMock.Object,
             chatRepositoryMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
@@ -156,7 +181,8 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = userId,
             Message1 = "hi",
-            CreatedAt = now.AddMinutes(-1)
+            CreatedAt = now.AddMinutes(-1),
+            MediaType = (int)ChatMediaType.Text
         };
 
         var message2 = new Message
@@ -165,7 +191,8 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = Guid.NewGuid(),
             Message1 = "hello",
-            CreatedAt = now.AddMinutes(-2)
+            CreatedAt = now.AddMinutes(-2),
+            MediaType = (int)ChatMediaType.Text
         };
 
         var message3 = new Message
@@ -174,7 +201,8 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = Guid.NewGuid(),
             Message1 = "extra",
-            CreatedAt = now.AddMinutes(-3)
+            CreatedAt = now.AddMinutes(-3),
+            MediaType = (int)ChatMediaType.Text
         };
 
         chatRepositoryMock
@@ -207,7 +235,8 @@ public class GetCohortMessagesHandlerTests
             validatorMock.Object,
             cohortRepositoryMock.Object,
             chatRepositoryMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            CreateS3Options());
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
@@ -216,5 +245,74 @@ public class GetCohortMessagesHandlerTests
         Assert.Contains(result.Items, x => x.MessageId == message1.MessageId);
         Assert.Contains(result.Items, x => x.MessageId == message2.MessageId);
         Assert.NotNull(result.NextCursor);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenImageMessageExists_ThenReturnsMediaUrl()
+    {
+        var validatorMock = new Mock<IValidator<GetCohortMessagesRequestDto>>();
+        var cohortRepositoryMock = new Mock<ICohortRepository>();
+        var chatRepositoryMock = new Mock<IChatMessageRepository>();
+        var profileServiceMock = new Mock<IProfileService>();
+
+        var userId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var key = "chat/cohorts/test/image.png";
+
+        var dto = new GetCohortMessagesRequestDto
+        {
+            CohortId = cohortId,
+            PageSize = 10
+        };
+
+        validatorMock
+            .Setup(v => v.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
+        cohortRepositoryMock
+            .Setup(r => r.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var message = new Message
+        {
+            MessageId = Guid.NewGuid(),
+            CohortId = cohortId,
+            UserId = Guid.NewGuid(),
+            Message1 = "",
+            CreatedAt = DateTime.UtcNow,
+            MediaType = (int)ChatMediaType.Image,
+            MediaKey = key,
+            MediaContentType = "image/png"
+        };
+
+        chatRepositoryMock
+            .Setup(r => r.GetPagedForCohortAsync(
+                cohortId,
+                dto.BeforeCreatedAt,
+                dto.PageSize.Value + 1,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Message> { message });
+
+        profileServiceMock
+            .Setup(p => p.GetProfileAsync(message.UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserProfileDto
+            {
+                UserId = message.UserId,
+                Username = "u",
+                S3AvatarUrl = "a"
+            });
+
+        var handler = new GetCohortMessagesHandler(
+            validatorMock.Object,
+            cohortRepositoryMock.Object,
+            chatRepositoryMock.Object,
+            profileServiceMock.Object,
+            CreateS3Options());
+
+        var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
+
+        Assert.Single(result.Items);
+        Assert.Equal(ChatMediaType.Image, result.Items[0].MediaType);
+        Assert.Equal($"https://algoduck-content-test.s3.eu-central-1.amazonaws.com/{key}", result.Items[0].MediaUrl);
     }
 }

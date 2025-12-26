@@ -22,6 +22,24 @@ public sealed class CohortRepository : ICohortRepository
             .FirstOrDefaultAsync(c => c.CohortId == cohortId, cancellationToken);
     }
 
+    public async Task<Models.Cohort?> GetByJoinCodeAsync(string joinCode, CancellationToken cancellationToken)
+    {
+        joinCode = (joinCode ?? string.Empty).Trim();
+
+        return await _queryDb.Cohorts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.JoinCode == joinCode, cancellationToken);
+    }
+
+    public async Task<bool> JoinCodeExistsAsync(string joinCode, CancellationToken cancellationToken)
+    {
+        joinCode = (joinCode ?? string.Empty).Trim();
+
+        return await _queryDb.Cohorts
+            .AsNoTracking()
+            .AnyAsync(c => c.JoinCode == joinCode, cancellationToken);
+    }
+
     public async Task<bool> ExistsAsync(Guid cohortId, CancellationToken cancellationToken)
     {
         return await _queryDb.Cohorts

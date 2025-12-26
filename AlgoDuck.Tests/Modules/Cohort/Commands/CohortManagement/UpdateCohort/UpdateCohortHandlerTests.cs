@@ -229,6 +229,7 @@ public class UpdateCohortHandlerTests
         {
             CohortId = cohortId,
             Name = "Old Name",
+            JoinCode = "UPD00001",
             CreatedByUserId = Guid.NewGuid(),
             IsActive = false
         };
@@ -278,6 +279,7 @@ public class UpdateCohortHandlerTests
         {
             CohortId = cohortId,
             Name = "Old Name",
+            JoinCode = "UPD00002",
             CreatedByUserId = Guid.NewGuid(),
             IsActive = true
         };
@@ -303,6 +305,6 @@ public class UpdateCohortHandlerTests
 
         var reloadedCohort = await dbContext.Cohorts.FindAsync(cohortId);
         Assert.NotNull(reloadedCohort);
-        Assert.Equal(dto.Name, reloadedCohort!.Name);
+        Assert.Equal(dto.Name, reloadedCohort.Name);
     }
 }

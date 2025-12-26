@@ -7,4 +7,5 @@ public sealed class GetCohortByIdResultDto
     public bool IsActive { get; init; }
     public Guid CreatedByUserId { get; init; }
     public bool IsMember { get; init; }
+    public string? JoinCode { get; init; }
 }

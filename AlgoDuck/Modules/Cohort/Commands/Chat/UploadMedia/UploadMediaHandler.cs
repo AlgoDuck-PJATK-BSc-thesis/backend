@@ -7,6 +7,16 @@ namespace AlgoDuck.Modules.Cohort.Commands.Chat.UploadMedia;
 
 public sealed class UploadMediaHandler : IUploadMediaHandler
 {
+    private const long MaxImageBytes = 10 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+    };
+
     private readonly IValidator<UploadMediaDto> _validator;
     private readonly ICohortRepository _cohortRepository;
     private readonly IChatMediaStorageService _chatMediaStorageService;
@@ -36,6 +46,22 @@ public sealed class UploadMediaHandler : IUploadMediaHandler
         if (!belongs)
         {
             throw new CohortValidationException("User does not belong to this cohort.");
+        }
+
+        if (dto.File.Length <= 0)
+        {
+            throw new CohortValidationException("File is empty.");
+        }
+
+        if (dto.File.Length > MaxImageBytes)
+        {
+            throw new CohortValidationException("File is too large.");
+        }
+
+        var contentType = (dto.File.ContentType).Trim();
+        if (!AllowedContentTypes.Contains(contentType))
+        {
+            throw new CohortValidationException("Unsupported media type.");
         }
 
         var descriptor = await _chatMediaStorageService.StoreImageAsync(

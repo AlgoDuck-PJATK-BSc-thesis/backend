@@ -1,5 +1,6 @@
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
+using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
 
@@ -40,12 +41,15 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
             throw new CohortValidationException("User already belongs to a cohort.");
         }
 
+        var joinCode = await CohortJoinCodeGenerator.GenerateUniqueAsync(_cohortRepository, 8, cancellationToken);
+
         var cohort = new Models.Cohort
         {
             CohortId = Guid.NewGuid(),
             Name = dto.Name,
             IsActive = true,
-            CreatedByUserId = userId
+            CreatedByUserId = userId,
+            JoinCode = joinCode
         };
 
         await _cohortRepository.AddAsync(cohort, cancellationToken);
@@ -58,7 +62,8 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
             CohortId = cohort.CohortId,
             Name = cohort.Name,
             CreatedByUserId = cohort.CreatedByUserId,
-            IsActive = cohort.IsActive
+            IsActive = cohort.IsActive,
+            JoinCode = cohort.JoinCode
         };
     }
 }
