@@ -12,12 +12,12 @@ public sealed class VmLease(VmLaunchManager manager, Guid vmId) : IDisposable
     {
         try
         {
-            var res = await manager.QueryVm<T, TResult>(vmId, query);
+            var res = await manager.QueryVmAsync<T, TResult>(vmId, query);
             return res;
         }
         catch (VmQueryTimedOutException ex)
         {
-            ex.WatchDogDecision = manager.InspectByWatchDog(this);
+            ex.WatchDogDecision = manager.InspectByWatchDogAsync(this);
             throw;
         } 
     }

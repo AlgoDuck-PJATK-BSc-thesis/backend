@@ -27,28 +27,35 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition, Symb
         var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier != null)
         {
-            nodeInterface.InterfaceAccessModifier = accessModifier.Value;
+            nodeInterface.AccessModifier = accessModifier.Value;
             ConsumeToken();
+        }
+
+        while (PeekToken()?.Type == TokenType.At)
+        {
+            nodeInterface.AddAnnotation(ParseAnnotation());
         }
 
         nodeInterface.Modifiers = ParseModifiers(legalModifiers);
 
         ConsumeIfOfType("interface", TokenType.Interface);
         
-        nodeInterface.Identifier = ConsumeIfOfType("interface name", TokenType.Ident);
+        nodeInterface.Name = ConsumeIfOfType("interface name", TokenType.Ident);
         
         ParseGenericDeclaration(nodeInterface);
         
         ParseExtendsKeyword(nodeInterface);
 
-        nodeInterface.InterfaceScope = ParseInterfaceScope(nodeInterface);
+        nodeInterface.TypeScope = ParseInterfaceScope(nodeInterface);
         return nodeInterface;
     }
 
     public AstNodeTypeScope<AstNodeInterface> ParseInterfaceScope(AstNodeInterface astNodeInterface)
     {
+        _symbolTableBuilder.EnterScope();
         var interfaceScope = new AstNodeTypeScope<AstNodeInterface>()
         {
+            OwnScope = _symbolTableBuilder.CurrentScope,
             OwnerMember = astNodeInterface,
             ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos,
         };
@@ -57,6 +64,7 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition, Symb
             interfaceScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder).ParseTypeMember(astNodeInterface));
         }
         interfaceScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
+        _symbolTableBuilder.ExitScope();
         return interfaceScope;
     }
     

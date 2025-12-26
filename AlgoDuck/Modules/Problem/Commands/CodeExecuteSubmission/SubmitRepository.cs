@@ -2,6 +2,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ public interface IExecutorSubmitRepository
 {
     public Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId);
     public Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId);
-    public Task<bool> InsertSubmissionResultAsync(SubmissionInsertDto insertDto);
+    public Task<Result<bool, ErrorObject<string>>> InsertSubmissionResultAsync(SubmissionInsertDto insertDto, CancellationToken cancellationToken = default);
     
 }
 
@@ -58,38 +59,81 @@ public class SubmitRepository(
                    await awsS3Client.GetDocumentStringByPathAsync($"problems/{exerciseId}/template.xml")
                    ) ?? throw new XmlParsingException();
     }
-
-    public async Task<bool> InsertSubmissionResultAsync(SubmissionInsertDto insertDto)
+    
+    public async Task<Result<bool, ErrorObject<string>>> InsertSubmissionResultAsync(SubmissionInsertDto insertDto, CancellationToken cancellationToken = default)
     {
-        var userSolution = await commandDbContext.UserSolutions.AddAsync(new UserSolution
+        var solution = new UserSolution
         {
-            CodeRuntimeSubmitted = insertDto.ExecuteResponse.ExecutionTime,
-            ProblemId = insertDto.ExecuteRequest.ProblemId,
+            CodeRuntimeSubmitted = insertDto.CodeRuntimeSubmitted,
+            ProblemId = insertDto.ProblemId,
+            UserId = insertDto.UserId,
             Stars = 3,
-            StatusId = Guid.NewGuid(), /* TODO: Remember what status was supposed to be*/
-            UserId = insertDto.UserId
-        });
+            CreatedAt = DateTime.UtcNow,
+        };
 
-        await commandDbContext.TestingResults.AddRangeAsync(insertDto.ExecuteResponse.TestResults.Select(tr => new TestingResult
+        try
         {
-            TestCaseId = Guid.Parse(tr.TestId),
-            UserSolutionId = userSolution.Entity.SolutionId,
-            IsPassed = tr.IsTestPassed
-        }));
+            await commandDbContext.UserSolutions.AddAsync(solution, cancellationToken);
+            await commandDbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception e)
+        {
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.InternalError(e.Message));
+        }
 
-        await commandDbContext.SaveChangesAsync();
-        await PostUserSolutionCodeToS3Async(insertDto, insertDto.UserId);
-        return true;
+        var objectPath = $"users/{solution.UserId}/problems/autosave/{solution.ProblemId}.xml";
+
+        await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken);
+        
+        return await PostUserSolutionCodeToS3Async(new UserSolutionPartialS3
+        {
+            CodeB64 = insertDto.CodeB64,
+            UserId = insertDto.UserId,
+            UserSolutionId = solution.SolutionId
+        });
     }
 
-    private async Task PostUserSolutionCodeToS3Async(SubmissionInsertDto insertDto, Guid userSolutionId)
+    private async Task<Result<bool, ErrorObject<string>>> PostUserSolutionCodeToS3Async(UserSolutionPartialS3 insertDto)
     {
-        await awsS3Client.PutXmlObjectAsync($"users/{insertDto.UserId}/solutions/${insertDto.ExecuteRequest.ProblemId}/${userSolutionId}.xml", insertDto.ExecuteRequest);
+        if (insertDto.UserId == Guid.Empty || insertDto.UserId == Guid.Empty)
+        {
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest(""));
+        }
+
+        try
+        {
+            await awsS3Client.PostXmlObjectAsync($"users/{insertDto.UserSolutionId}/solutions/${insertDto.UserSolutionId}.xml", insertDto);
+            return Result<bool, ErrorObject<string>>.Ok(true);   
+        }
+        catch (Exception e)
+        {
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest(e.Message));
+        }
+    }
+    
+    private async Task<Result<bool, ErrorObject<string>>> DropLastCheckpointAsync(AutoSaveDropDto dropDto, CancellationToken cancellationToken = default)
+    {
+        var objectPath = $"users/{dropDto.UserId}/problems/autosave/{dropDto.ProblemId}.xml";
+        return await awsS3Client.DeleteDocumentAsync(objectPath,  cancellationToken);
     }
 }
 public class SubmissionInsertDto
 {
+    public required long CodeRuntimeSubmitted { get; set; }
+    public required Guid ProblemId { get; set; }
     public required Guid UserId { get; set; }
-    public required SubmitExecuteRequestRabbit ExecuteRequest { get; set; }
-    public required SubmitExecuteResponse ExecuteResponse { get; set; } 
+    public required string CodeB64 { get; set; }
+}
+
+public class UserSolutionPartialS3
+{
+    public required string CodeB64 { get; set; }
+    internal Guid UserSolutionId { get; set; }
+    internal Guid UserId { get; set; }
+}
+
+internal class AutoSaveDropDto
+{
+    internal required Guid UserId { get; set; }
+    internal required Guid ProblemId { get; set; }
 }

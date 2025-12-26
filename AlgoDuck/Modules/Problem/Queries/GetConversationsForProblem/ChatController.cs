@@ -37,8 +37,6 @@ public class ChatService(
 {
     public async Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken)
     {
-        Console.WriteLine(request.ProblemId);
-        Console.WriteLine(request.UserId);
         return await chatRepository.GetChatsForProblemAsync(request, cancellationToken);
     }
 }
@@ -60,7 +58,8 @@ public class ChatRepository(
                 .Where(c => c.ProblemId == request.ProblemId && c.UserId == request.UserId)
                 .Select(c => new ChatDetail
                 {
-                    ChatName = c.Name
+                    ChatName = c.Name,
+                    ChatId = c.Id
                 }).ToListAsync(cancellationToken: cancellationToken) 
         };
     }
@@ -80,4 +79,5 @@ public class ChatList
 public class ChatDetail
 {
     public required string ChatName { get; set; }
+    public required Guid ChatId { get; set; }
 }

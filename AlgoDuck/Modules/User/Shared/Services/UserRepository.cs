@@ -53,7 +53,6 @@ public sealed class UserRepository : IUserRepository
     {
         return await _queryDbContext.UserSolutions
             .Include(s => s.Problem)
-            .Include(s => s.Status)
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.CreatedAt)
             .Skip(skip)

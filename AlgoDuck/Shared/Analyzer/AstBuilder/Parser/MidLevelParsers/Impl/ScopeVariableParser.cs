@@ -23,6 +23,7 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition, 
 
         _symbolTableBuilder.DefineSymbol(new VariableSymbol
         {
+            ScopeMemberVar = scopedVar,
             Name = scopedVar.Identifier!.Value!,
             SymbolType = scopedVar.Type,
         });

@@ -40,7 +40,6 @@ public sealed class GetUserActivityHandler : IGetUserActivityHandler
                 SolutionId = s.SolutionId,
                 ProblemId = s.ProblemId,
                 ProblemName = s.Problem?.ProblemTitle ?? string.Empty,
-                StatusName = s.Status?.StatusName ?? string.Empty,
                 CodeRuntimeSubmitted = s.CodeRuntimeSubmitted,
                 SubmittedAt = s.CreatedAt
             })

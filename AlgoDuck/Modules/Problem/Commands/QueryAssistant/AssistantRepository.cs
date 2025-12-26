@@ -31,11 +31,9 @@ public class AssistantRepository(
         CancellationToken cancellationToken = default)
     {
         return dbContext.AssistantChats
-            .Include(e => e.Messages.OrderByDescending(ie => ie.CreatedOn).Take(10)
-            ).ThenInclude(e => e.Fragments)
-            .FirstOrDefaultAsync(
-                e => e.UserId == request.UserId && e.ProblemId == request.ExerciseId && e.Name == request.ChatName,
-                cancellationToken);
+            .Include(e => e.Messages.OrderByDescending(ie => ie.CreatedOn).Take(10))
+            .ThenInclude(e => e.Fragments)
+            .FirstOrDefaultAsync(e => e.Id == request.ChatId, cancellationToken);
     }
 
     public async Task<ProblemDto> GetProblemDetailsAsync(Guid problemId, CancellationToken cancellationToken = default)
@@ -161,15 +159,22 @@ public class AssistantRepository(
 
         var newMessage = new AssistanceMessage
         {
-            ProblemId = chatMessage.ProblemId,
-            UserId = chatMessage.UserId,
-            ChatName = chatMessage.ChatName,
             Fragments = fragments,
             IsUserMessage = chatMessage.Author == MessageAuthor.User,
         };
         chat.Messages.Add(newMessage);
         await dbContext.SaveChangesAsync(cancellationToken);
         return newMessage;
-        throw new NotImplementedException();
     }
+}
+
+public class AssistanceMessageDto
+{
+    public required Guid ChatId { get; set; }
+}
+
+public class AssistantMessageFragmentDto
+{
+    public required string Content { get; set; }
+    public ContentType ContentType { get; set; } = ContentType.Text;
 }

@@ -1,13 +1,18 @@
 using System.Net;
 using System.Text;
 using System.Xml.Serialization;
+using AlgoDuck.Shared.Http;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Shared.S3;
 
-public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : IAwsS3Client
+public class AwsS3Client(
+    IAmazonS3 s3Client,
+    IOptions<S3Settings> s3Settings
+    ) : IAwsS3Client
 {
     public async Task<GetObjectResponse> GetDocumentObjectByPathAsync(string path, CancellationToken cancellationToken = default)
     {
@@ -63,18 +68,26 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
         }
     }
 
-    public async Task PutXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
     {
         var serializer = new XmlSerializer(typeof(T));
-    
         using var memoryStream = new MemoryStream();
-        await using (var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), leaveOpen: true))
+        try
         {
-            serializer.Serialize(writer, obj);
+
+            await using (var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), leaveOpen: true))
+            {
+                serializer.Serialize(writer, obj);
+            }
+    
+            memoryStream.Position = 0;
+
         }
-    
-        memoryStream.Position = 0;
-    
+        catch (Exception e)
+        {
+            return Result<T, ErrorObject<string>>.Err(ErrorObject<string>.InternalError(e.Message));
+        }
+        
         var putRequest = new PutObjectRequest
         {
             BucketName = s3Settings.Value.ContentBucketSettings.BucketName,
@@ -84,11 +97,17 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
         };
     
         var response = await s3Client.PutObjectAsync(putRequest, cancellationToken);
-    
+        
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new AmazonS3Exception($"Could not put XML object at path {path}");
+            return Result<T, ErrorObject<string>>.Err(response.HttpStatusCode switch
+            {
+                HttpStatusCode.Forbidden => ErrorObject<string>.Forbidden($"post object failed for {path}"),
+                HttpStatusCode.BadRequest => ErrorObject<string>.BadRequest($"post object failed for {path}"),
+                _ => ErrorObject<string>.InternalError($"post object failed for {path}")
+            });
         }
+        return Result<T, ErrorObject<string>>.Ok(obj);
     }
 
     public async Task PostRawFile(IFormFile file, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
@@ -107,5 +126,26 @@ public class AwsS3Client(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings) : 
             ContentType = file.ContentType
         };
         await s3Client.PutObjectAsync(request, cancellationToken);
+    }
+
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+            {
+                BucketName = s3Settings.Value.ContentBucketSettings.BucketName,
+                Key = path
+            }, cancellationToken);
+            
+            return Result<bool, ErrorObject<string>>.Ok(true);
+        }catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound("document not found"));
+        }
+        catch (Exception)
+        {
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("could not delete"));
+        }
     }
 }

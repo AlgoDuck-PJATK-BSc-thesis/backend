@@ -34,8 +34,6 @@ internal class ExecutorQueryInterface(IHttpClientFactory httpClientFactory) : IE
                    ?? throw new ExecutorNullResponseException("Failed to deserialize error response");
         }
         
-        // var errorResponse = DefaultJsonSerializer.Deserialize<ExecutorErrorResponse>(resultRaw) 
-        //                     ?? throw new ExecutorNullResponseException("Failed to deserialize error response");
         throw new ExecutionOutputNotFoundException("errorResponse.ErrMsg");
     }
 }

@@ -6,6 +6,7 @@ using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
 using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
+using ConsoleApp1.Analyzer._AnalyzerUtils.AstNodes.Types;
 
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
@@ -16,7 +17,7 @@ public class TypeMemberParser(List<Token> tokens, FilePosition filePosition, Sym
     private readonly List<Token> _tokens = tokens;
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
 
-    public AstNodeTypeMember<T> ParseTypeMember<T>(T member) where T: IType<T>
+    public AstNodeTypeMember<T> ParseTypeMember<T>(T member) where T: BaseType<T>
     {
         var forwardOffset = 0;
         /*

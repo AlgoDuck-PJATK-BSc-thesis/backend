@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,15 +11,15 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public int Experience { get; set; }
 
     public int AmountSolved { get; set; }
-
+    
     public Guid? CohortId { get; set; }
 
     public virtual Cohort? Cohort { get; set; }
 
     public virtual ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
-
+    
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
-
+    
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
@@ -33,9 +33,10 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public virtual UserConfig? UserConfig { get; set; }
 
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
-
-    public virtual ICollection<PurchasedTestCase> PurchasedTestCases { get; set; } = new List<PurchasedTestCase>();
-
+    
+    public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
+    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

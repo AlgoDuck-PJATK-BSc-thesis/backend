@@ -1,3 +1,5 @@
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
+
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 public class SymbolTableBuilder
@@ -10,6 +12,7 @@ public class SymbolTableBuilder
         builder = new SymbolTableBuilder();
         return builder;
     }
+    
     public SymbolTableBuilder()
     {
         CurrentScope = GlobalScope;
@@ -22,7 +25,7 @@ public class SymbolTableBuilder
             "byte", "short", "int", "long", "float", "double", "char", "boolean", "String", "Object", "void"
         ];
 
-        builtInTypes.ForEach(s => GlobalScope.DefineSymbol(new TypeSymbol
+        builtInTypes.ForEach(s => GlobalScope.DefineSymbol(new TypeSymbol<AstNodeClass>
         {
             Name = s
         }));
@@ -30,10 +33,12 @@ public class SymbolTableBuilder
     
     public void EnterScope()
     {
-        CurrentScope = new Scope
+        var newScope = new Scope
         {
             Parent = CurrentScope
         };
+        CurrentScope.Children.Add(newScope);
+        CurrentScope = newScope;
     }
 
     public void ExitScope()

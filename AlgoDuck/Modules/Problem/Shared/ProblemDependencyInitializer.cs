@@ -1,11 +1,15 @@
 using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Commands.CreateProblem;
+using AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
+using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
+using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
@@ -98,8 +102,8 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IAutoSaveService, AutoSaveService>();
         builder.Services.AddScoped<IAutoSaveRepository, AutoSaveRepository>();
 
-        builder.Services.AddScoped<ILoadProblemRepository, LoadProblemRepository>();
-        builder.Services.AddScoped<ILoadProblemService, LoadProblemService>();
+        builder.Services.AddScoped<ILoadAutoSaveRepository, LoadAutoSaveRepository>();
+        builder.Services.AddScoped<ILoadAutoSaveService, LoadAutoSaveService>();
 
         builder.Services.AddScoped<IConversationService, ConversationService>();
         builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -107,6 +111,19 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IChatService, ChatService>();
         builder.Services.AddScoped<IChatRepository, ChatRepository>();
 
+        builder.Services.AddScoped<IAnalysisResultService, AnalysisResultService>();
+        
+        builder.Services.AddScoped<ICreateProblemService, CreateProblemService>();
+        builder.Services.AddScoped<ICreateProblemRepository, CreateProblemRepository>(); 
+        
+        builder.Services.AddScoped<IDeleteChatService, DeleteChatService>();
+        builder.Services.AddScoped<IDeleteChatRepository, DeleteChatRepository>();
+
+        builder.Services.AddScoped<IUpdateChatNameService, UpdateChatNameService>();
+        builder.Services.AddScoped<IUpdateChatNameRepository, UpdateChatNameRepository>();
+
+        builder.Services.AddScoped<IExecutionStatisticsRepository, ExecutionStatisticsRepository>();
+        
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
@@ -121,8 +138,11 @@ internal static class ProblemDependencyInitializer
                 RequestedConnectionTimeout = TimeSpan.FromSeconds(30)
             };
         });
+        builder.Services.Configure<MessageQueuesConfig>(
+            builder.Configuration.GetSection("MessageQueues"));
         
         builder.Services.AddSingleton<IRabbitMqConnectionService, RabbitMqConnectionService>();
         builder.Services.AddHostedService<CodeExecutionResultChannelReadWorker>();
+        builder.Services.AddHostedService<ProblemValidationResultChannelReadWorker>();
     }
 }
