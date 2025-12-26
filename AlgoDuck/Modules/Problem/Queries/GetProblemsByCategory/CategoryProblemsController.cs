@@ -12,9 +12,8 @@ public class CategoryProblemsController(
     [HttpGet]
     public async Task<IActionResult> GetAllProblemsForCategory([FromQuery] string categoryName)
     {
-        return Ok(new StandardApiResponse<ICollection<ProblemDisplayDto>>
-        {
-            Body = await categoryProblemsService.GetAllProblemsForCategoryAsync(categoryName)
-        });
+        var result = await categoryProblemsService.GetAllProblemsForCategoryAsync(categoryName);
+        return result.ToActionResult();
+
     }
 }
