@@ -1,7 +1,9 @@
 using System.Net;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
-using FluentValidation;
+
+using FluentValidationException = FluentValidation.ValidationException;
+using UserValidationException = AlgoDuck.Modules.User.Shared.Exceptions.ValidationException;
 
 namespace AlgoDuck.Shared.Middleware;
 
@@ -25,14 +27,20 @@ public class ErrorHandler
         catch (Exception error)
         {
             var response = context.Response;
-            response.ContentType = "application/json";
+
+            if (response.HasStarted)
+            {
+                throw;
+            }
+
+            response.ContentType = "application/json; charset=utf-8";
 
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var message = "Unexpected error";
             var code = "internal_error";
             object? body = null;
 
-            if (error is ValidationException validationEx)
+            if (error is FluentValidationException validationEx)
             {
                 statusCode = StatusCodes.Status400BadRequest;
                 message = "Validation failed.";
@@ -42,8 +50,14 @@ public class ErrorHandler
                     .GroupBy(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "general" : e.PropertyName)
                     .ToDictionary(
                         g => g.Key,
-                        g => g.Select(e => e.ErrorMessage).Distinct().ToArray()
+                        g => g.Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToArray()
                     );
+            }
+            else if (error is UserValidationException userValidationEx)
+            {
+                statusCode = StatusCodes.Status400BadRequest;
+                message = string.IsNullOrWhiteSpace(userValidationEx.Message) ? "Validation failed." : userValidationEx.Message;
+                code = "validation_error";
             }
             else if (error is AppException appEx)
             {

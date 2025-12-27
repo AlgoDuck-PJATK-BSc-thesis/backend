@@ -1,8 +1,10 @@
+using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Shared.S3;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Modules.Cohort.Shared.Services;
@@ -31,22 +33,22 @@ public sealed class ChatMediaStorageService : IChatMediaStorageService
     {
         if (file == null)
         {
-            throw new ArgumentNullException(nameof(file));
+            throw new CohortValidationException("File is required.", StatusCodes.Status400BadRequest);
         }
 
         if (file.Length == 0)
         {
-            throw new InvalidOperationException("Uploaded file is empty.");
+            throw new CohortValidationException("File is empty.", StatusCodes.Status400BadRequest);
         }
 
         if (file.Length > _mediaSettings.MaxFileSizeBytes)
         {
-            throw new InvalidOperationException("Uploaded file exceeds maximum allowed size.");
+            throw new CohortValidationException("File is too large.", StatusCodes.Status413PayloadTooLarge);
         }
 
         if (!_mediaSettings.AllowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Uploaded file content type is not allowed.");
+            throw new CohortValidationException("Unsupported media type.", StatusCodes.Status415UnsupportedMediaType);
         }
 
         var extension = Path.GetExtension(file.FileName);
@@ -68,7 +70,7 @@ public sealed class ChatMediaStorageService : IChatMediaStorageService
 
         if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
         {
-            throw new InvalidOperationException("Failed to upload chat media to storage.");
+            throw new CohortValidationException("Failed to upload chat media to storage.", StatusCodes.Status500InternalServerError);
         }
 
         var url = $"https://{bucket.BucketName}.s3.{bucket.Region}.amazonaws.com/{key}";

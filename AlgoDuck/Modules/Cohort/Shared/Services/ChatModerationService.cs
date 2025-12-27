@@ -76,7 +76,7 @@ public sealed class ChatModerationService : IChatModerationService
                     PropertyNameCaseInsensitive = true
                 });
 
-            if (moderationResponse == null || moderationResponse.Results == null || moderationResponse.Results.Count == 0)
+            if (moderationResponse?.Results == null || moderationResponse.Results.Count == 0)
             {
                 return HandleModerationFailure("Moderation response contained no results.");
             }
@@ -88,16 +88,15 @@ public sealed class ChatModerationService : IChatModerationService
                 return ChatModerationResult.Allowed();
             }
 
-            var highest = GetMostSevereCategory(result.CategoryScores);
-            var severity = highest.Score;
+            var (name, score) = GetMostSevereCategory(result.CategoryScores);
 
-            if (severity < _settings.SeverityThreshold)
+            if (score < _settings.SeverityThreshold)
             {
                 return ChatModerationResult.Allowed();
             }
 
-            var reason = $"Message was blocked due to {highest.Name} content.";
-            return ChatModerationResult.Blocked(reason, highest.Name, severity);
+            var reason = $"Message was blocked due to {name} content.";
+            return ChatModerationResult.Blocked(reason, name, score);
         }
         catch (Exception ex)
         {
@@ -147,32 +146,27 @@ public sealed class ChatModerationService : IChatModerationService
         return request;
     }
 
-    private static (string Name, double Score) GetMostSevereCategory(ModerationCategoryScores scores)
+    private static (string Name, double Score) GetMostSevereCategory(Dictionary<string, double> scores)
     {
-        var categories = new List<(string Name, double Score)>
+        if (scores.Count == 0)
         {
-            ("hate", scores.Hate),
-            ("hate_threatening", scores.HateThreatening),
-            ("harassment", scores.Harassment),
-            ("harassment_threatening", scores.HarassmentThreatening),
-            ("self_harm", scores.SelfHarm),
-            ("self_harm_intent", scores.SelfHarmIntent),
-            ("self_harm_instructions", scores.SelfHarmInstructions),
-            ("sexual", scores.Sexual),
-            ("sexual_minors", scores.SexualMinors),
-            ("violence", scores.Violence),
-            ("violence_graphic", scores.ViolenceGraphic)
-        };
+            return ("unknown", 0);
+        }
 
-        var max = categories[0];
-        foreach (var c in categories)
+        var maxName = "unknown";
+        var maxScore = double.MinValue;
+
+        foreach (var kvp in scores)
         {
-            if (c.Score > max.Score)
+            if (kvp.Value > maxScore)
             {
-                max = c;
+                maxScore = kvp.Value;
+                maxName = kvp.Key;
             }
         }
 
-        return max;
+        if (maxScore < 0) maxScore = 0;
+
+        return (maxName, maxScore);
     }
 }

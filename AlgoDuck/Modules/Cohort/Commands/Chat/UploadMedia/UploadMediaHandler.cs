@@ -45,7 +45,7 @@ public sealed class UploadMediaHandler : IUploadMediaHandler
         var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, dto.CohortId, cancellationToken);
         if (!belongs)
         {
-            throw new CohortValidationException("User does not belong to this cohort.");
+            throw new CohortValidationException("User does not belong to this cohort.", StatusCodes.Status403Forbidden);
         }
 
         if (dto.File.Length <= 0)
@@ -55,13 +55,13 @@ public sealed class UploadMediaHandler : IUploadMediaHandler
 
         if (dto.File.Length > MaxImageBytes)
         {
-            throw new CohortValidationException("File is too large.");
+            throw new CohortValidationException("File is too large.", StatusCodes.Status413PayloadTooLarge);
         }
 
         var contentType = (dto.File.ContentType).Trim();
         if (!AllowedContentTypes.Contains(contentType))
         {
-            throw new CohortValidationException("Unsupported media type.");
+            throw new CohortValidationException("Unsupported media type.", StatusCodes.Status415UnsupportedMediaType);
         }
 
         var descriptor = await _chatMediaStorageService.StoreImageAsync(
@@ -72,7 +72,7 @@ public sealed class UploadMediaHandler : IUploadMediaHandler
 
         if (descriptor.MediaType != ChatMediaType.Image)
         {
-            throw new CohortValidationException("Unsupported media type.");
+            throw new CohortValidationException("Unsupported media type.", StatusCodes.Status415UnsupportedMediaType);
         }
 
         return new UploadMediaResultDto
