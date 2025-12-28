@@ -5,35 +5,14 @@ using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
-using AlgoDuck.Shared.S3;
 using FluentValidation;
 using FluentValidation.Results;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Commands.Chat.SendMessage;
 
 public sealed class SendMessageHandlerTests
 {
-    private static IOptions<S3Settings> CreateS3Options()
-    {
-        return Options.Create(new S3Settings
-        {
-            ContentBucketSettings = new S3BucketSettings
-            {
-                Region = "eu-central-1",
-                BucketName = "algoduck-content-test",
-                Type = S3BucketType.Content
-            },
-            DataBucketSettings = new S3BucketSettings
-            {
-                Region = "eu-central-1",
-                BucketName = "algoduck-data-test",
-                Type = S3BucketType.Data
-            }
-        });
-    }
-
     [Fact]
     public async Task HandleAsync_WhenDtoIsInvalid_ThenThrowsCohortValidationException()
     {
@@ -62,8 +41,7 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object,
-            CreateS3Options());
+            profileServiceMock.Object);
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -99,8 +77,7 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object,
-            CreateS3Options());
+            profileServiceMock.Object);
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -178,8 +155,7 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object,
-            CreateS3Options());
+            profileServiceMock.Object);
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
@@ -236,8 +212,7 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object,
-            CreateS3Options());
+            profileServiceMock.Object);
 
         await Assert.ThrowsAsync<ChatValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -305,13 +280,12 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object,
-            CreateS3Options());
+            profileServiceMock.Object);
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
         Assert.Equal(ChatMediaType.Image, result.MediaType);
-        Assert.Equal($"https://algoduck-content-test.s3.eu-central-1.amazonaws.com/{key}", result.MediaUrl);
+        Assert.Equal($"/api/cohorts/{cohortId}/chat/media?key={Uri.EscapeDataString(key)}", result.MediaUrl);
 
         chatModerationServiceMock.Verify(
             x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),

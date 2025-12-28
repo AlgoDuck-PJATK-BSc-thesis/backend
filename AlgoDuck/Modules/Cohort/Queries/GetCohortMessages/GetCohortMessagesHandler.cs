@@ -2,9 +2,7 @@ using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.Interfaces;
-using AlgoDuck.Shared.S3;
 using FluentValidation;
-using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Modules.Cohort.Queries.GetCohortMessages;
 
@@ -14,20 +12,17 @@ public sealed class GetCohortMessagesHandler : IGetCohortMessagesHandler
     private readonly ICohortRepository _cohortRepository;
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IProfileService _profileService;
-    private readonly S3Settings _s3Settings;
 
     public GetCohortMessagesHandler(
         IValidator<GetCohortMessagesRequestDto> validator,
         ICohortRepository cohortRepository,
         IChatMessageRepository chatMessageRepository,
-        IProfileService profileService,
-        IOptions<S3Settings> s3Options)
+        IProfileService profileService)
     {
         _validator = validator;
         _cohortRepository = cohortRepository;
         _chatMessageRepository = chatMessageRepository;
         _profileService = profileService;
-        _s3Settings = s3Options.Value;
     }
 
     public async Task<GetCohortMessagesResultDto> HandleAsync(
@@ -68,7 +63,9 @@ public sealed class GetCohortMessagesHandler : IGetCohortMessagesHandler
             var profile = await _profileService.GetProfileAsync(message.UserId, cancellationToken);
 
             var mediaType = (ChatMediaType)message.MediaType;
-            var mediaUrl = mediaType == ChatMediaType.Image ? ResolveMediaUrl(message.MediaKey) : null;
+            var mediaUrl = mediaType == ChatMediaType.Image && !string.IsNullOrWhiteSpace(message.MediaKey)
+                ? ChatMediaUrl.Build(message.CohortId, message.MediaKey!)
+                : null;
 
             items.Add(ChatMessageMappings.ToGetCohortMessagesItemDto(
                 message,
@@ -88,16 +85,5 @@ public sealed class GetCohortMessagesHandler : IGetCohortMessagesHandler
             NextCursor = nextCursor,
             HasMore = hasMore
         };
-    }
-
-    private string? ResolveMediaUrl(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return null;
-        }
-
-        var bucket = _s3Settings.ContentBucketSettings;
-        return $"https://{bucket.BucketName}.s3.{bucket.Region}.amazonaws.com/{key}";
     }
 }

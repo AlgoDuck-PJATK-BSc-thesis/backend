@@ -3,9 +3,7 @@ using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.Interfaces;
-using AlgoDuck.Shared.S3;
 using FluentValidation;
-using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
 
@@ -16,22 +14,19 @@ public sealed class SendMessageHandler : ISendMessageHandler
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IChatModerationService _chatModerationService;
     private readonly IProfileService _profileService;
-    private readonly S3Settings _s3Settings;
 
     public SendMessageHandler(
         IValidator<SendMessageDto> validator,
         ICohortRepository cohortRepository,
         IChatMessageRepository chatMessageRepository,
         IChatModerationService chatModerationService,
-        IProfileService profileService,
-        IOptions<S3Settings> s3Options)
+        IProfileService profileService)
     {
         _validator = validator;
         _cohortRepository = cohortRepository;
         _chatMessageRepository = chatMessageRepository;
         _chatModerationService = chatModerationService;
         _profileService = profileService;
-        _s3Settings = s3Options.Value;
     }
 
     public async Task<SendMessageResultDto> HandleAsync(
@@ -91,23 +86,14 @@ public sealed class SendMessageHandler : ISendMessageHandler
         var profile = await _profileService.GetProfileAsync(saved.UserId, cancellationToken);
 
         var savedMediaType = (ChatMediaType)saved.MediaType;
-        var mediaUrl = savedMediaType == ChatMediaType.Image ? ResolveMediaUrl(saved.MediaKey) : null;
+        var mediaUrl = savedMediaType == ChatMediaType.Image && !string.IsNullOrWhiteSpace(saved.MediaKey)
+            ? ChatMediaUrl.Build(saved.CohortId, saved.MediaKey!)
+            : null;
 
         return ChatMessageMappings.ToSendMessageResultDto(
             saved,
             profile,
             savedMediaType,
             mediaUrl);
-    }
-
-    private string? ResolveMediaUrl(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return null;
-        }
-
-        var bucket = _s3Settings.ContentBucketSettings;
-        return $"https://{bucket.BucketName}.s3.{bucket.Region}.amazonaws.com/{key}";
     }
 }
