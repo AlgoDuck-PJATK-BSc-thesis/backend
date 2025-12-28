@@ -32,16 +32,16 @@ public class CohortChatHub : Hub
         var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
         {
-            await Clients.Caller.SendAsync("MessageRejected", "Unauthorized user.");
+            await Clients.Caller.SendAsync("MessageRejected", "Unauthorized user.", Context.ConnectionAborted);
             return;
         }
 
         try
         {
-            var result = await _sendMessageHandler.HandleAsync(userId, dto, CancellationToken.None);
+            var result = await _sendMessageHandler.HandleAsync(userId, dto, Context.ConnectionAborted);
 
             await Clients.Group(GetGroupName(dto.CohortId))
-                .SendAsync("ReceiveMessage", result);
+                .SendAsync("ReceiveMessage", result, Context.ConnectionAborted);
         }
         catch (ChatValidationException ex)
         {
@@ -55,7 +55,7 @@ public class CohortChatHub : Hub
                 ? "This message violates our content rules."
                 : ex.Message;
 
-            await Clients.Caller.SendAsync("MessageRejected", reason);
+            await Clients.Caller.SendAsync("MessageRejected", reason, Context.ConnectionAborted);
         }
         catch (CohortValidationException ex)
         {
@@ -65,7 +65,10 @@ public class CohortChatHub : Hub
                 userId,
                 dto.CohortId);
 
-            await Clients.Caller.SendAsync("MessageRejected", "You cannot send messages to this cohort.");
+            await Clients.Caller.SendAsync(
+                "MessageRejected",
+                "You cannot send messages to this cohort.",
+                Context.ConnectionAborted);
         }
         catch (Exception ex)
         {
@@ -75,7 +78,10 @@ public class CohortChatHub : Hub
                 userId,
                 dto.CohortId);
 
-            await Clients.Caller.SendAsync("MessageRejected", "Internal error. Please try again.");
+            await Clients.Caller.SendAsync(
+                "MessageRejected",
+                "Internal error. Please try again.",
+                Context.ConnectionAborted);
         }
     }
 
@@ -85,7 +91,9 @@ public class CohortChatHub : Hub
         var cohortIdRaw = http?.Request.Query["cohortId"].ToString();
         var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (!Guid.TryParse(cohortIdRaw, out var cohortId) || string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        if (!Guid.TryParse(cohortIdRaw, out var cohortId) ||
+            string.IsNullOrWhiteSpace(userIdStr) ||
+            !Guid.TryParse(userIdStr, out var userId))
         {
             _logger.LogWarning("Missing or invalid cohortId/userId; aborting connection");
             Context.Abort();

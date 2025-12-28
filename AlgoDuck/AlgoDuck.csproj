@@ -72,8 +72,6 @@
         <Folder Include="Modules\User\Commands\SelectAvatar\" />
         <Folder Include="Modules\User\Commands\UpdatePreferences\" />
         <Folder Include="Modules\User\Commands\UpdateUsername\" />
-        <Folder Include="Modules\User\Queries\GetUserProfile\" />
-        <Folder Include="Modules\User\Queries\GetUserStatistics\" />
         <Folder Include="Modules\User\Shared\Constants\" />
         <Folder Include="Modules\User\Shared\Exceptions\" />
         <Folder Include="Modules\User\Shared\Repositories\" />

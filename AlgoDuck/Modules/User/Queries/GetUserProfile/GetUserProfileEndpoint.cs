@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,29 +16,41 @@ public sealed class GetUserProfileEndpoint : ControllerBase
     {
         _handler = handler;
     }
-    
+
+    private static string[] ExtractRoles(ClaimsPrincipal user)
+    {
+        return user.Claims
+            .Where(c =>
+                c.Type == ClaimTypes.Role ||
+                c.Type == "role" ||
+                c.Type == "roles")
+            .Select(c => (c.Value).Trim())
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
-            var error = new StandardApiResponse
+            return Unauthorized(new StandardApiResponse
             {
                 Status = Status.Error,
                 Message = "Unauthorized"
-            };
-
-            return Unauthorized(error);
+            });
         }
 
         var profile = await _handler.HandleAsync(userId, cancellationToken);
 
-        var response = new StandardApiResponse<UserProfileDto>
-        {
-            Body = profile
-        };
+        var roles = ExtractRoles(User);
+        var primaryRole = roles.FirstOrDefault();
 
-        return Ok(response);
+        return Ok(new StandardApiResponse<UserProfileWithRolesDto>
+        {
+            Body = new UserProfileWithRolesDto(profile, roles, primaryRole)
+        });
     }
 }

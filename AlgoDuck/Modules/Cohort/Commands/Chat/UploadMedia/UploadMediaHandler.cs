@@ -30,7 +30,7 @@ public sealed class UploadMediaHandler : IUploadMediaHandler
         _cohortRepository = cohortRepository;
         _chatMediaStorageService = chatMediaStorageService;
     }
-
+    
     public async Task<UploadMediaResultDto> HandleAsync(
         Guid userId,
         UploadMediaDto dto,
