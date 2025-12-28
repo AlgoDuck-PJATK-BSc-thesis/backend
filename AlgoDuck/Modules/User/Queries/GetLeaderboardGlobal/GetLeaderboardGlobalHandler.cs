@@ -6,6 +6,8 @@ namespace AlgoDuck.Modules.User.Queries.GetLeaderboardGlobal;
 
 public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
 {
+    private const string AvatarFolderPrefix = "Ducks/Outfits/";
+
     private readonly ApplicationQueryDbContext _queryDbContext;
 
     public GetLeaderboardGlobalHandler(ApplicationQueryDbContext queryDbContext)
@@ -40,19 +42,34 @@ public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
                 u.UserName,
                 u.Experience,
                 u.AmountSolved,
-                u.CohortId
+                u.CohortId,
+                SelectedItemId = _queryDbContext.Purchases
+                    .Where(p => p.UserId == u.Id && p.Selected)
+                    .Select(p => (Guid?)p.ItemId)
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
         var entries = usersPage
-            .Select((u, index) => new UserLeaderboardEntryDto
+            .Select((u, index) =>
             {
-                Rank = skip + index + 1,
-                UserId = u.Id,
-                Username = u.UserName ?? string.Empty,
-                Experience = u.Experience,
-                AmountSolved = u.AmountSolved,
-                CohortId = u.CohortId
+                string? avatarPath = null;
+
+                if (u.SelectedItemId.HasValue)
+                {
+                    avatarPath = AvatarFolderPrefix + "duck-" + u.SelectedItemId.Value.ToString("D") + ".png";
+                }
+
+                return new UserLeaderboardEntryDto
+                {
+                    Rank = skip + index + 1,
+                    UserId = u.Id,
+                    Username = u.UserName ?? string.Empty,
+                    Experience = u.Experience,
+                    AmountSolved = u.AmountSolved,
+                    CohortId = u.CohortId,
+                    UserAvatarUrl = avatarPath
+                };
             })
             .ToList();
 
