@@ -57,7 +57,7 @@ public sealed class GetUserActivityHandlerTests
         var statusId = Guid.NewGuid();
         var createdAt = DateTime.UtcNow;
 
-        var problem = new Problem
+        var problem = new Models.Problem
         {
             ProblemId = problemId,
             ProblemTitle = "Two Sum",
@@ -69,12 +69,6 @@ public sealed class GetUserActivityHandlerTests
             Difficulty = null!
         };
 
-        var status = new Status
-        {
-            StatusId = statusId,
-            StatusName = "Accepted"
-        };
-
         var solutions = new List<UserSolution>
         {
             new()
@@ -82,11 +76,9 @@ public sealed class GetUserActivityHandlerTests
                 SolutionId = solutionId,
                 UserId = userId,
                 ProblemId = problemId,
-                StatusId = statusId,
                 CodeRuntimeSubmitted = 123,
                 CreatedAt = createdAt,
                 Problem = problem,
-                Status = status,
                 User = null!
             }
         }.AsReadOnly();
@@ -107,7 +99,6 @@ public sealed class GetUserActivityHandlerTests
         Assert.Equal(solutionId, result[0].SolutionId);
         Assert.Equal(problemId, result[0].ProblemId);
         Assert.Equal("Two Sum", result[0].ProblemName);
-        Assert.Equal("Accepted", result[0].StatusName);
         Assert.Equal(123, result[0].CodeRuntimeSubmitted);
         Assert.Equal(createdAt, result[0].SubmittedAt);
     }

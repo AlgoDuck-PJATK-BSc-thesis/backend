@@ -4,6 +4,7 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Impl;
 using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 using OneOf;
 
@@ -55,12 +56,122 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         [TokenType.LogOr] = 1,
     };
 
+    private Token SwallowUntilExpressionEnd()
+    {
+        var parenDepth = 0;
+        var bracketDepth = 0;
+
+        Token? token = null;
+        while (PeekToken() != null)
+        {
+            token = PeekToken()!;
+
+            if (token.Type == TokenType.OpenCurly)
+            {
+                var statementParser = new StatementParser(_tokens, _filePosition, _symbolTableBuilder);
+                statementParser.ParseStatementScope();
+                continue;
+            }
+
+            switch (token.Type)
+            {
+                case TokenType.OpenParen: parenDepth++; break;
+                case TokenType.CloseParen: parenDepth--; break;
+                case TokenType.OpenBrace: bracketDepth++; break;
+                case TokenType.CloseBrace: bracketDepth--; break;
+            }
+
+            if (token.Type == TokenType.Semi && parenDepth <= 0 && bracketDepth <= 0)
+                break;
+
+            if (token.Type == TokenType.Comma && parenDepth <= 0 && bracketDepth <= 0)
+                break;
+
+            if (parenDepth < 0 || bracketDepth < 0)
+                break;
+            
+            if (token.Type == TokenType.CloseCurly)
+                throw new JavaSyntaxException("unexpected '}'");
+
+            ConsumeToken();
+        }
+        
+        if (PeekToken() == null)
+            throw new JavaSyntaxException("unexpected end of expression");
+
+        return token ?? throw new JavaSyntaxException("unexpected end of expression");
+    }
+
+    private bool IsComplexExpressionStart()
+    {
+        var token = PeekToken();
+        if (token == null) return false;
+
+        return token.Type switch
+        {
+            TokenType.New => true,
+            TokenType.Switch => true,
+            _ => false
+        };
+    }
+
+    private bool LooksLikeLambdaOrMethodRef()
+    {
+        _filePosition.CreateCheckpoint();
+        try
+        {
+            int depth = 0;
+            while (PeekToken() != null)
+            {
+                var t = PeekToken()!;
+                
+                switch (t.Type)
+                {
+                    case TokenType.OpenParen:
+                        depth++;
+                        break;
+                    case TokenType.CloseParen:
+                        depth--;
+                        break;
+                }
+                
+                if (depth <= 0 && t.Type is TokenType.Arrow or TokenType.DoubleColon)
+                    return true;
+                
+                if (t.Type is TokenType.Semi or TokenType.Comma)
+                    return false;
+                
+                if (depth < 0) return false;
+                
+                ConsumeToken();
+            }
+            return false;
+        }
+        finally
+        {
+            _filePosition.LoadCheckpoint();
+        }
+    }
+
     private NodeTerm ParseTerm()
     {
         if (PeekToken() == null) throw new JavaSyntaxException("");
         var nodeTerm = new NodeTerm();
+        
+        if (IsComplexExpressionStart())
+        {
+            SwallowUntilExpressionEnd();
+            return new NodeTerm { Val = new NodeTermSwallowed() };
+        }
+        
         if (PeekToken()!.Type == TokenType.OpenParen)
         {
+            if (LooksLikeLambdaOrMethodRef())
+            {
+                SwallowUntilExpressionEnd();
+                return new NodeTerm { Val = new NodeTermSwallowed() };
+            }
+            
             _filePosition.CreateCheckpoint();
             if (TryParseCast(out var cast))
             {
@@ -75,13 +186,19 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         }
         else if (PeekToken()!.Type == TokenType.Ident)
         {
-            var variableIdentifier  = ConsumeToken();
+            var variableIdentifier = ConsumeToken();
             
+            if (CheckTokenType(TokenType.Arrow) || CheckTokenType(TokenType.DoubleColon) || CheckTokenType(TokenType.OpenParen) || CheckTokenType(TokenType.Dot))
+            {
+                SwallowUntilExpressionEnd();
+                return new NodeTerm { Val = new NodeTermSwallowed() };
+            }
+
             if (CheckTokenType(TokenType.OpenBrace))
             {
                 ConsumeToken(); // consume '['
                 var arrIndex = ParseExpr();
-                nodeTerm = new NodeTerm { Val = new NodeTermArrayReference { ArrIndex = arrIndex, ArrReference = variableIdentifier } };
+                nodeTerm = new NodeTerm { Val = new NodeTermArrayReference { ArrReference = variableIdentifier, ArrIndex = arrIndex } };
                 ConsumeIfOfType("]", TokenType.CloseBrace); 
             }
             else
@@ -105,7 +222,7 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
                 TokenType.CharLit => ConsumeToken(),
                 TokenType.StringLit => ConsumeToken(),
                 TokenType.BooleanLit => ConsumeToken(),
-                _ => throw new JavaSyntaxException("unexpected token"),
+                _ => SwallowUntilExpressionEnd()
             };
             nodeTerm.Val = new NodeTermLit { TermLit = numericLiteral };
         }
@@ -167,6 +284,13 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         {
             var curToken = PeekToken();
             if (curToken == null) break;
+            
+            if (curToken.Type == TokenType.Wildcard)
+            {
+                SwallowUntilExpressionEnd();
+                return new NodeExpr { Expr = new NodeTerm { Val = new NodeTermSwallowed() } };
+            }
+            
             var op = MapTokensToBinaryOperators(curToken);
 
             if (op == null) return lhs;
@@ -213,11 +337,6 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         var inferredType = TokenType.Ident;
         while (PeekToken() != null && CheckTokenType(TokenType.Comma, 1))
         {
-            /*
-             *  Early type checking for literals.
-             *  Find first non Identifier literal (as an identifier can be a variable which we cannot at this point type check)
-             *  and set it as expected type
-             */
             var curToken = PeekToken()!;
             var tokenLiteralType = MapTokenTypeToLiteralType(curToken.Type);
             if (inferredType == TokenType.Ident && tokenLiteralType != null && tokenLiteralType != LiteralType.Ident)
@@ -254,9 +373,10 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
             return CreateWrappedUnaryExpression(UnaryOperator.Decrement);
         }
 
-        if (CheckTokenType(TokenType.Negation)) // TODO implement this and add TokenType.Tilde
+        if (CheckTokenType(TokenType.Negation))
         {
-            
+            ConsumeToken();
+            return CreateWrappedUnaryExpression(UnaryOperator.Negation);
         }
 
         if (CheckTokenType(TokenType.Plus))
@@ -267,7 +387,7 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         return ParseTerm();
     }
 
-    private NodeTerm CreateWrappedUnaryExpression(UnaryOperator op) // shorthand for operator which is a restricted keyword. Stating the obvious I guess
+    private NodeTerm CreateWrappedUnaryExpression(UnaryOperator op)
     {
         return new NodeTerm {Val = new NodeTermParen {Expr = new NodeExpr {Expr = new NodeUnaryExpr { Rhs = new NodeExpr {Expr = new NodeTerm { Val = new NodeTermParen {Expr = ParseExpr() } } }, Operator = op } } } };
     }
@@ -302,7 +422,7 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
             _ => null,
         };
     }
-
+    
     private static LiteralType? MapTokenTypeToLiteralType(TokenType token)
     {
         return token switch
@@ -367,11 +487,12 @@ public class NodeTermCast
     public NodeExpr? Expression { get; set; }
 }
 
+public class NodeTermSwallowed { }
+
 
 public class NodeTerm
 {
-    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent, NodeTermArrayReference, NodeTermCast> Val { get; set; }
-    
+    public OneOf<NodeTermLit, NodeTermParen, NodeTermIdent, NodeTermArrayReference, NodeTermCast, NodeTermSwallowed> Val { get; set; }
 }
 
 public class NodeExpr

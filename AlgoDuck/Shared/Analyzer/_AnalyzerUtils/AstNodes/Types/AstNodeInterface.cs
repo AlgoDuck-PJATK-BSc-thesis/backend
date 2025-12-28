@@ -3,31 +3,31 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
+using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
+using ConsoleApp1.Analyzer._AnalyzerUtils.AstNodes.Types;
 
 namespace AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Interfaces;
 
-public class AstNodeInterface : IType<AstNodeInterface>, IGenericSettable
+public class AstNodeInterface : BaseType<AstNodeInterface>, IGenerifiable, IAnnotable
 {
-    public AccessModifier InterfaceAccessModifier { get; set; } = AccessModifier.Default;
-    public Token? Identifier { get; set; }
     public List<MemberModifier> Modifiers { get; set; } = [];
     public List<GenericTypeDeclaration> GenericTypes { get; set; } = [];
-    public AstNodeTypeScope<AstNodeInterface>? InterfaceScope { get; set; }
+    // public AstNodeTypeScope<AstNodeInterface>? TypeScope { get; set; }
     public List<ComplexTypeDeclaration> Extends { get; set; } = [];
-    public Token? GetIdentifier()
+    private ICollection<AnnotationAstNode> Annotations { get; set; } = [];
+
+    public void SetAnnotations(ICollection<AnnotationAstNode> annotations)
     {
-        return Identifier;
+        Annotations = annotations;
     }
 
-    public List<AstNodeTypeMember<AstNodeInterface>> GetMembers()
+    public ICollection<AnnotationAstNode> GetAnnotations() => Annotations;
+
+    public void AddAnnotation(AnnotationAstNode annotation)
     {
-        return InterfaceScope!.TypeMembers;
+        Annotations.Add(annotation);
     }
 
-    public AstNodeTypeScope<AstNodeInterface>? GetScope()
-    {
-        return InterfaceScope;
-    }
 
     public void SetGenericTypes(List<GenericTypeDeclaration> tokens)
     {

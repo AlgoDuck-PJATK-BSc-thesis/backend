@@ -39,15 +39,10 @@ public class VmCompilationFailure : VmCompilationResponse
     public string ErrorMsg { get; set; } = string.Empty;
 }
 
-public class VmExecutionQuery : VmInputQuery
+public class VmExecutionQuery(VmCompilationSuccess compilationResponse) : VmInputQuery
 {
-    public VmExecutionQuery(VmCompilationSuccess compilationResponse)
-    {
-        Entrypoint = compilationResponse.Entrypoint;
-        GeneratedClassFiles = compilationResponse.GeneratedClassFiles;
-    }
-    public string Entrypoint { get; set; }
-    public Dictionary<string, string> GeneratedClassFiles { get; set; }
+    public string Entrypoint { get; set; } = compilationResponse.Entrypoint;
+    public Dictionary<string, string> GeneratedClassFiles { get; set; } = compilationResponse.GeneratedClassFiles;
 }
 
 public class VmExecutionResponse : VmInputResponse

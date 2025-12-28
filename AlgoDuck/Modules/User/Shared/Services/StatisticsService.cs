@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Shared.Constants;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
@@ -18,39 +19,37 @@ public sealed class StatisticsService : IStatisticsService
 
     public async Task<StatisticsSummary> GetStatisticsAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var userSolutions = _queryDbContext.UserSolutions
-            .AsNoTracking()
-            .Include(s => s.Status)
+        var userSolutions = _queryDbContext.CodeExecutionStatisticss
             .Where(s => s.UserId == userId);
 
         var totalSubmissions = await userSolutions.CountAsync(cancellationToken);
 
         var acceptedSubmissions = await userSolutions
             .CountAsync(
-                s => s.Status.StatusName == StatisticsConstants.StatusAccepted,
+                s => s.TestCaseResult == TestCaseResult.Accepted,
                 cancellationToken
             );
 
         var wrongAnswerSubmissions = await userSolutions
             .CountAsync(
-                s => s.Status.StatusName == StatisticsConstants.StatusWrongAnswer,
+                s => s.TestCaseResult == TestCaseResult.Rejected,
                 cancellationToken
             );
 
         var timeLimitSubmissions = await userSolutions
             .CountAsync(
-                s => s.Status.StatusName == StatisticsConstants.StatusTimeLimit,
+                s => s.Result == ExecutionResult.Timeout,
                 cancellationToken
             );
 
         var runtimeErrorSubmissions = await userSolutions
             .CountAsync(
-                s => s.Status.StatusName == StatisticsConstants.StatusRuntimeError,
+                s => s.Result == ExecutionResult.RuntimeError,
                 cancellationToken
             );
 
         var totalSolved = await userSolutions
-            .Where(s => s.Status.StatusName == StatisticsConstants.StatusAccepted)
+            .Where(s => s.TestCaseResult == TestCaseResult.Accepted)
             .Select(s => s.ProblemId)
             .Distinct()
             .CountAsync(cancellationToken);
@@ -69,6 +68,7 @@ public sealed class StatisticsService : IStatisticsService
             timeLimitSubmissions,
             runtimeErrorSubmissions
         );
+
     }
 
     public async Task<IReadOnlyList<SolvedProblemSummary>> GetSolvedProblemsAsync(
@@ -77,17 +77,19 @@ public sealed class StatisticsService : IStatisticsService
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var problemIds = await _queryDbContext.UserSolutions
-            .AsNoTracking()
-            .Include(s => s.Status)
+        var query = _queryDbContext.CodeExecutionStatisticss
             .Where(
                 s =>
                     s.UserId == userId
-                    && s.Status.StatusName == StatisticsConstants.StatusAccepted
+                    && s.ProblemId != null /* since we track all executions we must allow a scenario where code is executed for no problem (perhaps in the algo visualizer?) hence the nullability and null check */
+                    && s.TestCaseResult == TestCaseResult.Accepted
             )
-            .GroupBy(s => s.ProblemId)
-            .Select(g => g.Key)
-            .OrderBy(id => id)
+            .Select(s => (Guid) s.ProblemId!)
+            .Distinct()
+            .OrderBy(id => id);
+
+        var problemIds = await query
+            .Select(id => id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -98,5 +100,6 @@ public sealed class StatisticsService : IStatisticsService
                 ProblemId = id
             })
             .ToList();
+
     }
 }

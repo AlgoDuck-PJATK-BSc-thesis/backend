@@ -65,6 +65,7 @@
         <Folder Include="Modules\Auth\Shared\Middleware\" />
         <Folder Include="Modules\Auth\Shared\Repositories\" />
         <Folder Include="Modules\Problem\Commands\CreateProblem\" />
+        <Folder Include="Modules\Cohort\Commands\CohortManagement\" />
         <Folder Include="Modules\User\Commands\ChangePassword\" />
         <Folder Include="Modules\User\Commands\SetEditorLayout\" />
         <Folder Include="Modules\User\Commands\SetEditorTheme\" />
@@ -76,7 +77,6 @@
         <Folder Include="Modules\User\Shared\Constants\" />
         <Folder Include="Modules\User\Shared\Exceptions\" />
         <Folder Include="Modules\User\Shared\Repositories\" />
-        <Folder Include="Modules\User\Shared\Services\" />
         <Folder Include="Modules\User\Shared\Utils\" />
     </ItemGroup>
 

@@ -12,14 +12,15 @@ namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers;
 
 public class LowLevelParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
     ParserCore(tokens, filePosition, symbolTableBuilder),
-    IGenericParser, IModifierParser, ITypeParser, IExpressionParser
+    IGenericParser, IModifierParser, ITypeParser, IExpressionParser, IAnnotationParser
 {
     private readonly GenericParser _genericParser = new(tokens, filePosition, symbolTableBuilder);
     private readonly ModifierParser _modifierParser = new(tokens, filePosition, symbolTableBuilder);
     private readonly TypeParser _typeParser = new(tokens, filePosition, symbolTableBuilder);
     private readonly ExpressionParser _expressionParser = new(tokens, filePosition, symbolTableBuilder);
+    private readonly AnnotationParser _annotationParser = new(tokens, filePosition, symbolTableBuilder);
     
-    public void ParseGenericDeclaration(IGenericSettable funcOrClass)
+    public void ParseGenericDeclaration(IGenerifiable funcOrClass)
     {
         _genericParser.ParseGenericDeclaration(funcOrClass);
     }
@@ -69,8 +70,8 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition, Symbo
         return _expressionParser.ParseExpr(minPrecedence);
     }
 
-    // public NodeTerm? ParseTerm()
-    // {
-    //     return _expressionParser.ParseTerm();
-    // }
+    public AnnotationAstNode ParseAnnotation()
+    {
+        return _annotationParser.ParseAnnotation();
+    }
 }

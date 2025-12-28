@@ -2,6 +2,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Shared.Exceptions;
+using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 
 public interface ICategoryProblemsRepository
 {
-    public Task<ICollection<ProblemDisplayDto>> GetAllProblemsForCategoryAsync(string categoryName);
+    public Task<Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>> GetAllProblemsForCategoryAsync(string categoryName);
 }
 
 public class CategoryProblemsRepository(
@@ -20,49 +21,61 @@ public class CategoryProblemsRepository(
     IAwsS3Client awsS3Client
 ) : ICategoryProblemsRepository
 {
-    public async Task<ICollection<ProblemDisplayDto>> GetAllProblemsForCategoryAsync(string categoryName)
+    public async Task<Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>> GetAllProblemsForCategoryAsync(string categoryName)
     {
-        var problemIds = await dbContext.Problems
+        var problemsRdb = await dbContext.Problems
             .Include(p => p.Category)
             .Include(p => p.Difficulty)
             .Where(p => p.Category.CategoryName == categoryName)
-            .Select(p => new
+            .Select(p => new ProblemDisplayDbPartial
             {
                 ProblemId = p.ProblemId,
                 Difficulty = p.Difficulty.DifficultyName,
-                Tags = p.Tags
+                Tags = p.Tags.Select(t => new TagDto
+                {
+                    Name = t.TagName
+                }).ToList()
             })
-            .ToListAsync();
+            .ToDictionaryAsync(p => p.ProblemId, p => p);
 
-        var tasks = problemIds.Select(async p =>
-        {
-            var info = await GetProblemInfoAsync(p.ProblemId);
-            return new ProblemDisplayDto
+        var problemsS3 = problemsRdb.Select(async p => await GetProblemInfoAsync(p.Key)).ToList();
+
+        await Task.WhenAll(problemsS3);
+
+        return Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>.Ok(problemsS3.Select(t => t.Result)
+            .Where(t => t.IsOk).Select(t => t.AsT0).Select(t => new ProblemDisplayDto()
             {
-                ProblemId = p.ProblemId,
-                Difficulty = new DifficultyDto { Name = p.Difficulty },
-                Tags = p.Tags.Select(t => new TagDto { Name = t.TagName }),
-                Title = info.Title
-            };
-        }).ToList();
-
-        return await Task.WhenAll(tasks);
+                Difficulty = new DifficultyDto
+                {
+                    Name = problemsRdb[t.ProblemId].Difficulty
+                },
+                ProblemId = t.ProblemId,
+                Tags = problemsRdb[t.ProblemId].Tags,
+                Title = t.Title
+            }).ToList());
     }
 
-    private async Task<ProblemS3PartialInfo> GetProblemInfoAsync(
+    private async Task<Result<ProblemS3PartialInfo, ErrorObject<string>>> GetProblemInfoAsync(
         Guid problemId,
         SupportedLanguage lang = SupportedLanguage.En)
     {
         var objectPath = $"problems/{problemId}/infos/{lang.GetDisplayName().ToLowerInvariant()}.xml";
         if (!await awsS3Client.ObjectExistsAsync(objectPath))
         {
-            throw new NotFoundException(objectPath);
+            return Result<ProblemS3PartialInfo, ErrorObject<string>>.Err(ErrorObject<string>.NotFound("not found"));
         }
 
         var problemInfosRaw = await awsS3Client.GetDocumentStringByPathAsync(objectPath);
         var problemInfos = XmlToObjectParser.ParseXmlString<ProblemS3PartialInfo>(problemInfosRaw)
                            ?? throw new XmlParsingException(objectPath);
 
-        return problemInfos;
+        return Result<ProblemS3PartialInfo, ErrorObject<string>>.Ok(problemInfos);
     }
+}
+
+public class ProblemDisplayDbPartial
+{
+    public required Guid ProblemId { get; set; }
+    public required string Difficulty { get; set; }
+    public List<TagDto> Tags { get; set; } = [];
 }

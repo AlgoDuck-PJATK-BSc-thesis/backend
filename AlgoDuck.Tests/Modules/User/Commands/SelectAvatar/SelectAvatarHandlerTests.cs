@@ -146,9 +146,9 @@ public sealed class SelectAvatarHandlerTests
         return rarity;
     }
 
-    static Item SeedItem(ApplicationCommandDbContext dbContext, Guid itemId, Guid rarityId, Rarity rarity)
+    static Models.Item SeedItem(ApplicationCommandDbContext dbContext, Guid itemId, Guid rarityId, Rarity rarity)
     {
-        var item = new Item
+        var item = new Models.Item
         {
             ItemId = itemId,
             Name = $"Item_{itemId:N}",
@@ -165,7 +165,7 @@ public sealed class SelectAvatarHandlerTests
         return item;
     }
 
-    static Purchase SeedPurchase(ApplicationCommandDbContext dbContext, ApplicationUser user, Item item, bool selected)
+    static Purchase SeedPurchase(ApplicationCommandDbContext dbContext, ApplicationUser user, Models.Item item, bool selected)
     {
         var purchase = new Purchase
         {

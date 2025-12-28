@@ -5,6 +5,7 @@ namespace AlgoDuck.Models;
 
 public class AssistantChat : IEntityTypeConfiguration<AssistantChat>
 {
+    public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
@@ -21,7 +22,7 @@ public class AssistantChat : IEntityTypeConfiguration<AssistantChat>
     {
         builder.ToTable("assistant_chat");
         
-        builder.HasKey(e => new { e.Name, e.ProblemId, e.UserId })
+        builder.HasKey(e => e.Id)
             .HasName("assistant_chat_id");
         
         builder.Property(e => e.Name)

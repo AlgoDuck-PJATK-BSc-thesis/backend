@@ -9,6 +9,7 @@ public sealed class S3Settings
     public required S3BucketSettings DataBucketSettings { get; init; }
 }
 
+
 public sealed class S3BucketSettings
 {
     public required string Region { get; init; }
