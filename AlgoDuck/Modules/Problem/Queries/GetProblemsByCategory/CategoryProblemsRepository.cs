@@ -49,6 +49,7 @@ public class CategoryProblemsRepository(
                 {
                     Name = problemsRdb[t.ProblemId].Difficulty
                 },
+                Description = t.Description,
                 ProblemId = t.ProblemId,
                 Tags = problemsRdb[t.ProblemId].Tags,
                 Title = t.Title
