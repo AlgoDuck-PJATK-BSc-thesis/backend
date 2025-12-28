@@ -19,6 +19,8 @@ public partial class Item : IEntityTypeConfiguration<Item>
 
     public Guid RarityId { get; set; }
 
+    public ItemType Type { get; set; } = ItemType.Duck;
+
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
 
     public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
@@ -33,6 +35,11 @@ public partial class Item : IEntityTypeConfiguration<Item>
         builder.Property(e => e.ItemId)
             .ValueGeneratedNever()
             .HasColumnName("item_id");
+
+        builder.Property(e => e.Type)
+            .HasColumnName("type")
+            .HasConversion<string>();
+        
         builder.Property(e => e.Description)
             .HasMaxLength(1024)
             .HasColumnName("description");
@@ -47,4 +54,11 @@ public partial class Item : IEntityTypeConfiguration<Item>
             .HasForeignKey(d => d.RarityId)
             .HasConstraintName("item_rarity_ref");
     }
+}
+
+
+public enum ItemType
+{
+    Duck, 
+    Plant
 }

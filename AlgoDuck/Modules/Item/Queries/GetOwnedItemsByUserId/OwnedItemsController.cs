@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Extensions;
 using AlgoDuck.Shared.Http;
@@ -13,9 +14,8 @@ namespace AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 [Route("api/[controller]")]
 [Authorize]
 public class OwnedItemsController(
-    IOwnedItemsService ownedItemsService,
-    ILogger<OwnedItemsController> logger
-        ) : ControllerBase
+    IOwnedItemsService ownedItemsService
+    ) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetOwnedItemsByUserIdAsync(CancellationToken cancellationToken)
@@ -24,55 +24,21 @@ public class OwnedItemsController(
 
         if (userId.IsErr)
             return userId.ToActionResult();
-        
-        return Ok(new StandardApiResponse<ICollection<ItemDto>>
-        {
-            Body = await ownedItemsService.GetOwnedItemsByUserIdAsync(userId.AsT0, cancellationToken)
-        });
+
+        var ownedItemsResult = await ownedItemsService.GetOwnedItemsByUserIdAsync(userId.AsT0, cancellationToken);
+        return ownedItemsResult.ToActionResult();
     }
 }
 
-public interface IOwnedItemsService
-{
-    public Task<ICollection<ItemDto>> GetOwnedItemsByUserIdAsync(Guid userId, CancellationToken cancellationToken);
-}
-
-public class OwnedItemsService(
-    IOwnedItemsRepository ownedItemsRepository
-    ) : IOwnedItemsService
-{
-    public async Task<ICollection<ItemDto>> GetOwnedItemsByUserIdAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        return await ownedItemsRepository.GetOwnedItemsByUserId(userId, cancellationToken);
-    }
-}
-
-public interface IOwnedItemsRepository
-{
-    public Task<ICollection<ItemDto>> GetOwnedItemsByUserId(Guid userId, CancellationToken cancellationToken);
-}
-
-public class OwnedItemsRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IOwnedItemsRepository
-{
-    public async Task<ICollection<ItemDto>> GetOwnedItemsByUserId(Guid userId, CancellationToken cancellationToken)
-    {
-        return await dbContext.Items
-            .Include(e => e.Purchases)
-            .Where(e => e.Purchases.Select(p => p.UserId).Contains(userId))
-            .Select(i => new ItemDto
-            {
-                ItemId = i.ItemId
-            }).ToListAsync(cancellationToken: cancellationToken); 
-    }
-}
 
 public class ItemDto
 {
-    public Guid ItemId { get; set; }
+    public required Guid ItemId { get; set; }
+    public required ItemType ItemType { get; set; }
 }
 
+
+/*TODO: Move this somewhere*/
 public static class ClaimsPrincipalExtension
 {
     public static Result<Guid, ErrorObject<string>> GetUserId(this ClaimsPrincipal claimsPrincipal)
