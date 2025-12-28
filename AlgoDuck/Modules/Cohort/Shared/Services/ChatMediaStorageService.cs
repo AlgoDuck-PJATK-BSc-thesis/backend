@@ -1,3 +1,4 @@
+using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Shared.S3;
@@ -31,34 +32,36 @@ public sealed class ChatMediaStorageService : IChatMediaStorageService
     {
         if (file == null)
         {
-            throw new ArgumentNullException(nameof(file));
+            throw new CohortValidationException("File is required.");
         }
 
         if (file.Length == 0)
         {
-            throw new InvalidOperationException("Uploaded file is empty.");
+            throw new CohortValidationException("File is empty.");
         }
 
         if (file.Length > _mediaSettings.MaxFileSizeBytes)
         {
-            throw new InvalidOperationException("Uploaded file exceeds maximum allowed size.");
+            throw new CohortValidationException("File is too large.", StatusCodes.Status413PayloadTooLarge);
         }
 
         if (!_mediaSettings.AllowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Uploaded file content type is not allowed.");
+            throw new CohortValidationException("Unsupported media type.", StatusCodes.Status415UnsupportedMediaType);
         }
 
         var extension = Path.GetExtension(file.FileName);
         var key = BuildObjectKey(cohortId, userId, extension);
 
-        await using var stream = file.OpenReadStream();
+        var bucketName = string.IsNullOrWhiteSpace(_mediaSettings.BucketName)
+            ? _s3Settings.ContentBucketSettings.BucketName
+            : _mediaSettings.BucketName;
 
-        var bucket = _s3Settings.ContentBucketSettings;
+        await using var stream = file.OpenReadStream();
 
         var request = new PutObjectRequest
         {
-            BucketName = bucket.BucketName,
+            BucketName = bucketName,
             Key = key,
             InputStream = stream,
             ContentType = file.ContentType
@@ -68,15 +71,15 @@ public sealed class ChatMediaStorageService : IChatMediaStorageService
 
         if (response.HttpStatusCode != System.Net.HttpStatusCode.OK)
         {
-            throw new InvalidOperationException("Failed to upload chat media to storage.");
+            throw new CohortValidationException("Failed to upload chat media to storage.", StatusCodes.Status500InternalServerError);
         }
 
-        var url = $"https://{bucket.BucketName}.s3.{bucket.Region}.amazonaws.com/{key}";
+        var gatewayUrl = ChatMediaUrl.Build(cohortId, key);
 
         return new ChatMediaDescriptor
         {
             Key = key,
-            Url = url,
+            Url = gatewayUrl,
             ContentType = file.ContentType,
             SizeBytes = file.Length,
             MediaType = ChatMediaType.Image

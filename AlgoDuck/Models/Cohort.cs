@@ -9,6 +9,8 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
 
     public string Name { get; set; } = null!;
 
+    public string JoinCode { get; set; } = null!;
+
     public virtual ApplicationUser CreatedByUser { get; set; } = null!;
     public Guid CreatedByUserId { get; set; }
 
@@ -31,6 +33,14 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
         builder.Property(e => e.Name)
             .HasMaxLength(256)
             .HasColumnName("name");
+
+        builder.Property(e => e.JoinCode)
+            .HasMaxLength(16)
+            .HasColumnName("join_code");
+
+        builder.HasIndex(e => e.JoinCode)
+            .IsUnique()
+            .HasDatabaseName("cohort_join_code_uq");
 
         builder.Property(e => e.IsActive)
             .HasColumnName("is_active");

@@ -111,6 +111,7 @@ public class LeaveCohortHandlerTests
         {
             CohortId = cohortId,
             Name = "Test",
+            JoinCode = "LEAVE0001",
             CreatedByUserId = Guid.NewGuid(),
             IsActive = true
         };
@@ -170,6 +171,7 @@ public class LeaveCohortHandlerTests
         {
             CohortId = cohortId,
             Name = "Test",
+            JoinCode = "LEAVE0002",
             CreatedByUserId = Guid.NewGuid(),
             IsActive = true
         };

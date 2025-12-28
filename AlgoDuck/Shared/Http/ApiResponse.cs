@@ -4,16 +4,26 @@ namespace AlgoDuck.Shared.Http;
 
 internal class StandardApiResponse<T>
 {
+    [JsonPropertyOrder(0)]
     public Status Status { get; set; } = Status.Success;
-    public T? Body { get; set; }
+
+    [JsonPropertyOrder(1)]
     public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(2)]
+    public T? Body { get; set; }
 }
 
 internal class StandardApiResponse
 {
+    [JsonPropertyOrder(0)]
     public Status Status { get; set; } = Status.Success;
-    public object? Body { get; set; }
+
+    [JsonPropertyOrder(1)]
     public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(2)]
+    public object? Body { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

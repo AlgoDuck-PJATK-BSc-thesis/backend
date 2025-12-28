@@ -2,6 +2,7 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Cohort.Queries.GetCohortMessages;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
+using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
@@ -10,7 +11,7 @@ using Moq;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortMessages;
 
-public class GetCohortMessagesHandlerTests
+public sealed class GetCohortMessagesHandlerTests
 {
     [Fact]
     public async Task HandleAsync_WhenRequestInvalid_ThenThrowsCohortValidationException()
@@ -106,7 +107,7 @@ public class GetCohortMessagesHandlerTests
             .Setup(r => r.GetPagedForCohortAsync(
                 cohortId,
                 dto.BeforeCreatedAt,
-                dto.PageSize.Value + 1,
+                dto.PageSize!.Value + 1,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Message>());
 
@@ -156,7 +157,8 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = userId,
             Message1 = "hi",
-            CreatedAt = now.AddMinutes(-1)
+            CreatedAt = now.AddMinutes(-1),
+            MediaType = (int)ChatMediaType.Text
         };
 
         var message2 = new Message
@@ -165,7 +167,8 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = Guid.NewGuid(),
             Message1 = "hello",
-            CreatedAt = now.AddMinutes(-2)
+            CreatedAt = now.AddMinutes(-2),
+            MediaType = (int)ChatMediaType.Text
         };
 
         var message3 = new Message
@@ -174,14 +177,15 @@ public class GetCohortMessagesHandlerTests
             CohortId = cohortId,
             UserId = Guid.NewGuid(),
             Message1 = "extra",
-            CreatedAt = now.AddMinutes(-3)
+            CreatedAt = now.AddMinutes(-3),
+            MediaType = (int)ChatMediaType.Text
         };
 
         chatRepositoryMock
             .Setup(r => r.GetPagedForCohortAsync(
                 cohortId,
                 dto.BeforeCreatedAt,
-                dto.PageSize.Value + 1,
+                dto.PageSize!.Value + 1,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Message> { message1, message2, message3 });
 
@@ -216,5 +220,73 @@ public class GetCohortMessagesHandlerTests
         Assert.Contains(result.Items, x => x.MessageId == message1.MessageId);
         Assert.Contains(result.Items, x => x.MessageId == message2.MessageId);
         Assert.NotNull(result.NextCursor);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenImageMessageExists_ThenReturnsMediaUrl()
+    {
+        var validatorMock = new Mock<IValidator<GetCohortMessagesRequestDto>>();
+        var cohortRepositoryMock = new Mock<ICohortRepository>();
+        var chatRepositoryMock = new Mock<IChatMessageRepository>();
+        var profileServiceMock = new Mock<IProfileService>();
+
+        var userId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var key = "chat/cohorts/test/image.png";
+
+        var dto = new GetCohortMessagesRequestDto
+        {
+            CohortId = cohortId,
+            PageSize = 10
+        };
+
+        validatorMock
+            .Setup(v => v.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
+        cohortRepositoryMock
+            .Setup(r => r.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var message = new Message
+        {
+            MessageId = Guid.NewGuid(),
+            CohortId = cohortId,
+            UserId = Guid.NewGuid(),
+            Message1 = "",
+            CreatedAt = DateTime.UtcNow,
+            MediaType = (int)ChatMediaType.Image,
+            MediaKey = key,
+            MediaContentType = "image/png"
+        };
+
+        chatRepositoryMock
+            .Setup(r => r.GetPagedForCohortAsync(
+                cohortId,
+                dto.BeforeCreatedAt,
+                dto.PageSize!.Value + 1,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Message> { message });
+
+        profileServiceMock
+            .Setup(p => p.GetProfileAsync(message.UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserProfileDto
+            {
+                UserId = message.UserId,
+                Username = "u",
+                S3AvatarUrl = "a"
+            });
+
+        var handler = new GetCohortMessagesHandler(
+            validatorMock.Object,
+            cohortRepositoryMock.Object,
+            chatRepositoryMock.Object,
+            profileServiceMock.Object);
+
+        var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
+
+        Assert.Single(result.Items);
+        Assert.Equal(ChatMediaType.Image, result.Items[0].MediaType);
+        Assert.Equal($"/api/cohorts/{cohortId}/chat/media?key={Uri.EscapeDataString(key)}", result.Items[0].MediaUrl);
     }
 }

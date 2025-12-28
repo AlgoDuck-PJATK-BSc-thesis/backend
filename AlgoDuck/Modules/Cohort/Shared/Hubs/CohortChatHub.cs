@@ -103,6 +103,17 @@ public class CohortChatHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(cohortId), Context.ConnectionAborted);
         await _chatPresenceService.UserConnectedAsync(cohortId, userId, Context.ConnectionId, Context.ConnectionAborted);
 
+        await Clients.Group(GetGroupName(cohortId)).SendAsync(
+            "PresenceUpdated",
+            new
+            {
+                userId,
+                isActive = true,
+                lastSeenAt = DateTime.UtcNow
+            },
+            Context.ConnectionAborted
+        );
+
         await base.OnConnectedAsync();
     }
 
@@ -116,6 +127,17 @@ public class CohortChatHub : Hub
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(cohortId), Context.ConnectionAborted);
             await _chatPresenceService.UserDisconnectedAsync(cohortId, userId, Context.ConnectionId, Context.ConnectionAborted);
+
+            await Clients.Group(GetGroupName(cohortId)).SendAsync(
+                "PresenceUpdated",
+                new
+                {
+                    userId,
+                    isActive = false,
+                    lastSeenAt = DateTime.UtcNow
+                },
+                Context.ConnectionAborted
+            );
         }
 
         await base.OnDisconnectedAsync(exception);

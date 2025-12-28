@@ -6,4 +6,5 @@ public sealed class CreateCohortResultDto
     public string Name { get; init; } = string.Empty;
     public Guid CreatedByUserId { get; init; }
     public bool IsActive { get; init; }
+    public string JoinCode { get; init; } = string.Empty;
 }

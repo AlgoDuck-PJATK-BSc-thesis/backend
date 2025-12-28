@@ -33,17 +33,17 @@ public sealed class ChatValidationExceptionTests
     }
 
     [Fact]
-    public void Ctor_WithMessageCategoryAndInner_SetsAllProperties()
+    public void Ctor_WithMessageStatusCodeAndInner_SetsInnerException_CategoryNull()
     {
         var message = "bad chat message";
-        var category = "self_harm";
         var inner = new InvalidOperationException("inner");
+        var statusCode = 400;
 
-        var ex = new ChatValidationException(message, category, inner);
+        var ex = new ChatValidationException(message, statusCode, inner);
 
         ex.Code.Should().Be("chat_validation_error");
         ex.Message.Should().Be(message);
-        ex.Category.Should().Be(category);
+        ex.Category.Should().BeNull();
         ex.InnerException.Should().BeSameAs(inner);
     }
 }

@@ -18,12 +18,13 @@ public sealed class CohortValidationExceptionTests
     }
 
     [Fact]
-    public void Ctor_WithMessageAndInner_SetsAllProperties()
+    public void Ctor_WithMessageStatusCodeAndInner_SetsAllProperties()
     {
         var message = "validation failed";
         var inner = new ArgumentException("inner");
+        var statusCode = 400;
 
-        var ex = new CohortValidationException(message, inner);
+        var ex = new CohortValidationException(message, statusCode, inner);
 
         ex.Code.Should().Be("cohort_validation_error");
         ex.Message.Should().Be(message);

@@ -34,53 +34,66 @@ public sealed class SendMessageHandler : ISendMessageHandler
         SendMessageDto dto,
         CancellationToken cancellationToken)
     {
-        var validationResult = await _validator.ValidateAsync(dto, CancellationToken.None);
+        var validationResult = await _validator.ValidateAsync(dto, cancellationToken);
         if (!validationResult.IsValid)
         {
             throw new CohortValidationException("Invalid chat message payload.");
         }
 
-        var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, dto.CohortId, CancellationToken.None);
+        var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, dto.CohortId, cancellationToken);
         if (!belongs)
         {
             throw new CohortValidationException("User does not belong to this cohort.");
         }
 
-        var contentToModerate = dto.MediaType == ChatMediaType.Text ? dto.Content ?? string.Empty : string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(contentToModerate))
+        if (dto.MediaType == ChatMediaType.Text)
         {
-            var moderationResult = await _chatModerationService.CheckMessageAsync(
-                userId,
-                dto.CohortId,
-                contentToModerate,
-                CancellationToken.None);
+            var contentToModerate = dto.Content ?? string.Empty;
 
-            if (!moderationResult.IsAllowed)
+            if (!string.IsNullOrWhiteSpace(contentToModerate))
             {
-                throw new ChatValidationException(
-                    moderationResult.BlockReason ?? "This message violates our content rules.",
-                    moderationResult.Category);
+                var moderationResult = await _chatModerationService.CheckMessageAsync(
+                    userId,
+                    dto.CohortId,
+                    contentToModerate,
+                    cancellationToken);
+
+                if (!moderationResult.IsAllowed)
+                {
+                    throw new ChatValidationException(
+                        moderationResult.BlockReason ?? "This message violates our content rules.",
+                        moderationResult.Category);
+                }
             }
         }
+
+        var mediaKey = string.IsNullOrWhiteSpace(dto.MediaKey) ? null : dto.MediaKey.Trim();
+        var mediaContentType = string.IsNullOrWhiteSpace(dto.MediaContentType) ? null : dto.MediaContentType.Trim();
 
         var message = new Message
         {
             MessageId = Guid.NewGuid(),
             CohortId = dto.CohortId,
             UserId = userId,
-            Message1 = dto.Content ?? string.Empty,
-            CreatedAt = DateTime.UtcNow
+            Message1 = dto.MediaType == ChatMediaType.Text ? (dto.Content ?? string.Empty) : string.Empty,
+            CreatedAt = DateTime.UtcNow,
+            MediaType = (int)dto.MediaType,
+            MediaKey = mediaKey,
+            MediaContentType = mediaContentType
         };
 
-        var saved = await _chatMessageRepository.AddAsync(message, CancellationToken.None);
+        var saved = await _chatMessageRepository.AddAsync(message, cancellationToken);
+        var profile = await _profileService.GetProfileAsync(saved.UserId, cancellationToken);
 
-        var profile = await _profileService.GetProfileAsync(saved.UserId, CancellationToken.None);
+        var savedMediaType = (ChatMediaType)saved.MediaType;
+        var mediaUrl = savedMediaType == ChatMediaType.Image && !string.IsNullOrWhiteSpace(saved.MediaKey)
+            ? ChatMediaUrl.Build(saved.CohortId, saved.MediaKey!)
+            : null;
 
         return ChatMessageMappings.ToSendMessageResultDto(
             saved,
             profile,
-            ChatMediaType.Text,
-            null);
+            savedMediaType,
+            mediaUrl);
     }
 }

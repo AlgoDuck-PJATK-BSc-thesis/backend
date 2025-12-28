@@ -99,7 +99,7 @@ public class UploadMediaHandlerTests
         var dto = new UploadMediaDto
         {
             CohortId = cohortId,
-            File = CreateFormFile(Encoding.UTF8.GetBytes("data"), "file.bin", "application/octet-stream")
+            File = CreateFormFile(Encoding.UTF8.GetBytes("data"), "file.png", "image/png")
         };
 
         validatorMock
@@ -120,7 +120,7 @@ public class UploadMediaHandlerTests
         };
 
         mediaStorageMock
-            .Setup(x => x.StoreImageAsync(cohortId, userId, dto.File, It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreImageAsync(cohortId, userId, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(descriptor);
 
         var handler = new UploadMediaHandler(
@@ -131,7 +131,7 @@ public class UploadMediaHandlerTests
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
 
-        mediaStorageMock.Verify(x => x.StoreImageAsync(cohortId, userId, dto.File, It.IsAny<CancellationToken>()), Times.Once);
+        mediaStorageMock.Verify(x => x.StoreImageAsync(cohortId, userId, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class UploadMediaHandlerTests
         };
 
         mediaStorageMock
-            .Setup(x => x.StoreImageAsync(cohortId, userId, dto.File, It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreImageAsync(cohortId, userId, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(descriptor);
 
         var handler = new UploadMediaHandler(
@@ -185,6 +185,6 @@ public class UploadMediaHandlerTests
         Assert.Equal(descriptor.SizeBytes, result.SizeBytes);
 
         cohortRepositoryMock.Verify(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()), Times.Once);
-        mediaStorageMock.Verify(x => x.StoreImageAsync(cohortId, userId, dto.File, It.IsAny<CancellationToken>()), Times.Once);
+        mediaStorageMock.Verify(x => x.StoreImageAsync(cohortId, userId, It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

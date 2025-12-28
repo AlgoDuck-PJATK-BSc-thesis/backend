@@ -1,6 +1,7 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Queries.GetCohortLeaderboard;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetCohortLeaderboard;
@@ -11,7 +12,7 @@ public sealed class GetCohortLeaderboardHandlerTests
     public async Task HandleAsync_WhenCohortIdEmpty_ThenThrowsValidationException()
     {
         await using var dbContext = CreateQueryDbContext();
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var dto = new GetCohortLeaderboardRequestDto
         {
@@ -35,7 +36,7 @@ public sealed class GetCohortLeaderboardHandlerTests
             new ApplicationUser { Id = Guid.NewGuid(), UserName = "u1", Experience = 10, AmountSolved = 1, CohortId = cohortId, Email = "u1@test.local", SecurityStamp = Guid.NewGuid().ToString() }
         });
 
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var dto = new GetCohortLeaderboardRequestDto
         {
@@ -64,7 +65,7 @@ public sealed class GetCohortLeaderboardHandlerTests
             new ApplicationUser { Id = Guid.NewGuid(), UserName = "u1", Experience = 10, AmountSolved = 1, CohortId = cohortId, Email = "u1@test.local", SecurityStamp = Guid.NewGuid().ToString() }
         });
 
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var dto = new GetCohortLeaderboardRequestDto
         {
@@ -96,7 +97,7 @@ public sealed class GetCohortLeaderboardHandlerTests
         dbContext.ApplicationUsers.AddRange(users);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var result = await handler.HandleAsync(new GetCohortLeaderboardRequestDto
         {
@@ -125,7 +126,7 @@ public sealed class GetCohortLeaderboardHandlerTests
         dbContext.ApplicationUsers.AddRange(u1, u2, u3, u4);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var result = await handler.HandleAsync(new GetCohortLeaderboardRequestDto
         {
@@ -172,7 +173,7 @@ public sealed class GetCohortLeaderboardHandlerTests
         dbContext.ApplicationUsers.AddRange(users);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetCohortLeaderboardHandler(dbContext);
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
 
         var result = await handler.HandleAsync(new GetCohortLeaderboardRequestDto
         {
@@ -190,6 +191,65 @@ public sealed class GetCohortLeaderboardHandlerTests
         Assert.Equal(20, result.Entries[9].Rank);
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenUserHasSelectedPurchase_ThenReturnsAvatarUrl()
+    {
+        await using var dbContext = CreateQueryDbContext();
+
+        var cohortId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var duckItemId = Guid.NewGuid();
+        var rarityId = Guid.NewGuid();
+
+        dbContext.Rarities.Add(new Rarity
+        {
+            RarityId = rarityId,
+            RarityName = "test"
+        });
+
+        dbContext.Items.Add(new Item
+        {
+            ItemId = duckItemId,
+            Name = "duck",
+            Description = "duck",
+            Price = 0,
+            Purchasable = true,
+            RarityId = rarityId
+        });
+
+        dbContext.ApplicationUsers.Add(new ApplicationUser
+        {
+            Id = userId,
+            UserName = "u1",
+            Experience = 10,
+            AmountSolved = 1,
+            CohortId = cohortId,
+            Email = "u1@test.local",
+            SecurityStamp = Guid.NewGuid().ToString()
+        });
+
+        dbContext.Purchases.Add(new Purchase
+        {
+            UserId = userId,
+            ItemId = duckItemId,
+            Selected = true
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var handler = new GetCohortLeaderboardHandler(dbContext, new TestS3AvatarUrlGenerator());
+
+        var result = await handler.HandleAsync(new GetCohortLeaderboardRequestDto
+        {
+            CohortId = cohortId,
+            Page = 1,
+            PageSize = 20
+        }, CancellationToken.None);
+
+        Assert.Single(result.Entries);
+        Assert.False(string.IsNullOrWhiteSpace(result.Entries[0].UserAvatarUrl));
+    }
+
     static ApplicationQueryDbContext CreateQueryDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationQueryDbContext>()
@@ -201,7 +261,9 @@ public sealed class GetCohortLeaderboardHandlerTests
 
     static void SeedUsers(ApplicationQueryDbContext dbContext, Guid cohortId, IEnumerable<ApplicationUser> users)
     {
-        foreach (var u in users)
+        var list = users.ToList();
+
+        foreach (var u in list)
         {
             u.CohortId = cohortId;
             if (string.IsNullOrWhiteSpace(u.Email))
@@ -215,7 +277,15 @@ public sealed class GetCohortLeaderboardHandlerTests
             }
         }
 
-        dbContext.ApplicationUsers.AddRange(users);
+        dbContext.ApplicationUsers.AddRange(list);
         dbContext.SaveChanges();
+    }
+
+    private sealed class TestS3AvatarUrlGenerator : IS3AvatarUrlGenerator
+    {
+        public string GetAvatarUrl(string avatarKey)
+        {
+            return string.IsNullOrWhiteSpace(avatarKey) ? string.Empty : $"https://test.local/{avatarKey}";
+        }
     }
 }

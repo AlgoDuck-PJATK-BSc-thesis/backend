@@ -62,12 +62,17 @@ public sealed class GetCohortMessagesHandler : IGetCohortMessagesHandler
         {
             var profile = await _profileService.GetProfileAsync(message.UserId, cancellationToken);
 
+            var mediaType = (ChatMediaType)message.MediaType;
+            var mediaUrl = mediaType == ChatMediaType.Image && !string.IsNullOrWhiteSpace(message.MediaKey)
+                ? ChatMediaUrl.Build(message.CohortId, message.MediaKey!)
+                : null;
+
             items.Add(ChatMessageMappings.ToGetCohortMessagesItemDto(
                 message,
                 profile,
                 userId,
-                ChatMediaType.Text,
-                null));
+                mediaType,
+                mediaUrl));
         }
 
         DateTime? nextCursor = items.Count > 0

@@ -12,8 +12,8 @@ public sealed class CohortExceptionTests
         {
         }
 
-        public TestCohortException(string code, string message, Exception? innerException)
-            : base(code, message, innerException)
+        public TestCohortException(string code, string message, Exception innerException)
+            : base(code, message, 400, innerException)
         {
         }
     }

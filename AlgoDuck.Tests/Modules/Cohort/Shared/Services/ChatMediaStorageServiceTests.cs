@@ -1,4 +1,5 @@
 using System.Net;
+using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Services;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Shared.S3;
@@ -13,10 +14,7 @@ namespace AlgoDuck.Tests.Modules.Cohort.Shared.Services;
 
 public sealed class ChatMediaStorageServiceTests
 {
-    private static ChatMediaStorageService CreateService(
-        out Mock<IAmazonS3> s3Mock,
-        out ChatMediaSettings mediaSettings,
-        out S3Settings s3Settings)
+    private static ChatMediaStorageService CreateService(out Mock<IAmazonS3> s3Mock, out ChatMediaSettings mediaSettings)
     {
         s3Mock = new Mock<IAmazonS3>();
 
@@ -27,7 +25,7 @@ public sealed class ChatMediaStorageServiceTests
             AllowedContentTypes = new[] { "image/png", "image/jpeg" }
         };
 
-        s3Settings = new S3Settings
+        var s3Settings = new S3Settings
         {
             ContentBucketSettings = new S3BucketSettings
             {
@@ -43,13 +41,10 @@ public sealed class ChatMediaStorageServiceTests
             }
         };
 
-        var mediaOptions = Options.Create(mediaSettings);
-        var s3Options = Options.Create(s3Settings);
-
         return new ChatMediaStorageService(
             s3Mock.Object,
-            mediaOptions,
-            s3Options);
+            Options.Create(mediaSettings),
+            Options.Create(s3Settings));
     }
 
     private static IFormFile CreateFormFile(string fileName, string contentType, byte[] content)
@@ -63,26 +58,32 @@ public sealed class ChatMediaStorageServiceTests
     }
 
     [Fact]
-    public async Task StoreImageAsync_WhenFileIsNull_ThrowsArgumentNullException()
+    public async Task StoreImageAsync_WhenFileIsNull_ThrowsCohortValidationException()
     {
-        var service = CreateService(out var s3Mock, out _, out _);
+        var service = CreateService(out var s3Mock, out _);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             service.StoreImageAsync(Guid.NewGuid(), Guid.NewGuid(), null!, CancellationToken.None));
 
+        ex.Message.Should().Be("File is required.");
+        ex.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+
         s3Mock.Verify(
             x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task StoreImageAsync_WhenFileIsEmpty_ThrowsInvalidOperationException()
+    public async Task StoreImageAsync_WhenFileIsEmpty_ThrowsCohortValidationException()
     {
-        var service = CreateService(out var s3Mock, out _, out _);
+        var service = CreateService(out var s3Mock, out _);
         var file = CreateFormFile("image.png", "image/png", Array.Empty<byte>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             service.StoreImageAsync(Guid.NewGuid(), Guid.NewGuid(), file, CancellationToken.None));
+
+        ex.Message.Should().Be("File is empty.");
+        ex.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
 
         s3Mock.Verify(
             x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()),
@@ -90,15 +91,18 @@ public sealed class ChatMediaStorageServiceTests
     }
 
     [Fact]
-    public async Task StoreImageAsync_WhenFileTooLarge_ThrowsInvalidOperationException()
+    public async Task StoreImageAsync_WhenFileTooLarge_ThrowsCohortValidationException()
     {
-        var service = CreateService(out var s3Mock, out var mediaSettings, out _);
+        var service = CreateService(out var s3Mock, out var mediaSettings);
 
         var oversized = new byte[mediaSettings.MaxFileSizeBytes + 1];
         var file = CreateFormFile("image.png", "image/png", oversized);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             service.StoreImageAsync(Guid.NewGuid(), Guid.NewGuid(), file, CancellationToken.None));
+
+        ex.Message.Should().Be("File is too large.");
+        ex.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
 
         s3Mock.Verify(
             x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()),
@@ -106,15 +110,18 @@ public sealed class ChatMediaStorageServiceTests
     }
 
     [Fact]
-    public async Task StoreImageAsync_WhenContentTypeNotAllowed_ThrowsInvalidOperationException()
+    public async Task StoreImageAsync_WhenContentTypeNotAllowed_ThrowsCohortValidationException()
     {
-        var service = CreateService(out var s3Mock, out _, out _);
+        var service = CreateService(out var s3Mock, out _);
 
         var bytes = new byte[16];
         var file = CreateFormFile("doc.txt", "text/plain", bytes);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             service.StoreImageAsync(Guid.NewGuid(), Guid.NewGuid(), file, CancellationToken.None));
+
+        ex.Message.Should().Be("Unsupported media type.");
+        ex.StatusCode.Should().Be(StatusCodes.Status415UnsupportedMediaType);
 
         s3Mock.Verify(
             x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()),
@@ -122,9 +129,9 @@ public sealed class ChatMediaStorageServiceTests
     }
 
     [Fact]
-    public async Task StoreImageAsync_WhenS3UploadFails_ThrowsInvalidOperationException()
+    public async Task StoreImageAsync_WhenS3UploadFails_ThrowsCohortValidationException()
     {
-        var service = CreateService(out var s3Mock, out _, out _);
+        var service = CreateService(out var s3Mock, out _);
 
         s3Mock
             .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
@@ -133,8 +140,11 @@ public sealed class ChatMediaStorageServiceTests
         var bytes = new byte[64];
         var file = CreateFormFile("image.png", "image/png", bytes);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             service.StoreImageAsync(Guid.NewGuid(), Guid.NewGuid(), file, CancellationToken.None));
+
+        ex.Message.Should().Be("Failed to upload chat media to storage.");
+        ex.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
 
         s3Mock.Verify(
             x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()),
@@ -144,7 +154,7 @@ public sealed class ChatMediaStorageServiceTests
     [Fact]
     public async Task StoreImageAsync_WhenUploadSucceeds_ReturnsDescriptorWithExpectedValues()
     {
-        var service = CreateService(out var s3Mock, out _, out var s3Settings);
+        var service = CreateService(out var s3Mock, out _);
 
         s3Mock
             .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
@@ -163,6 +173,6 @@ public sealed class ChatMediaStorageServiceTests
         result.SizeBytes.Should().Be(bytes.Length);
         result.MediaType.Should().Be(ChatMediaType.Image);
         result.Key.Should().NotBeNullOrWhiteSpace();
-        result.Url.Should().StartWith($"https://{s3Settings.ContentBucketSettings.BucketName}.s3.{s3Settings.ContentBucketSettings.Region}.amazonaws.com/");
+        result.Url.Should().Be($"/api/cohorts/{cohortId}/chat/media?key={Uri.EscapeDataString(result.Key)}");
     }
 }

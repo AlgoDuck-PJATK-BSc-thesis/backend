@@ -1,16 +1,21 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.DTOs;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Queries.GetCohortLeaderboard;
 
 public sealed class GetCohortLeaderboardHandler : IGetCohortLeaderboardHandler
 {
-    private readonly ApplicationQueryDbContext _queryDbContext;
+    private const string AvatarFolderPrefix = "Ducks/Outfits/";
 
-    public GetCohortLeaderboardHandler(ApplicationQueryDbContext queryDbContext)
+    private readonly ApplicationQueryDbContext _queryDbContext;
+    private readonly IS3AvatarUrlGenerator _avatarUrlGenerator;
+
+    public GetCohortLeaderboardHandler(ApplicationQueryDbContext queryDbContext, IS3AvatarUrlGenerator avatarUrlGenerator)
     {
         _queryDbContext = queryDbContext;
+        _avatarUrlGenerator = avatarUrlGenerator;
     }
 
     public async Task<UserLeaderboardPageDto> HandleAsync(GetCohortLeaderboardRequestDto requestDto, CancellationToken cancellationToken)
@@ -46,19 +51,36 @@ public sealed class GetCohortLeaderboardHandler : IGetCohortLeaderboardHandler
                 u.UserName,
                 u.Experience,
                 u.AmountSolved,
-                u.CohortId
+                u.CohortId,
+                SelectedItemId = _queryDbContext.Purchases
+                    .Where(p => p.UserId == u.Id && p.Selected)
+                    .Select(p => (Guid?)p.ItemId)
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
         var entries = usersPage
-            .Select((u, index) => new UserLeaderboardEntryDto
+            .Select((u, index) =>
             {
-                Rank = skip + index + 1,
-                UserId = u.Id,
-                Username = u.UserName ?? string.Empty,
-                Experience = u.Experience,
-                AmountSolved = u.AmountSolved,
-                CohortId = u.CohortId
+                string avatarKey = string.Empty;
+
+                if (u.SelectedItemId.HasValue)
+                {
+                    avatarKey = AvatarFolderPrefix + "duck-" + u.SelectedItemId.Value.ToString("D") + ".png";
+                }
+
+                var avatarUrl = _avatarUrlGenerator.GetAvatarUrl(avatarKey);
+
+                return new UserLeaderboardEntryDto
+                {
+                    Rank = skip + index + 1,
+                    UserId = u.Id,
+                    Username = u.UserName ?? string.Empty,
+                    Experience = u.Experience,
+                    AmountSolved = u.AmountSolved,
+                    CohortId = u.CohortId,
+                    UserAvatarUrl = avatarUrl
+                };
             })
             .ToList();
 

@@ -91,6 +91,32 @@ public sealed class CsrfGuard
             cookieVal = Uri.UnescapeDataString(cookieRaw);
         }
 
+        if (string.IsNullOrEmpty(cookieVal))
+        {
+            var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            var encoded = Uri.EscapeDataString(token);
+
+            ctx.Response.Cookies.Append(
+                _jwt.CsrfCookieName,
+                encoded,
+                new CookieOptions
+                {
+                    HttpOnly = false,
+                    Secure = !_env.IsDevelopment(),
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/"
+                });
+
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "CSRF validation failed.",
+                Body = null
+            });
+            return;
+        }
+
         string? headerVal = null;
         if (!string.IsNullOrEmpty(headerRaw))
         {
