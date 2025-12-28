@@ -36,6 +36,8 @@ public static class AuthDependencyInitializer
         return v;
     }
 
+    private const string DevFallbackSigningKey = "dev_signing_key_dev_signing_key_dev_signing_key_32+";
+
     public static IServiceCollection AddAuthModule(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         services.AddOptions<JwtSettings>()
@@ -49,6 +51,11 @@ public static class AuthDependencyInitializer
                     {
                         s.SigningKey = fallback;
                     }
+                }
+
+                if (string.IsNullOrWhiteSpace(s.SigningKey) && !environment.IsProduction())
+                {
+                    s.SigningKey = DevFallbackSigningKey;
                 }
 
                 if (string.IsNullOrWhiteSpace(s.SigningKey) && environment.IsProduction())
@@ -75,6 +82,11 @@ public static class AuthDependencyInitializer
             jwtConfig["Key"] ??
             Environment.GetEnvironmentVariable("JWT_SIGNING_KEY") ??
             string.Empty;
+
+        if (string.IsNullOrWhiteSpace(jwtKey) && !environment.IsProduction())
+        {
+            jwtKey = DevFallbackSigningKey;
+        }
 
         if (string.IsNullOrWhiteSpace(jwtKey) && environment.IsProduction())
         {
@@ -133,7 +145,11 @@ public static class AuthDependencyInitializer
             })
             .AddJwtBearer(options =>
             {
-                var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+                var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                {
+                    KeyId = "algoduck-symmetric-v1"
+                };
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
@@ -194,7 +210,7 @@ public static class AuthDependencyInitializer
 
                         await context.Response.WriteAsJsonAsync(new StandardApiResponse
                         {
-                            Status =  AlgoDuck.Shared.Http.Status.Error,
+                            Status = Status.Error,
                             Message = msg,
                             Body = null
                         });
@@ -211,7 +227,7 @@ public static class AuthDependencyInitializer
 
                         await context.Response.WriteAsJsonAsync(new StandardApiResponse
                         {
-                            Status = AlgoDuck.Shared.Http.Status.Error,
+                            Status = Status.Error,
                             Message = "Forbidden.",
                             Body = null
                         });
