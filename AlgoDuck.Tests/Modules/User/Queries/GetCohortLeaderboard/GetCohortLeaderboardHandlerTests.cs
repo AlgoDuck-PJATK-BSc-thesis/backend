@@ -207,7 +207,7 @@ public sealed class GetCohortLeaderboardHandlerTests
             RarityName = "test"
         });
 
-        dbContext.Items.Add(new Item
+        dbContext.Items.Add(new Models.Item
         {
             ItemId = duckItemId,
             Name = "duck",

@@ -16,7 +16,16 @@ public sealed class JwtTokenProvider
     public JwtTokenProvider(IOptions<JwtSettings> options)
     {
         _settings = options.Value;
-        _signingKey = new SymmetricSecurityKey("809859987debc6adb9d7fa56301532bb"u8.ToArray());
+
+        var key = string.IsNullOrWhiteSpace(_settings.SigningKey)
+            ? "dev_signing_key_dev_signing_key_dev_signing_key_32+"
+            : _settings.SigningKey;
+
+        _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        {
+            KeyId = "algoduck-symmetric-v1"
+        };
+
         _signingCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
     }
 
@@ -27,16 +36,16 @@ public sealed class JwtTokenProvider
 
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new Claim("sid", sessionId.ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.UserName ?? string.Empty),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new("sid", sessionId.ToString())
         };
 
         var token = new JwtSecurityToken(
-            issuer: _settings.Issuer,
-            audience: _settings.Audience,
+            issuer: string.IsNullOrWhiteSpace(_settings.Issuer) ? null : _settings.Issuer,
+            audience: string.IsNullOrWhiteSpace(_settings.Audience) ? null : _settings.Audience,
             claims: claims,
             notBefore: now.UtcDateTime,
             expires: expiresAt.UtcDateTime,
