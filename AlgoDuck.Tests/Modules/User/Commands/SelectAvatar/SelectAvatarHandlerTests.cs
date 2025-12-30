@@ -95,8 +95,8 @@ public sealed class SelectAvatarHandlerTests
 
         await handler.HandleAsync(userId, dto, CancellationToken.None);
 
-        Assert.False(p1.Selected);
-        Assert.True(p2.Selected);
+        Assert.False(p1.SelectedAsAvatar);
+        Assert.True(p2.SelectedAsAvatar);
     }
 
     static ApplicationCommandDbContext CreateCommandDbContext()
@@ -148,7 +148,7 @@ public sealed class SelectAvatarHandlerTests
 
     static Models.Item SeedItem(ApplicationCommandDbContext dbContext, Guid itemId, Guid rarityId, Rarity rarity)
     {
-        var item = new Models.Item
+        var item = new DuckItem
         {
             ItemId = itemId,
             Name = $"Item_{itemId:N}",
@@ -165,13 +165,13 @@ public sealed class SelectAvatarHandlerTests
         return item;
     }
 
-    static Purchase SeedPurchase(ApplicationCommandDbContext dbContext, ApplicationUser user, Models.Item item, bool selected)
+    static DuckOwnership SeedPurchase(ApplicationCommandDbContext dbContext, ApplicationUser user, Models.Item item, bool selected)
     {
-        var purchase = new Purchase
+        var purchase = new DuckOwnership()
         {
             UserId = user.Id,
             ItemId = item.ItemId,
-            Selected = selected,
+            SelectedAsAvatar = selected,
             User = user,
             Item = item
         };

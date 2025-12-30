@@ -1,0 +1,46 @@
+using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
+
+[Route("api/[controller]")]
+[Authorize]
+public class OwnedPlantsController(
+    IOwnedPlantsService ownedPlantsService
+    ) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetOwnedPlantsPagedAsync([FromQuery] int page,
+        [FromQuery] int pageSize, CancellationToken cancellationToken)
+    {
+        var userIdRes = User.GetUserId();
+        if (userIdRes.IsErr)
+            return userIdRes.ToActionResult();
+
+        var itemsResult = await ownedPlantsService.GetOwnedPlantsAsync(new OwnedItemsRequest
+        {
+            CurrPage = page,
+            PageSize = pageSize,
+            UserId = userIdRes.AsT0
+        }, cancellationToken: cancellationToken);
+
+        return itemsResult.ToActionResult();
+    }
+}
+
+
+public class OwnedItemsRequest
+{
+    public required int CurrPage { get; set; }
+    public required int PageSize { get; set; }
+    public required Guid UserId { get; set; }
+}
+
+public class OwnedPlantDto
+{
+    public required Guid ItemId { get; set; }
+    public required byte Width { get; set; }
+    public required byte Height { get; set; }
+}

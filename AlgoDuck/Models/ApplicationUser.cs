@@ -22,7 +22,7 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    public virtual ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
+    public virtual ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
 
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
 
