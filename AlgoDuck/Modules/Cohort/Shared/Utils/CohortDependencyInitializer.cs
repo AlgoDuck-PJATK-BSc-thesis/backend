@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AlgoDuck.Modules.Cohort.Commands;
 using AlgoDuck.Modules.Cohort.Commands.CohortManagement.JoinCohortByCode;
 using AlgoDuck.Modules.Cohort.Queries;
@@ -22,6 +23,7 @@ public static class CohortDependencyInitializer
         services.AddHttpClient<IChatModerationService, ChatModerationService>();
         services.AddScoped<IChatMediaStorageService, ChatMediaStorageService>();
         services.AddSingleton<IChatPresenceService, ChatPresenceService>();
+        services.AddSingleton<IChatReadReceiptService, ChatReadReceiptService>();
 
         services.AddScoped<IJoinCohortByCodeHandler, JoinCohortByCodeHandler>();
         services.AddScoped<IValidator<JoinCohortByCodeDto>, JoinCohortByCodeValidator>();
@@ -32,6 +34,11 @@ public static class CohortDependencyInitializer
         services.AddSignalR(options =>
         {
             options.EnableDetailedErrors = environment.IsDevelopment();
+        })
+        .AddJsonProtocol(options =>
+        {
+            options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         });
 
         return services;

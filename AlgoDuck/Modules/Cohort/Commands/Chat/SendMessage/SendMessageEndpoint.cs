@@ -30,6 +30,7 @@ public sealed class SendMessageEndpoint : ControllerBase
         var effectiveDto = new SendMessageDto
         {
             CohortId = cohortId,
+            ClientMessageId = dto.ClientMessageId,
             Content = dto.Content,
             MediaType = dto.MediaType,
             MediaKey = dto.MediaKey,

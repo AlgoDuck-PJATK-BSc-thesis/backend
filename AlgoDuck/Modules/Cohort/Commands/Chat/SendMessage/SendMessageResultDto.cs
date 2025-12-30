@@ -7,6 +7,7 @@ public sealed class SendMessageResultDto
     public Guid MessageId { get; init; }
     public Guid CohortId { get; init; }
     public Guid UserId { get; init; }
+    public Guid? ClientMessageId { get; set; }
     public string UserName { get; init; } = string.Empty;
     public string? UserAvatarUrl { get; init; }
     public string? Content { get; init; }

@@ -56,6 +56,13 @@ public sealed class ChatMessageRepository : IChatMessageRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<Message?> GetByIdForCohortAsync(Guid cohortId, Guid messageId, CancellationToken cancellationToken)
+    {
+        return await _queryDb.Messages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.CohortId == cohortId && m.MessageId == messageId, cancellationToken);
+    }
+
     public async Task<bool> SoftDeleteAsync(Guid messageId, Guid requesterId, CancellationToken cancellationToken)
     {
         var message = await _commandDb.Messages

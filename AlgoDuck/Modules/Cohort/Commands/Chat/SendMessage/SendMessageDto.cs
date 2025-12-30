@@ -5,6 +5,7 @@ namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
 public sealed class SendMessageDto
 {
     public Guid CohortId { get; init; }
+    public Guid? ClientMessageId { get; init; }
     public string? Content { get; init; }
     public ChatMediaType MediaType { get; init; } = ChatMediaType.Text;
     public string? MediaKey { get; init; }
