@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251228223129_AddJsonbItemOwnershipColum")]
+    partial class AddJsonbItemOwnershipColum
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -475,10 +478,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("rarity_id");
 
-                    b.Property<string>("type")
+                    b.Property<string>("Type")
                         .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("character varying(5)");
+                        .HasColumnType("text")
+                        .HasColumnName("type");
 
                     b.HasKey("ItemId")
                         .HasName("shop_pk");
@@ -486,37 +489,6 @@ namespace AlgoDuck.Migrations
                     b.HasIndex("RarityId");
 
                     b.ToTable("item", (string)null);
-
-                    b.HasDiscriminator<string>("type").HasValue("Item");
-
-                    b.UseTphMappingStrategy();
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.ItemOwnership", b =>
-                {
-                    b.Property<Guid>("ItemId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("item_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("ownership_type")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("character varying(13)");
-
-                    b.HasKey("ItemId", "UserId")
-                        .HasName("purchases_pk");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("purchase", (string)null);
-
-                    b.HasDiscriminator<string>("ownership_type").HasValue("ItemOwnership");
-
-                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Message", b =>
@@ -612,6 +584,28 @@ namespace AlgoDuck.Migrations
                     b.HasIndex("DifficultyId");
 
                     b.ToTable("problem", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.Purchase", b =>
+                {
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<bool>("Selected")
+                        .HasColumnType("boolean")
+                        .HasColumnName("selected");
+
+                    b.HasKey("ItemId", "UserId")
+                        .HasName("purchases_pk");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("purchase", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>
@@ -1174,58 +1168,6 @@ namespace AlgoDuck.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.DuckItem", b =>
-                {
-                    b.HasBaseType("AlgoDuck.Models.Item");
-
-                    b.HasDiscriminator().HasValue("Duck");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.PlantItem", b =>
-                {
-                    b.HasBaseType("AlgoDuck.Models.Item");
-
-                    b.Property<byte>("Height")
-                        .HasColumnType("smallint")
-                        .HasColumnName("plant_height");
-
-                    b.Property<byte>("Width")
-                        .HasColumnType("smallint")
-                        .HasColumnName("plant_width");
-
-                    b.HasDiscriminator().HasValue("Plant");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.DuckOwnership", b =>
-                {
-                    b.HasBaseType("AlgoDuck.Models.ItemOwnership");
-
-                    b.Property<bool>("SelectedAsAvatar")
-                        .HasColumnType("boolean")
-                        .HasColumnName("duck_selected_as_avatar");
-
-                    b.Property<bool>("SelectedForPond")
-                        .HasColumnType("boolean")
-                        .HasColumnName("duck_selected_for_pond");
-
-                    b.HasDiscriminator().HasValue("Duck");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.PlantOwnership", b =>
-                {
-                    b.HasBaseType("AlgoDuck.Models.ItemOwnership");
-
-                    b.Property<byte?>("GridX")
-                        .HasColumnType("smallint")
-                        .HasColumnName("plant_grid_x");
-
-                    b.Property<byte?>("GridY")
-                        .HasColumnType("smallint")
-                        .HasColumnName("plant_grid_y");
-
-                    b.HasDiscriminator().HasValue("Plant");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>
                 {
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
@@ -1358,27 +1300,6 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Rarity");
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.ItemOwnership", b =>
-                {
-                    b.HasOne("AlgoDuck.Models.Item", "Item")
-                        .WithMany("Purchases")
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("item_purchase_ref");
-
-                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
-                        .WithMany("Purchases")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("purchase_user_ref");
-
-                    b.Navigation("Item");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Message", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Cohort", "Cohort")
@@ -1419,6 +1340,52 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("Difficulty");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.Purchase", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.Item", "Item")
+                        .WithMany("Purchases")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("item_purchase_ref");
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("Purchases")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("purchase_user_ref");
+
+                    b.OwnsOne("AlgoDuck.Models.ItemData", "ItemData", b1 =>
+                        {
+                            b1.Property<Guid>("PurchaseItemId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("PurchaseUserId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Type")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("PurchaseItemId", "PurchaseUserId");
+
+                            b1.ToTable("purchase");
+
+                            b1.ToJson("item_data");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PurchaseItemId", "PurchaseUserId");
+                        });
+
+                    b.Navigation("Item");
+
+                    b.Navigation("ItemData")
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>

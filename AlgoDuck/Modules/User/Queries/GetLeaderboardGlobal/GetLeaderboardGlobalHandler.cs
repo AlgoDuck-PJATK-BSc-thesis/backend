@@ -43,8 +43,8 @@ public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
                 u.Experience,
                 u.AmountSolved,
                 u.CohortId,
-                SelectedItemId = _queryDbContext.Purchases
-                    .Where(p => p.UserId == u.Id && p.Selected)
+                SelectedItemId = _queryDbContext.DuckOwnerships
+                    .Where(p => p.UserId == u.Id && p.SelectedForPond)
                     .Select(p => (Guid?)p.ItemId)
                     .FirstOrDefault()
             })

@@ -1,19 +1,14 @@
 using System.Security.Claims;
-using AlgoDuck.DAL;
-using AlgoDuck.Models;
-using AlgoDuck.Shared.Exceptions;
-using AlgoDuck.Shared.Extensions;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class OwnedItemsController(
+public class OwnedUsedItemsController(
     IOwnedItemsService ownedItemsService
     ) : ControllerBase
 {
@@ -31,10 +26,26 @@ public class OwnedItemsController(
 }
 
 
-public class ItemDto
+public class OwnedItemsDto
+{
+    public required ICollection<OwnedDuckItemDto> Ducks { get; set; }
+    public required ICollection<OwnedPlantItemDto> Plants { get; set; }
+}
+
+public class OwnedDuckItemDto
 {
     public required Guid ItemId { get; set; }
-    public required ItemType ItemType { get; set; }
+    public required bool IsSelectedAsAvatar { get; set; }
+    public required bool IsSelectedForPond { get; set; }
+}
+
+public class OwnedPlantItemDto
+{
+    public required Guid ItemId { get; set; }
+    public required byte GridX { get; set; }
+    public required byte GridY { get; set; }
+    public required byte Width { get; set; }
+    public required byte Height { get; set; }
 }
 
 

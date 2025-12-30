@@ -264,7 +264,7 @@ public class DataSeedingService(
         {
             var items = new List<Item>
             {
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("16d4a949-0f5f-481a-b9d6-e0329f9d7dd3"), 
                     Name = "pirate", 
                     Description = "description", 
@@ -272,7 +272,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("052b219a-ec0b-430a-a7db-95c5db35dfce"), 
                     Name = "detective", 
                     Description = "description", 
@@ -280,7 +280,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("03a4dced-f802-4cc5-b239-e0d4c3be9dcd"), 
                     Name = "princess", 
                     Description = "description", 
@@ -288,7 +288,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("182769e6-ff23-4584-a6fd-83d1c71725e8"), 
                     Name = "miku", 
                     Description = "description", 
@@ -296,7 +296,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("3cf1b82e-704a-4f2b-8bc0-af22b41dec14"), 
                     Name = "mermaid", 
                     Description = "description", 
@@ -304,7 +304,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("56ef2a57-707e-43d4-b62e-0c69ed4e8c65"), 
                     Name = "anakin", 
                     Description = "description", 
@@ -312,7 +312,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("6239a5ed-45e7-4316-80c2-b3b4c7eeab5f"), 
                     Name = "samurai", 
                     Description = "description", 
@@ -320,7 +320,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("660d65f2-6b1f-49c0-ac05-cfc0af7dc080"), 
                     Name = "ninja", 
                     Description = "description", 
@@ -328,7 +328,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("6e231d75-91ff-4112-8d25-7f289b6e6f04"), 
                     Name = "viking", 
                     Description = "description", 
@@ -336,7 +336,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("833e927f-55cf-43e1-9653-647819e09bf2"), 
                     Name = "knight", 
                     Description = "description", 
@@ -344,7 +344,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("88ae6422-cb6f-4245-8367-cf46e381d886"), 
                     Name = "cowboy", 
                     Description = "description", 
@@ -352,7 +352,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("8e32fcf2-a192-4cd1-ad41-2e4362b6007d"), 
                     Name = "witch", 
                     Description = "description", 
@@ -360,14 +360,107 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
-                new Item { 
+                new DuckItem { 
                     ItemId = Guid.Parse("be99f3f8-412a-4503-99d6-52fee988ad88"), 
                     Name = "mallard", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
-                }
+                },
+                
+                
+                
+                new PlantItem { 
+                    ItemId = Guid.Parse("64058fa8-9ae3-435b-bbf8-c2005cad364e"), 
+                    Name = "birch", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 3,
+                    Height = 5,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("ee46cf1b-0609-49c6-9619-c6b2a6199e44"), 
+                    Name = "berry bush", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 2,
+                    Height = 2,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("2cee9ac1-78f5-45ad-ae7e-f00610c9911e"), 
+                    Name = "purple bush", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 5,
+                    Height = 3,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("7d819d69-51fb-4528-92ff-26ead5cf825b"), 
+                    Name = "birch #2", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 2,
+                    Height = 4,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("069f8ee0-96bd-4bed-bbcf-e7f76061657e"), 
+                    Name = "oak", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 4,
+                    Height = 3,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("561c0c66-114d-4cb5-b9ba-735ff20ba9dd"), 
+                    Name = "flower #1", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 1,
+                    Height = 1,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("0557da00-35bc-47ff-a431-818ffa3ac4ef"), 
+                    Name = "flower #2", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 1,
+                    Height = 1,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("f56993d3-2052-4ef4-a48c-392025f10721"), 
+                    Name = "big ass tree", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 6,
+                    Height = 4,
+                },
+                new PlantItem { 
+                    ItemId = Guid.Parse("19f662b6-cb89-49d7-a2f5-e87299e237fb"), 
+                    Name = "Christmas tree", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 4,
+                    Height = 3,
+                },
             };
 
             await context.Items.AddRangeAsync(items);

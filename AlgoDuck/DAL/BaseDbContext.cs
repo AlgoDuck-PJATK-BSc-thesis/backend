@@ -31,14 +31,18 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
 
     public virtual DbSet<EditorTheme> EditorThemes { get; set; }
 
-    public virtual DbSet<Item> Items { get; set; }
-
 
     public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<Problem> Problems { get; set; }
 
-    public virtual DbSet<Purchase> Purchases { get; set; }
+    public virtual DbSet<ItemOwnership> Purchases { get; set; }
+    public virtual DbSet<DuckOwnership> DuckOwnerships { get; set; }
+    public virtual DbSet<PlantOwnership> PlantOwnerships { get; set; }
+
+    public virtual DbSet<Item> Items { get; set; }
+    public DbSet<DuckItem> DuckItems { get; set; }
+    public DbSet<PlantItem> PlantItems { get; set; }
 
     public virtual DbSet<Rarity> Rarities { get; set; }
 

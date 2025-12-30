@@ -146,8 +146,8 @@ public sealed class ProfileService : IProfileService
 
     private async Task<Guid?> GetSelectedAvatarItemIdAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var selected = await _queryDbContext.Purchases
-            .Where(p => p.UserId == userId && p.Selected)
+        var selected = await _queryDbContext.DuckOwnerships
+            .Where(p => p.UserId == userId && p.SelectedAsAvatar)
             .Select(p => p.ItemId)
             .FirstOrDefaultAsync(cancellationToken);
 

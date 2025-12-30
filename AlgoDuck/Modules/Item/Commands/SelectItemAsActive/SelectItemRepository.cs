@@ -19,9 +19,9 @@ public class SelectItemRepository(
     
     public async Task<Result<SelectItemResultDto, ErrorObject<string>>> SelectItemAsync(SelectItemDto item, CancellationToken token = default)
     {
-        var rowsChanged = await dbContext.Purchases
+        var rowsChanged = await dbContext.DuckOwnerships
             .Where(p => p.UserId == item.UserId && p.ItemId == item.ItemId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.Selected, true), cancellationToken: token);
+            .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.SelectedForPond, true), cancellationToken: token);
         
         if (rowsChanged == 0)
             return Result<SelectItemResultDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Item with id {item.ItemId} not found"));
@@ -34,7 +34,7 @@ public class SelectItemRepository(
 
     public async Task<Result<int, ErrorObject<string>>> GetCurrentSelectedCountAsync(SelectItemDto item, CancellationToken token = default)
     {
-        var count = await dbContext.Purchases.CountAsync(p => p.UserId == item.UserId && p.ItemId == item.ItemId && p.Selected,
+        var count = await dbContext.DuckOwnerships.CountAsync(p => p.UserId == item.UserId && p.ItemId == item.ItemId && p.SelectedForPond,
             cancellationToken: token);
         return Result<int, ErrorObject<string>>.Ok(count);
     }
