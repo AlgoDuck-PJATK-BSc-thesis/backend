@@ -12,5 +12,7 @@ public interface IChatMessageRepository
         int pageSize,
         CancellationToken cancellationToken);
 
+    Task<Message?> GetByIdForCohortAsync(Guid cohortId, Guid messageId, CancellationToken cancellationToken);
+
     Task<bool> SoftDeleteAsync(Guid messageId, Guid requesterId, CancellationToken cancellationToken);
 }

@@ -13,17 +13,23 @@ public class CohortChatHub : Hub
     private readonly ISendMessageHandler _sendMessageHandler;
     private readonly ICohortRepository _cohortRepository;
     private readonly IChatPresenceService _chatPresenceService;
+    private readonly IChatReadReceiptService _chatReadReceiptService;
+    private readonly IChatMessageRepository _chatMessageRepository;
     private readonly ILogger<CohortChatHub> _logger;
 
     public CohortChatHub(
         ISendMessageHandler sendMessageHandler,
         ICohortRepository cohortRepository,
         IChatPresenceService chatPresenceService,
+        IChatReadReceiptService chatReadReceiptService,
+        IChatMessageRepository chatMessageRepository,
         ILogger<CohortChatHub> logger)
     {
         _sendMessageHandler = sendMessageHandler;
         _cohortRepository = cohortRepository;
         _chatPresenceService = chatPresenceService;
+        _chatReadReceiptService = chatReadReceiptService;
+        _chatMessageRepository = chatMessageRepository;
         _logger = logger;
     }
 
@@ -85,6 +91,101 @@ public class CohortChatHub : Hub
         }
     }
 
+    public async Task MarkReadUpTo(Guid messageId)
+    {
+        var http = Context.GetHttpContext();
+        var cohortIdRaw = http?.Request.Query["cohortId"].ToString();
+        var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(cohortIdRaw, out var cohortId) ||
+            string.IsNullOrWhiteSpace(userIdStr) ||
+            !Guid.TryParse(userIdStr, out var userId))
+        {
+            return;
+        }
+
+        var belongs = await _cohortRepository.UserBelongsToCohortAsync(userId, cohortId, Context.ConnectionAborted);
+        if (!belongs)
+        {
+            return;
+        }
+
+        var message = await _chatMessageRepository.GetByIdForCohortAsync(cohortId, messageId, Context.ConnectionAborted);
+        if (message is null)
+        {
+            return;
+        }
+
+        var readByCount = await _chatReadReceiptService.MarkReadUpToAsync(cohortId, userId, message, Context.ConnectionAborted);
+
+        await Clients.Group(GetGroupName(cohortId)).SendAsync(
+            "ReadReceiptUpdated",
+            new
+            {
+                messageId = message.MessageId,
+                readByCount
+            },
+            Context.ConnectionAborted
+        );
+    }
+
+    public async Task ReportActivity()
+    {
+        var http = Context.GetHttpContext();
+        var cohortIdRaw = http?.Request.Query["cohortId"].ToString();
+        var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(cohortIdRaw, out var cohortId) ||
+            string.IsNullOrWhiteSpace(userIdStr) ||
+            !Guid.TryParse(userIdStr, out var userId))
+        {
+            return;
+        }
+
+        var snapshot = await _chatPresenceService.ReportActivityAsync(cohortId, userId, Context.ConnectionId, Context.ConnectionAborted);
+
+        await Clients.Group(GetGroupName(cohortId)).SendAsync(
+            "PresenceUpdated",
+            new
+            {
+                userId,
+                isActive = snapshot.IsActiveLegacy,
+                status = snapshot.Status.ToString(),
+                lastActivityAt = snapshot.LastActivityAt,
+                lastSeenAt = snapshot.LastSeenAt,
+                connectionCount = snapshot.ConnectionCount
+            },
+            Context.ConnectionAborted
+        );
+    }
+
+    public async Task RequestPresenceSnapshot()
+    {
+        var http = Context.GetHttpContext();
+        var cohortIdRaw = http?.Request.Query["cohortId"].ToString();
+
+        if (!Guid.TryParse(cohortIdRaw, out var cohortId))
+        {
+            return;
+        }
+
+        var list = await _chatPresenceService.GetSnapshotsForCohortAsync(cohortId, Context.ConnectionAborted);
+
+        await Clients.Caller.SendAsync(
+            "PresenceSnapshot",
+            list.Select(x => new
+            {
+                userId = x.UserId,
+                isActive = x.IsActiveLegacy,
+                status = x.Status.ToString(),
+                lastActivityAt = x.LastActivityAt,
+                lastSeenAt = x.LastSeenAt,
+                connectionCount = x.ConnectionCount
+            }),
+            Context.ConnectionAborted
+        );
+    }
+
     public override async Task OnConnectedAsync()
     {
         var http = Context.GetHttpContext();
@@ -111,13 +212,18 @@ public class CohortChatHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(cohortId), Context.ConnectionAborted);
         await _chatPresenceService.UserConnectedAsync(cohortId, userId, Context.ConnectionId, Context.ConnectionAborted);
 
+        var snapshot = await _chatPresenceService.GetSnapshotAsync(cohortId, userId, Context.ConnectionAborted);
+
         await Clients.Group(GetGroupName(cohortId)).SendAsync(
             "PresenceUpdated",
             new
             {
                 userId,
-                isActive = true,
-                lastSeenAt = DateTime.UtcNow
+                isActive = snapshot.IsActiveLegacy,
+                status = snapshot.Status.ToString(),
+                lastActivityAt = snapshot.LastActivityAt,
+                lastSeenAt = snapshot.LastSeenAt,
+                connectionCount = snapshot.ConnectionCount
             },
             Context.ConnectionAborted
         );
@@ -136,13 +242,18 @@ public class CohortChatHub : Hub
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(cohortId), Context.ConnectionAborted);
             await _chatPresenceService.UserDisconnectedAsync(cohortId, userId, Context.ConnectionId, Context.ConnectionAborted);
 
+            var snapshot = await _chatPresenceService.GetSnapshotAsync(cohortId, userId, Context.ConnectionAborted);
+
             await Clients.Group(GetGroupName(cohortId)).SendAsync(
                 "PresenceUpdated",
                 new
                 {
                     userId,
-                    isActive = false,
-                    lastSeenAt = DateTime.UtcNow
+                    isActive = snapshot.IsActiveLegacy,
+                    status = snapshot.Status.ToString(),
+                    lastActivityAt = snapshot.LastActivityAt,
+                    lastSeenAt = snapshot.LastSeenAt,
+                    connectionCount = snapshot.ConnectionCount
                 },
                 Context.ConnectionAborted
             );

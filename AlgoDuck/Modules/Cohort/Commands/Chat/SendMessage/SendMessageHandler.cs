@@ -90,10 +90,14 @@ public sealed class SendMessageHandler : ISendMessageHandler
             ? ChatMediaUrl.Build(saved.CohortId, saved.MediaKey!)
             : null;
 
-        return ChatMessageMappings.ToSendMessageResultDto(
+        var result = ChatMessageMappings.ToSendMessageResultDto(
             saved,
             profile,
             savedMediaType,
             mediaUrl);
+
+        result.ClientMessageId = dto.ClientMessageId;
+
+        return result;
     }
 }

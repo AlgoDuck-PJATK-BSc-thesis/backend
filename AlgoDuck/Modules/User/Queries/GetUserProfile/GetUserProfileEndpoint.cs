@@ -20,10 +20,7 @@ public sealed class GetUserProfileEndpoint : ControllerBase
     private static string[] ExtractRoles(ClaimsPrincipal user)
     {
         return user.Claims
-            .Where(c =>
-                c.Type == ClaimTypes.Role ||
-                c.Type == "role" ||
-                c.Type == "roles")
+            .Where(c => c.Type == ClaimTypes.Role || c.Type == "role" || c.Type == "roles")
             .Select(c => (c.Value).Trim())
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -48,9 +45,14 @@ public sealed class GetUserProfileEndpoint : ControllerBase
         var roles = ExtractRoles(User);
         var primaryRole = roles.FirstOrDefault();
 
-        return Ok(new StandardApiResponse<UserProfileWithRolesDto>
+        return Ok(new StandardApiResponse<GetUserProfileResponseDto>
         {
-            Body = new UserProfileWithRolesDto(profile, roles, primaryRole)
+            Body = new GetUserProfileResponseDto
+            {
+                Profile = profile,
+                Roles = roles,
+                PrimaryRole = primaryRole
+            }
         });
     }
 }
