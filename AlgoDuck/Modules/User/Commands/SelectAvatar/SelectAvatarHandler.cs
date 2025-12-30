@@ -27,7 +27,7 @@ public sealed class SelectAvatarHandler : ISelectAvatarHandler
             throw new Shared.Exceptions.ValidationException("User identifier is invalid.");
         }
 
-        var purchases = await _dbContext.Purchases
+        var purchases = await _dbContext.DuckOwnerships
             .Include(p => p.Item)
             .Where(p => p.UserId == userId)
             .ToListAsync(cancellationToken);
@@ -45,7 +45,7 @@ public sealed class SelectAvatarHandler : ISelectAvatarHandler
 
         foreach (var purchase in purchases)
         {
-            purchase.Selected = purchase == selectedPurchase;
+            purchase.SelectedAsAvatar = purchase == selectedPurchase;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

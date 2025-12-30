@@ -1,6 +1,12 @@
 using AlgoDuck.Modules.Item.Commands.CreateItem;
+using AlgoDuck.Modules.Item.Commands.DropItemAsActive;
+using AlgoDuck.Modules.Item.Commands.EmplacePlantOnHomePage;
 using AlgoDuck.Modules.Item.Commands.PurchaseItem;
-using AlgoDuck.Modules.Item.Queries.GetAllItemsPaged;
+using AlgoDuck.Modules.Item.Commands.SelectItemAsActive;
+using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
+using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
+using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
+using AlgoDuck.Modules.Item.Queries.GetOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
 namespace AlgoDuck.Modules.Item.Utils;
@@ -9,16 +15,34 @@ internal static class ItemDependencyInitializer
 {
     internal static void Initialize(WebApplicationBuilder builder)
     {
-        builder.Services.AddScoped<IOwnedItemsRepository, OwnedItemsRepository>();
-        builder.Services.AddScoped<IOwnedItemsService, OwnedItemsService>();
+        builder.Services.AddScoped<IOwnedItemsRepository, OwnedUsedItemsRepository>();
+        builder.Services.AddScoped<IOwnedItemsService, OwnedUsedItemsService>();
 
-        builder.Services.AddScoped<IAllItemsRepository, AllItemsRepository>();
-        builder.Services.AddScoped<IAllItemService, AllItemService>();
+        builder.Services.AddScoped<IAllDucksRepository, AllDucksRepository>();
+        builder.Services.AddScoped<IAllDucksService, AllDucksService>();
+        
+        builder.Services.AddScoped<IAllPlantsRepository, AllPlantsRepository>();
+        builder.Services.AddScoped<IAllPlantsService, AllPlantsService>();
 
         builder.Services.AddScoped<IPurchaseItemService, PurchaseItemService>();
         builder.Services.AddScoped<IPurchaseItemRepository, PurchaseItemRepository>();
 
         builder.Services.AddScoped<ICreateItemRepository, CreateItemRepository>();
         builder.Services.AddScoped<ICreateItemService, CreateItemService>();
+        
+        builder.Services.AddScoped<ISelectItemRepository, SelectItemRepository>();
+        builder.Services.AddScoped<ISelectItemService, SelectItemService>();
+        
+        builder.Services.AddScoped<IDropItemRepository, DropItemRepository>();
+        builder.Services.AddScoped<IDropItemService, DropItemService>();
+
+        builder.Services.AddScoped<IOwnedDucksRepository, OwnedDucksRepository>();
+        builder.Services.AddScoped<IOwnedDucksService, OwnedDucksService>();
+
+        builder.Services.AddScoped<IOwnedPlantsRepository, OwnedPlantsRepository>();
+        builder.Services.AddScoped<IOwnedPlantsService, OwnedPlantsService>();
+        
+        builder.Services.AddScoped<IEmplacePlantService, EmplacePlantService>();
+        builder.Services.AddScoped<IEmplacePlantRepository, EmplacePlantRepository>();
     }
 }

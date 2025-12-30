@@ -1,13 +1,22 @@
+using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Queries.GetCohortLeaderboard;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Xunit.Abstractions;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetCohortLeaderboard;
 
 public sealed class GetCohortLeaderboardHandlerTests
 {
+    private readonly ITestOutputHelper _testOutputHelper;
+
+    public GetCohortLeaderboardHandlerTests(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+    }
+
     [Fact]
     public async Task HandleAsync_WhenCohortIdEmpty_ThenThrowsValidationException()
     {
@@ -207,7 +216,7 @@ public sealed class GetCohortLeaderboardHandlerTests
             RarityName = "test"
         });
 
-        dbContext.Items.Add(new Models.Item
+        dbContext.Items.Add(new DuckItem
         {
             ItemId = duckItemId,
             Name = "duck",
@@ -228,11 +237,11 @@ public sealed class GetCohortLeaderboardHandlerTests
             SecurityStamp = Guid.NewGuid().ToString()
         });
 
-        dbContext.Purchases.Add(new Purchase
+        dbContext.Purchases.Add(new DuckOwnership
         {
             UserId = userId,
             ItemId = duckItemId,
-            Selected = true
+            SelectedAsAvatar = true
         });
 
         await dbContext.SaveChangesAsync();
