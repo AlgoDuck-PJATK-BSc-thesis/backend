@@ -97,4 +97,90 @@ public sealed class UserRepository : IUserRepository
 
         return await q.ToListAsync(cancellationToken);
     }
+
+    public async Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> GetPagedAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var q = _queryDbContext.Users.AsNoTracking();
+
+        var total = await q.CountAsync(cancellationToken);
+
+        var items = await q
+            .OrderBy(u => u.UserName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public async Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> SearchByUsernamePagedAsync(
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var normalized = (query).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return (Array.Empty<ApplicationUser>(), 0);
+
+        var usersQuery = _queryDbContext.Users.AsNoTracking();
+
+        var isInMemory = _queryDbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+        var lower = normalized.ToLowerInvariant();
+        var like = "%" + lower + "%";
+
+        IQueryable<ApplicationUser> q;
+
+        if (isInMemory)
+            q = usersQuery.Where(u => u.UserName != null && u.UserName.ToLower().Contains(lower));
+        else
+            q = usersQuery.Where(u => u.UserName != null && EF.Functions.ILike(u.UserName, like));
+
+        var total = await q.CountAsync(cancellationToken);
+
+        var items = await q
+            .OrderBy(u => u.UserName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public async Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> SearchByEmailPagedAsync(
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var normalized = (query).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return (Array.Empty<ApplicationUser>(), 0);
+
+        var usersQuery = _queryDbContext.Users.AsNoTracking();
+
+        var isInMemory = _queryDbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+        var lower = normalized.ToLowerInvariant();
+        var like = "%" + lower + "%";
+
+        IQueryable<ApplicationUser> q;
+
+        if (isInMemory)
+            q = usersQuery.Where(u => u.Email != null && u.Email.ToLower().Contains(lower));
+        else
+            q = usersQuery.Where(u => u.Email != null && EF.Functions.ILike(u.Email, like));
+
+        var total = await q.CountAsync(cancellationToken);
+
+        var items = await q
+            .OrderBy(u => u.Email)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
 }

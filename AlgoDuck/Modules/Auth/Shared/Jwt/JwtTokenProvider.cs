@@ -29,7 +29,7 @@ public sealed class JwtTokenProvider
         _signingCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
     }
 
-    public string CreateAccessToken(ApplicationUser user, Guid sessionId, out DateTimeOffset expiresAt)
+    public string CreateAccessToken(ApplicationUser user, Guid sessionId, out DateTimeOffset expiresAt, IEnumerable<string>? roles = null)
     {
         var now = DateTimeOffset.UtcNow;
         expiresAt = now.AddMinutes(_settings.AccessTokenMinutes);
@@ -42,6 +42,20 @@ public sealed class JwtTokenProvider
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new("sid", sessionId.ToString())
         };
+
+        if (roles is not null)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var raw in roles)
+            {
+                var role = (raw).Trim();
+                if (string.IsNullOrWhiteSpace(role)) continue;
+                if (!seen.Add(role)) continue;
+
+                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("role", role));
+            }
+        }
 
         var token = new JwtSecurityToken(
             issuer: string.IsNullOrWhiteSpace(_settings.Issuer) ? null : _settings.Issuer,
@@ -57,8 +71,11 @@ public sealed class JwtTokenProvider
 
     public ClaimsPrincipal ValidateToken(string token)
     {
-        var handler = new JwtSecurityTokenHandler();
-
+        var handler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false
+        };
+        
         var parameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,

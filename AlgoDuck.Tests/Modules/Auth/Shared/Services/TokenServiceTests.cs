@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
@@ -5,6 +6,8 @@ using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Services;
 using AlgoDuck.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -12,11 +15,34 @@ namespace AlgoDuck.Tests.Modules.Auth.Shared.Services;
 
 public class TokenServiceTests : AuthTestBase
 {
+    static Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
+    {
+        var store = new Mock<IUserStore<ApplicationUser>>();
+        var mgr = new Mock<UserManager<ApplicationUser>>(
+            store.Object,
+            Options.Create(new IdentityOptions()),
+            new Mock<IPasswordHasher<ApplicationUser>>().Object,
+            Array.Empty<IUserValidator<ApplicationUser>>(),
+            Array.Empty<IPasswordValidator<ApplicationUser>>(),
+            new Mock<ILookupNormalizer>().Object,
+            new IdentityErrorDescriber(),
+            new Mock<IServiceProvider>().Object,
+            new Mock<ILogger<UserManager<ApplicationUser>>>().Object
+        );
+
+        mgr.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string>());
+
+        return mgr;
+    }
+
     [Fact]
     public async Task GenerateAuthTokensAsync_WhenUserIsValid_ThenReturnsAuthResponseWithTokensAndSessionMetadata()
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -38,7 +64,8 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         var result = await service.GenerateAuthTokensAsync(user, CreateCancellationToken());
 
@@ -59,6 +86,56 @@ public class TokenServiceTests : AuthTestBase
 
         sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
         sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GenerateAuthTokensAsync_WhenUserHasRoles_ThenAccessTokenContainsRoleClaims()
+    {
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
+        var commandDbContext = CreateCommandDbContext();
+        var jwtSettings = CreateJwtSettings();
+        var jwtOptions = Options.Create(jwtSettings);
+        var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
+        var user = CreateUser();
+
+        userManagerMock
+            .Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string> { "admin", "Admin", " user ", "", "  " });
+
+        sessionRepositoryMock
+            .Setup(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        sessionRepositoryMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new TokenService(
+            sessionRepositoryMock.Object,
+            tokenRepositoryMock.Object,
+            commandDbContext,
+            jwtTokenProvider,
+            jwtOptions,
+            userManagerMock.Object);
+
+        var result = await service.GenerateAuthTokensAsync(user, CreateCancellationToken());
+
+        var principal = jwtTokenProvider.ValidateToken(result.AccessToken);
+
+        var roleClaims = principal.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        var roleAliasClaims = principal.Claims.Where(c => c.Type == "role").Select(c => c.Value).ToList();
+
+        Assert.Equal(2, roleClaims.Count);
+        Assert.Contains("admin", roleClaims);
+        Assert.Contains("user", roleClaims);
+
+        Assert.Equal(2, roleAliasClaims.Count);
+        Assert.Contains("admin", roleAliasClaims);
+        Assert.Contains("user", roleAliasClaims);
     }
 
     [Fact]
@@ -66,6 +143,8 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -90,7 +169,8 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         var result = await service.GetTokenInfoAsync(sessionId, CreateCancellationToken());
 
@@ -108,6 +188,8 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -123,7 +205,8 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         await Assert.ThrowsAsync<TokenException>(() => service.GetTokenInfoAsync(sessionId, CreateCancellationToken()));
 
@@ -135,6 +218,8 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -157,12 +242,14 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
 
         sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
@@ -170,6 +257,8 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -192,12 +281,14 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
 
         sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
@@ -205,6 +296,8 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
@@ -227,12 +320,14 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         await Assert.ThrowsAsync<TokenException>(() => service.RefreshTokensAsync(session, CreateCancellationToken()));
 
         sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
@@ -240,11 +335,17 @@ public class TokenServiceTests : AuthTestBase
     {
         var sessionRepositoryMock = new Mock<ISessionRepository>();
         var tokenRepositoryMock = new Mock<ITokenRepository>();
+        var userManagerMock = CreateUserManagerMock();
+
         var commandDbContext = CreateCommandDbContext();
         var jwtSettings = CreateJwtSettings();
         var jwtOptions = Options.Create(jwtSettings);
         var jwtTokenProvider = new JwtTokenProvider(jwtOptions);
         var user = CreateUser();
+
+        userManagerMock
+            .Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(new List<string> { "admin" });
 
         commandDbContext.ApplicationUsers.Add(user);
         await commandDbContext.SaveChangesAsync(CreateCancellationToken());
@@ -277,7 +378,8 @@ public class TokenServiceTests : AuthTestBase
             tokenRepositoryMock.Object,
             commandDbContext,
             jwtTokenProvider,
-            jwtOptions);
+            jwtOptions,
+            userManagerMock.Object);
 
         var result = await service.RefreshTokensAsync(oldSession, CreateCancellationToken());
 
@@ -298,7 +400,12 @@ public class TokenServiceTests : AuthTestBase
         Assert.False(string.IsNullOrWhiteSpace(result.CsrfToken));
         Assert.True(result.RefreshTokenExpiresAt > result.AccessTokenExpiresAt);
 
+        var principal = jwtTokenProvider.ValidateToken(result.AccessToken);
+        Assert.Contains(principal.Claims, c => c.Type == ClaimTypes.Role && c.Value == "admin");
+        Assert.Contains(principal.Claims, c => c.Type == "role" && c.Value == "admin");
+
         sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Once);
         sessionRepositoryMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        userManagerMock.Verify(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()), Times.Once);
     }
 }
