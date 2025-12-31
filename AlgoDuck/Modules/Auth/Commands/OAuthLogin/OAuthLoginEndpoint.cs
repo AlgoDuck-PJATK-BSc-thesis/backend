@@ -83,6 +83,13 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         var providerKey = NormalizeProviderKey(provider);
         var safeReturnUrl = SafeRelative(returnUrl, "/home");
 
+        var oauthError = (Request.Query["error"].ToString() ?? string.Empty).Trim();
+        if (oauthError.Equals("access_denied", StringComparison.OrdinalIgnoreCase))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return Redirect(BuildFrontendRedirect(errorUrl, providerKey, "access_denied"));
+        }
+
         var externalAuth = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
         if (!externalAuth.Succeeded || externalAuth.Principal is null)
         {

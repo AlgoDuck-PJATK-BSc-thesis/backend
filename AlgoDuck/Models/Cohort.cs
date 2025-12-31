@@ -11,8 +11,9 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
 
     public string JoinCode { get; set; } = null!;
 
-    public virtual ApplicationUser CreatedByUser { get; set; } = null!;
-    public Guid CreatedByUserId { get; set; }
+    public virtual ApplicationUser? CreatedByUser { get; set; }
+    
+    public Guid? CreatedByUserId { get; set; }
 
     public bool IsActive { get; set; } = true;
 
@@ -51,6 +52,6 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
         builder.HasOne(e => e.CreatedByUser)
             .WithMany()
             .HasForeignKey(e => e.CreatedByUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
