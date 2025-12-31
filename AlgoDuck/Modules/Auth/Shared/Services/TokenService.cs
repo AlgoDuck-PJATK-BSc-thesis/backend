@@ -6,6 +6,7 @@ using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Mappers;
 using AlgoDuck.Shared.Utilities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
@@ -21,25 +22,29 @@ public sealed class TokenService : ITokenService
     private readonly ApplicationCommandDbContext _commandDbContext;
     private readonly JwtTokenProvider _jwtTokenProvider;
     private readonly JwtSettings _settings;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public TokenService(
         ISessionRepository sessionRepository,
         ITokenRepository tokenRepository,
         ApplicationCommandDbContext commandDbContext,
         JwtTokenProvider jwtTokenProvider,
-        IOptions<JwtSettings> options)
+        IOptions<JwtSettings> options,
+        UserManager<ApplicationUser> userManager)
     {
         _sessionRepository = sessionRepository;
         _tokenRepository = tokenRepository;
         _commandDbContext = commandDbContext;
         _jwtTokenProvider = jwtTokenProvider;
         _settings = options.Value;
+        _userManager = userManager;
     }
 
     public async Task<AuthResponse> GenerateAuthTokensAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
         var sessionId = Guid.NewGuid();
-        var accessToken = _jwtTokenProvider.CreateAccessToken(user, sessionId, out var accessExpiresAt);
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = _jwtTokenProvider.CreateAccessToken(user, sessionId, out var accessExpiresAt, roles);
 
         var rawRefresh = GenerateRefreshToken();
         var saltBytes = HashingHelper.GenerateSalt();
@@ -129,7 +134,8 @@ public sealed class TokenService : ITokenService
         await _sessionRepository.AddAsync(newSession, cancellationToken);
         await _sessionRepository.SaveChangesAsync(cancellationToken);
 
-        var accessToken = _jwtTokenProvider.CreateAccessToken(user, newId, out var accessExpiresAt);
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = _jwtTokenProvider.CreateAccessToken(user, newId, out var accessExpiresAt, roles);
 
         return AuthMapper.ToRefreshResult(
             newSession,

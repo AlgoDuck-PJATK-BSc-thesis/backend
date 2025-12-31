@@ -11,4 +11,7 @@ public interface IUserRepository
     Task<IReadOnlyList<UserSolution>> GetUserSolutionsAsync(Guid userId, int skip, int take, CancellationToken cancellationToken);
     Task<IReadOnlyList<ApplicationUser>> SearchAsync(string query, int page, int pageSize, CancellationToken cancellationToken);
 
+    Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken);
+    Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> SearchByUsernamePagedAsync(string query, int page, int pageSize, CancellationToken cancellationToken);
+    Task<(IReadOnlyList<ApplicationUser> Items, int TotalCount)> SearchByEmailPagedAsync(string query, int page, int pageSize, CancellationToken cancellationToken);
 }

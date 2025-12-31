@@ -13,6 +13,8 @@ using AlgoDuck.Modules.User.Queries.GetUserLeaderboardPosition;
 using AlgoDuck.Modules.User.Queries.SearchUsers;
 using AlgoDuck.Modules.User.Queries.GetUserRankings;
 using AlgoDuck.Modules.User.Queries.GetVerifiedEmail;
+using AlgoDuck.Modules.User.Queries.AdminGetUsers;
+using AlgoDuck.Modules.User.Queries.AdminSearchUsers;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries;
@@ -47,19 +49,25 @@ public static class UserQueriesDependencyInitializer
 
         services.AddScoped<IGetUserRankingsHandler, GetUserRankingsHandler>();
         services.AddScoped<GetUserRankingsValidator>();
-        
+
         services.AddScoped<IGetUserLeaderboardPositionHandler, GetUserLeaderboardPositionHandler>();
-        
+
         services.AddScoped<IGetVerifiedEmailHandler, GetVerifiedEmailHandler>();
-        
+
         services.AddScoped<IGetTwoFactorEnabledHandler, GetTwoFactorEnabledHandler>();
-        
+
         services.AddScoped<IGetSelectedAvatarHandler, GetSelectedAvatarHandler>();
-        
+
         services.AddScoped<IGetLeaderboardGlobalHandler, GetLeaderboardGlobalHandler>();
-        
+
         services.AddScoped<IGetCohortLeaderboardHandler, GetCohortLeaderboardHandler>();
-        
+
+        services.AddScoped<IAdminGetUsersHandler, AdminGetUsersHandler>();
+        services.AddScoped<IValidator<AdminGetUsersDto>, AdminGetUsersValidator>();
+
+        services.AddScoped<IAdminSearchUsersHandler, AdminSearchUsersHandler>();
+        services.AddScoped<IValidator<AdminSearchUsersDto>, AdminSearchUsersValidator>();
+
         return services;
     }
 }

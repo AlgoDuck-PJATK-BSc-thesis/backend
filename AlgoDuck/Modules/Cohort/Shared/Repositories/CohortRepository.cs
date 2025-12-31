@@ -24,7 +24,7 @@ public sealed class CohortRepository : ICohortRepository
 
     public async Task<Models.Cohort?> GetByJoinCodeAsync(string joinCode, CancellationToken cancellationToken)
     {
-        joinCode = (joinCode ?? string.Empty).Trim();
+        joinCode = (joinCode).Trim();
 
         return await _queryDb.Cohorts
             .AsNoTracking()
@@ -33,7 +33,7 @@ public sealed class CohortRepository : ICohortRepository
 
     public async Task<bool> JoinCodeExistsAsync(string joinCode, CancellationToken cancellationToken)
     {
-        joinCode = (joinCode ?? string.Empty).Trim();
+        joinCode = (joinCode).Trim();
 
         return await _queryDb.Cohorts
             .AsNoTracking()
@@ -66,5 +66,57 @@ public sealed class CohortRepository : ICohortRepository
     {
         _commandDb.Cohorts.Add(cohort);
         return Task.CompletedTask;
+    }
+
+    public async Task<(IReadOnlyList<Models.Cohort> Items, int TotalCount)> GetPagedAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var q = _queryDb.Cohorts.AsNoTracking();
+
+        var total = await q.CountAsync(cancellationToken);
+
+        var items = await q
+            .OrderBy(c => c.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public async Task<(IReadOnlyList<Models.Cohort> Items, int TotalCount)> SearchByNamePagedAsync(
+        string query,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var normalized = (query).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return (Array.Empty<Models.Cohort>(), 0);
+
+        var cohortsQuery = _queryDb.Cohorts.AsNoTracking();
+
+        var isInMemory = _queryDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+        var lower = normalized.ToLowerInvariant();
+        var like = "%" + lower + "%";
+
+        IQueryable<Models.Cohort> q;
+
+        if (isInMemory)
+            q = cohortsQuery.Where(c => c.Name.ToLower().Contains(lower));
+        else
+            q = cohortsQuery.Where(c => EF.Functions.ILike(c.Name, like));
+
+        var total = await q.CountAsync(cancellationToken);
+
+        var items = await q
+            .OrderBy(c => c.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
     }
 }
