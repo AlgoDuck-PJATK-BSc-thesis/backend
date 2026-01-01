@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251231193652_AddRewardScalerColumnToDifficulty")]
+    partial class AddRewardScalerColumnToDifficulty
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -316,7 +319,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cohort_id");
 
-                    b.Property<Guid?>("CreatedByUserId")
+                    b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
@@ -1319,7 +1322,8 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("CreatedByUser");
                 });

@@ -23,7 +23,16 @@ public sealed class AssistantHub(
         
         await foreach (var chatCompletionPartial in  assistantService.GetAssistanceAsync(assistantRequest))
         {
-            yield return chatCompletionPartial;
+            if (chatCompletionPartial.IsErr)
+            {
+                yield return new ChatCompletionStreamedDto()
+                {
+                    Message = chatCompletionPartial.AsT1.Body,
+                    Type = ContentType.Text
+                };
+                yield break;
+            }
+            yield return chatCompletionPartial.AsT0;
         }
         
         await Clients.Caller.StreamCompleted();

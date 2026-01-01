@@ -177,6 +177,7 @@ public sealed class SetEditorThemeHandlerTests
             EditorLayoutId = Guid.NewGuid(),
             UserConfigId = config.UserId,
             EditorThemeId = theme.EditorThemeId,
+            LayoutName = "",
             UserConfig = config,
             EditorTheme = theme
         };

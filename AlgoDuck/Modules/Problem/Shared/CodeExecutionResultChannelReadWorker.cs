@@ -4,6 +4,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
 using Microsoft.AspNetCore.SignalR;
@@ -59,7 +60,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
 
     private async Task DeclareQueues(CancellationToken cancellationToken = default)
     {
-        var connection = await rabbitMqConnectionService.GetConnection();
+        var connection = await rabbitMqConnectionService.GetConnection(cancellationToken);
         
         _channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
         
@@ -104,17 +105,15 @@ public sealed class CodeExecutionResultChannelReadWorker(
                 SigningKey = jobDataResult.AsT0.SigningKey
             }
         };
-
         var result = fileHelper.ParseVmOutput(channelResponse);
 
         jobData.CachedResponses.Add(result);
-        Console.WriteLine(JsonSerializer.Serialize(jobData));
+        
         await redis.StringSetAsync(
             key: new RedisKey(jobData.JobId.ToString()),
             value: JsonSerializer.Serialize(jobData),
             expiry: TimeSpan.FromMinutes(3));
-
-
+        
         await hubContext.Clients.Group(channelResponse.JobId.ToString())
             .SendAsync(
                 method: "ExecutionStatusUpdated",
@@ -157,6 +156,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
         {
             return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("problem ID missing"));
         }
+        
         var problemId = jobData.ProblemId.Value;
         
         var autoSaveRepository = scope.ServiceProvider.GetRequiredService<IAutoSaveRepository>();
@@ -165,6 +165,15 @@ public sealed class CodeExecutionResultChannelReadWorker(
         {
             var submitRepository = scope.ServiceProvider.GetRequiredService<IExecutorSubmitRepository>();
             
+            var coinAddResult = await submitRepository.AddCoinsAndExperienceAsync(new SolutionRewardDto
+            {
+                ProblemId = problemId,
+                UserId = jobData.UserId
+            }, cancellationToken);    
+            
+            if (coinAddResult.IsErr)
+                return Result<bool, ErrorObject<string>>.Err(coinAddResult.AsT1);
+
             var result = await submitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
             {
                 CodeB64 = jobData.UserCodeB64,
@@ -173,10 +182,10 @@ public sealed class CodeExecutionResultChannelReadWorker(
                 UserId = jobData.UserId
             }, cancellationToken);
 
+
             if (result.IsErr)
                 return result;
-
-            return await autoSaveRepository.DeleteSolutionSnapshotCodeAsync(new DeleteAutoSaveDto()
+            return await autoSaveRepository.DeleteSolutionSnapshotCodeAsync(new DeleteAutoSaveDto
             {
                 ProblemId = problemId,
                 UserId = jobData.UserId

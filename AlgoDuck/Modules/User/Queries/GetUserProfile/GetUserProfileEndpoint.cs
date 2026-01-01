@@ -47,7 +47,7 @@ public sealed class GetUserProfileEndpoint : ControllerBase
 
         return Ok(new StandardApiResponse<GetUserProfileResponseDto>
         {
-            Body = new GetUserProfileResponseDto
+            Body = new GetUserProfileResponseDto    
             {
                 Profile = profile,
                 Roles = roles,

@@ -53,6 +53,7 @@ public sealed class SetEditorThemeHandler : ISetEditorThemeHandler
             {
                 EditorLayoutId = Guid.NewGuid(),
                 UserConfigId = config.UserId,
+                LayoutName = "",
                 EditorThemeId = dto.EditorThemeId
             };
 
