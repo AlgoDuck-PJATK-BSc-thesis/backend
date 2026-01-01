@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;

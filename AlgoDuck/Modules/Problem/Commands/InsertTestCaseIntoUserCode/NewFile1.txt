@@ -1,19 +1,32 @@
 import com.google.gson.Gson;
-public class Solution{
-    // your problem setup goes here
-    public static int[] TwoSum(int[] arr, int target){
-            return null;
+
+public class Solution {
+    public static int[] twoSum(int[] nums, int target) {
+          java.util.Map map = new java.util.HashMap();
+          for (int i = 0; i < nums.length; i++) {
+                  int comp = target - nums[i];
+                  if (map.containsKey(comp)) {
+                          return new int[] { (Integer) map.get(comp), i };
+                  }
+                  map.put(nums[i], i);
+          }
+          return null;
     }
     public static void main(String[] args){
-        Gson ac0343358157744f98e1e54ae59b44237_gson = new Gson();
+        long a8215965159d04872ad80a462042b6119_start = System.currentTimeMillis();
+        Gson a5fde61cd0dcb4037b4f2b99147cb7474_gson = new Gson();
 
         //your arrange goes here
         int[] arg1 = {1,2,3,4,5};
-        int arg2 = 7;
+        int target = 7;
+
+        int[] resu = {1,4};
+        var ae9fbd0cb_823d_4b03_8c8d_e185abcea9c1 = Solution.twoSum(arg1,target);
         
-        int[] expected = {1,4};
+        System.out.println("ctr-4bbd0839-9feb-4b9b-b6ab-b00e66b3ed18-answ: " + " tc_id:e9fbd0cb-823d-4b03-8c8d-e185abcea9c1 " + a5fde61cd0dcb4037b4f2b99147cb7474_gson.toJson(resu).equals(a5fde61cd0dcb4037b4f2b99147cb7474_gson.toJson(ae9fbd0cb_823d_4b03_8c8d_e185abcea9c1)));
         
-        var a4326ef21_8145_4ece_91ab_f66938a2cb06 = Solution.TwoSum(arg1,arg2);
-        System.out.println("ctr-e20918c0-abd2-4698-8bb8-adddd711aa00-answ: " + " tc_id:4326ef21-8145-4ece-91ab-f66938a2cb06 " + ac0343358157744f98e1e54ae59b44237_gson.toJson(expected).equals(ac0343358157744f98e1e54ae59b44237_gson.toJson(a4326ef21_8145_4ece_91ab_f66938a2cb06)));
+        long a39e9ad10120b48c6b346cad4ad4daadc_end = System.currentTimeMillis();
+        System.out.println("ctr-4bbd0839-9feb-4b9b-b6ab-b00e66b3ed18-time: " + (a39e9ad10120b48c6b346cad4ad4daadc_end - a8215965159d04872ad80a462042b6119_start));
     }
 }
+

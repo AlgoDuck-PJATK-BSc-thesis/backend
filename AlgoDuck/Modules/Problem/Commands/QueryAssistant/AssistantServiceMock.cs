@@ -1,3 +1,4 @@
+/*
 using System.Runtime.CompilerServices;
 using OpenAI.Chat;
 
@@ -40,3 +41,4 @@ public class AssistantServiceMock(
         }
     }
 }
+*/

@@ -44,5 +44,10 @@ internal static class ItemDependencyInitializer
         
         builder.Services.AddScoped<IEmplacePlantService, EmplacePlantService>();
         builder.Services.AddScoped<IEmplacePlantRepository, EmplacePlantRepository>();
+        
+        
+        builder.Services.Configure<AwardsConfig>(
+            builder.Configuration.GetSection("Awards"));
+
     }
 }

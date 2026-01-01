@@ -209,7 +209,8 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         }
         else if (CheckTokenType(TokenType.OpenCurly))
         {
-            nodeTerm = new NodeTerm { Val = new NodeTermLit { TermLit = ParseArrayLiteral() } };
+            SwallowUntilExpressionEnd();
+            return new NodeTerm { Val = new NodeTermSwallowed() };
         }
         else
         {

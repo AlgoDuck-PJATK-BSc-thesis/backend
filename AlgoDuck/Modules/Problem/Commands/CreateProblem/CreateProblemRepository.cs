@@ -27,19 +27,20 @@ public class CreateProblemRepository(
         List<TestCaseS3Partial> partialTestCasesS3 = [];
         List<TestCase> partialTestCasesRdb = [];
 
-        problemDto.TestCases.ForEach(t =>
+        problemDto.TestCaseJoins.ForEach(t =>
         {
             var testCaseId = Guid.NewGuid();
             partialTestCasesS3.Add(new TestCaseS3Partial
             {
-                Call = t.CallArgs.Select(ca => ca.Name).ToArray(),
-                Expected = t.Expected.Name,
-                Setup = Encoding.UTF8.GetString(Convert.FromBase64String(t.ArrangeB64)),
+                Call = t.Call,
+                Expected = t.Expected,
+                Setup = t.Setup,
                 TestCaseId = testCaseId
             });
+            
             partialTestCasesRdb.Add(new TestCase
             {
-                CallFunc = t.ResolvedFunctionCall ??
+                CallFunc = t.CallFunc ??
                            "", /*TODO: this is weird since at this point we know this is non empty since the service will resolve or return */
                 Display = t.Display,
                 IsPublic = t.IsPublic,
@@ -81,6 +82,12 @@ public class CreateProblemRepository(
                 Description = problem.Description,
                 Title = problemDto.ProblemTitle
             }, cancellationToken);
+
+        await s3Client.PostXmlObjectAsync($"problems/{problem.ProblemId}/template.xml", new ProblemS3PartialTemplate
+        {
+            ProblemId = problem.ProblemId,
+            Template = Encoding.UTF8.GetString(Convert.FromBase64String(problemDto.TemplateB64))
+        }, cancellationToken);
 
         return Result<Guid, ErrorObject<string>>.Ok(problem.ProblemId);
     }
