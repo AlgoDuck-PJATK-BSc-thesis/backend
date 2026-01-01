@@ -55,6 +55,13 @@ public sealed class RegisterHandler : IRegisterHandler
             throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"User registration failed: {errors}");
         }
 
+        var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
+        if (!addRoleResult.Succeeded)
+        {
+            var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
+            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
+        }
+
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
         var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
 

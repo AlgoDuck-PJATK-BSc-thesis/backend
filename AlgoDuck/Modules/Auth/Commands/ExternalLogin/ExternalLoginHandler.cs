@@ -1,6 +1,7 @@
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
+using AlgoDuck.Modules.Auth.Shared.Utils;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 
@@ -36,28 +37,73 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
 
         if (user is null)
         {
+            var username = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+
             user = new ApplicationUser
             {
-                UserName = dto.Email,
+                UserName = username,
                 Email = dto.Email,
                 EmailConfirmed = true
             };
 
-            var createResult = await _userManager.CreateAsync(user);
-            if (!createResult.Succeeded)
+            for (var attempt = 0; attempt < 8; attempt++)
             {
+                var createResult = await _userManager.CreateAsync(user);
+                if (createResult.Succeeded) break;
+
+                var isDuplicate = createResult.Errors.Any(e => string.Equals(e.Code, "DuplicateUserName", StringComparison.OrdinalIgnoreCase));
+                if (isDuplicate && attempt < 7)
+                {
+                    user.UserName = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+                    continue;
+                }
+
                 var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
                 throw new Shared.Exceptions.ValidationException($"Could not create user from external login: {errors}");
             }
         }
-        else if (!user.EmailConfirmed)
+        else
         {
-            user.EmailConfirmed = true;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
+            if (!user.EmailConfirmed)
             {
-                var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
-                throw new Shared.Exceptions.ValidationException($"Could not update user email confirmation: {errors}");
+                user.EmailConfirmed = true;
+            }
+
+            if (NeedsUsernameMigration(user, dto.Email))
+            {
+                for (var attempt = 0; attempt < 8; attempt++)
+                {
+                    user.UserName = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+
+                    var updateResult = await _userManager.UpdateAsync(user);
+                    if (updateResult.Succeeded) break;
+
+                    var isDuplicate = updateResult.Errors.Any(e => string.Equals(e.Code, "DuplicateUserName", StringComparison.OrdinalIgnoreCase));
+                    if (isDuplicate && attempt < 7) continue;
+
+                    var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
+                    throw new Shared.Exceptions.ValidationException($"Could not update username for external login: {errors}");
+                }
+            }
+            else
+            {
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
+                    throw new Shared.Exceptions.ValidationException($"Could not update user email confirmation: {errors}");
+                }
+            }
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Count == 0)
+        {
+            var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
+            if (!addRoleResult.Succeeded)
+            {
+                var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
+                throw new Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
             }
         }
 
@@ -84,6 +130,14 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
         var authResponse = await _tokenService.GenerateAuthTokensAsync(user, cancellationToken);
 
         return authResponse;
+    }
+
+    static bool NeedsUsernameMigration(ApplicationUser user, string email)
+    {
+        var uname = user.UserName ?? string.Empty;
+        if (uname.Contains('@')) return true;
+        if (string.Equals(uname, email, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 
     private static string? NormalizeProvider(string provider)

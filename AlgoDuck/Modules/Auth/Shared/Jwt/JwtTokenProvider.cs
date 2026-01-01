@@ -34,12 +34,15 @@ public sealed class JwtTokenProvider
         var now = DateTimeOffset.UtcNow;
         expiresAt = now.AddMinutes(_settings.AccessTokenMinutes);
 
+        var email = user.Email ?? string.Empty;
+
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(ClaimTypes.Email, email),
             new("sid", sessionId.ToString())
         };
 
@@ -48,7 +51,7 @@ public sealed class JwtTokenProvider
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var raw in roles)
             {
-                var role = (raw).Trim();
+                var role = raw.Trim();
                 if (string.IsNullOrWhiteSpace(role)) continue;
                 if (!seen.Add(role)) continue;
 
@@ -75,7 +78,7 @@ public sealed class JwtTokenProvider
         {
             MapInboundClaims = false
         };
-        
+
         var parameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,

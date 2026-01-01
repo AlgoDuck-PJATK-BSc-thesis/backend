@@ -51,7 +51,7 @@ public sealed class GetCohortByIdHandler : IGetCohortByIdHandler
             CohortId = cohort.CohortId,
             Name = cohort.Name,
             IsActive = cohort.IsActive,
-            CreatedByUserId = cohort.CreatedByUserId,
+            CreatedByUserId = cohort.CreatedByUserId.GetValueOrDefault(),
             IsMember = isMember,
             JoinCode = isMember ? cohort.JoinCode : null
         };

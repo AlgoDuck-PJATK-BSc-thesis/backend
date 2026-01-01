@@ -61,7 +61,7 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
         {
             CohortId = cohort.CohortId,
             Name = cohort.Name,
-            CreatedByUserId = cohort.CreatedByUserId,
+            CreatedByUserId = cohort.CreatedByUserId.GetValueOrDefault(),
             IsActive = cohort.IsActive,
             JoinCode = cohort.JoinCode
         };

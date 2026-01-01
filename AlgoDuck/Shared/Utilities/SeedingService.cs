@@ -368,6 +368,14 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
+                new DuckItem { 
+                    ItemId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55642"), 
+                    Name = "algoduck", 
+                    Description = "description", 
+                    Price = 0, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55642") 
+                },
                 
                 
                 
