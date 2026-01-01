@@ -1,65 +1,32 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
+using AlgoDuck.Modules.Item.Utils;
 using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuckShared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
 namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 public interface IExecutorSubmitRepository
 {
-    public Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId);
-    public Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId);
     public Task<Result<bool, ErrorObject<string>>> InsertSubmissionResultAsync(SubmissionInsertDto insertDto, CancellationToken cancellationToken = default);
-    
+    // private Task<Result<bool, ErrorObject<string>>> DropLastCheckpointAsync(AutoSaveDropDto dropDto, CancellationToken cancellationToken = default)
+
+    public Task<Result<RewardsDto, ErrorObject<string>>> AddCoinsAndExperienceAsync(SolutionRewardDto rewardDto, CancellationToken cancellationToken = default);
 }
 
 public class SubmitRepository(
     ApplicationCommandDbContext commandDbContext,
-    IAwsS3Client awsS3Client
+    IAwsS3Client awsS3Client,
+    IOptions<AwardsConfig> awardsConfig
     ) : IExecutorSubmitRepository
 {
-    public async Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId)
-    {
-        var exerciseDbPartialTestCases =
-            await commandDbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
-                .ToDictionaryAsync(t => t.TestCaseId, t => t);
 
-        var exerciseS3PartialTestCases = XmlToObjectParser.ParseXmlString<TestCaseS3WrapperObject>(
-                                             await awsS3Client.GetDocumentStringByPathAsync(
-                                                 $"problems/{exerciseId}/test-cases.xml"))
-                                         ?? throw new XmlParsingException($"problems/{exerciseId}/test-cases.xml");
-        
-        return exerciseS3PartialTestCases.TestCases.Select(t => new
-        {
-            dbTestCase = exerciseDbPartialTestCases[t.TestCaseId],
-            S3TestCase = t
-        }).Select(t => new TestCaseJoined
-        {
-            Call = t.S3TestCase.Call,
-            CallFunc = t.dbTestCase.CallFunc,
-            Display = t.dbTestCase.Display,
-            DisplayRes = t.dbTestCase.DisplayRes,
-            Expected = t.S3TestCase.Expected,
-            IsPublic = t.dbTestCase.IsPublic,
-            ProblemProblemId = exerciseId,
-            Setup = t.S3TestCase.Setup,
-            TestCaseId = t.dbTestCase.TestCaseId
-        }).ToList();
-        
-    }
-
-    public async Task<ProblemS3PartialTemplate> GetTemplateAsync(Guid exerciseId)
-    {
-        return XmlToObjectParser.ParseXmlString<ProblemS3PartialTemplate>(
-                   await awsS3Client.GetDocumentStringByPathAsync($"problems/{exerciseId}/template.xml")
-                   ) ?? throw new XmlParsingException();
-    }
-    
     public async Task<Result<bool, ErrorObject<string>>> InsertSubmissionResultAsync(SubmissionInsertDto insertDto, CancellationToken cancellationToken = default)
     {
         var solution = new UserSolution
@@ -90,6 +57,47 @@ public class SubmitRepository(
             CodeB64 = insertDto.CodeB64,
             UserId = insertDto.UserId,
             UserSolutionId = solution.SolutionId
+        });
+    }
+
+    public async Task<Result<RewardsDto, ErrorObject<string>>> AddCoinsAndExperienceAsync(SolutionRewardDto rewardDto, CancellationToken cancellationToken = default)
+    {
+        if (await commandDbContext.UserSolutions.CountAsync(
+                s => s.ProblemId == rewardDto.ProblemId && s.UserId == rewardDto.UserId,
+                cancellationToken: cancellationToken) != 0)
+            return Result<RewardsDto, ErrorObject<string>>.Ok(new RewardsDto
+            {
+                AwardedCoins = 0,
+                AwardedExperience = 0
+            });
+
+        var difficultyRes = await commandDbContext.Problems
+            .Include(p => p.Difficulty)
+            .Where(p => p.ProblemId == rewardDto.ProblemId)
+            .Select(p => p.Difficulty)
+            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
+        
+        if (difficultyRes == null)
+            return Result<RewardsDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"difficulty for problem: {rewardDto.ProblemId} not found"));
+
+        var user = await commandDbContext.ApplicationUsers
+            .FirstOrDefaultAsync(u => u.Id == rewardDto.UserId, cancellationToken);
+
+        if (user == null)
+            return Result<RewardsDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"user {rewardDto.UserId} not found"));
+
+        var coinsAwarded = (int)(awardsConfig.Value.BaselineCoins * difficultyRes.RewardScaler);
+        var experienceAwarded = (int)(awardsConfig.Value.BaselineExperience * difficultyRes.RewardScaler);
+        
+        user.Coins += coinsAwarded;
+        user.Experience += experienceAwarded;
+
+        await commandDbContext.SaveChangesAsync(cancellationToken);
+
+        return Result<RewardsDto, ErrorObject<string>>.Ok(new RewardsDto
+        {
+            AwardedCoins = coinsAwarded,
+            AwardedExperience = experienceAwarded
         });
     }
 
@@ -136,4 +144,16 @@ internal class AutoSaveDropDto
 {
     internal required Guid UserId { get; set; }
     internal required Guid ProblemId { get; set; }
+}
+
+public class SolutionRewardDto
+{
+    public required Guid ProblemId { get; set; }
+    public required Guid UserId { get; set; }
+}
+
+public class RewardsDto
+{
+    public int AwardedCoins { get; set; }
+    public int AwardedExperience { get; set; }
 }

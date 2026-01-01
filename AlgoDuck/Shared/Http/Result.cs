@@ -12,8 +12,37 @@ public class Result<T, TE> : OneOfBase<T, TE>
     public static Result<T, TE> Ok(T value) => new(value);
     public static Result<T, TE> Err(TE error) => new(error);
 
+    
     public bool IsOk => IsT0;
     public bool IsErr => IsT1;
+    public T? AsOk
+    {
+        get
+        {
+            try
+            {
+                return AsT0;
+            }
+            catch (Exception e)
+            {
+                return default;
+            }
+        }
+    }
+    public TE? AsErr
+    {
+        get
+        {
+            try
+            {
+                return AsT1;
+            }
+            catch (Exception e)
+            {
+                return default;
+            }
+        }
+    }
 }
 
 public class ErrorObject<TE>

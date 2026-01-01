@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251231040648_AddNameColumnToLayoutTable")]
+    partial class AddNameColumnToLayoutTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -397,10 +400,6 @@ namespace AlgoDuck.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("difficulty_name");
-
-                    b.Property<decimal>("RewardScaler")
-                        .HasColumnType("numeric")
-                        .HasColumnName("reward_scaler");
 
                     b.HasKey("DifficultyId")
                         .HasName("difficulty_pk");

@@ -10,9 +10,7 @@ public class ProblemController(IProblemService problemService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetProblemDetailsByIdAsync([FromQuery] Guid problemId)
     {
-        return Ok(new StandardApiResponse<ProblemDto>
-        {
-            Body = await problemService.GetProblemDetailsAsync(problemId)
-        });
+        var problemDetailsResult = await problemService.GetProblemDetailsAsync(problemId);
+        return problemDetailsResult.ToActionResult();
     }
 }

@@ -1,5 +1,6 @@
 using System.Text;
 using AlgoDuck.ModelsExternal;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuckShared;
 

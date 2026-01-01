@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
+using AlgoDuck.Shared.Http;
 using Microsoft.IdentityModel.Tokens;
 using OpenAI;
 using OpenAI.Chat;
@@ -13,7 +15,7 @@ namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
 public interface IAssistantService
 {
-    internal IAsyncEnumerable<ChatCompletionStreamedDto> GetAssistanceAsync(AssistantRequestDto request, CancellationToken cancellationToken = default);
+    internal IAsyncEnumerable<Result<ChatCompletionStreamedDto, ErrorObject<string>>> GetAssistanceAsync(AssistantRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public class SimpleStreamingUpdate
@@ -23,15 +25,30 @@ public class SimpleStreamingUpdate
 
 public class AssistantService(
     OpenAIClient openAiClient,
-    IAssistantRepository assistantRepository
+    IAssistantRepository assistantRepository,
+    ISharedProblemRepository problemRepository
     ) : IAssistantService
 {
-    public async IAsyncEnumerable<ChatCompletionStreamedDto> GetAssistanceAsync(AssistantRequestDto request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<Result<ChatCompletionStreamedDto, ErrorObject<string>>> GetAssistanceAsync(AssistantRequestDto request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var chatData = await assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
-        var problemData = await assistantRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
+        var chatDataResult = await assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
+        if (chatDataResult.IsErr && chatDataResult.AsT1.Type != ErrorType.NotFound)
+        {
+            yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Err(chatDataResult.AsT1);
+            yield break;
+        }
         
-        var assistantQueryJson = BuildAssistantQuery(request, problemData, chatData);
+        var chatData = chatDataResult.IsErr && chatDataResult.AsT1.Type == ErrorType.NotFound ? null : chatDataResult.AsT0;
+
+        var problemDataResult = await problemRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
+        
+        if (problemDataResult.IsErr)
+        {
+            yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Failed getting assistant response. Problem: {request.ExerciseId} not found"));
+            yield break;
+        }
+        
+        var assistantQueryJson = BuildAssistantQuery(request, problemDataResult.AsT0, chatData);
         var message = ChatMessage.CreateUserMessage(assistantQueryJson);
 
         var parser = new SignalParser();
@@ -71,7 +88,7 @@ public class AssistantService(
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            yield return completionUpdate;
+            yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Ok(completionUpdate);
         }
 
         var conversationName = nameBuilder.ToString().Trim();

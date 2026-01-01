@@ -1,7 +1,7 @@
 using System.Text;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 
-namespace AlgoDuck.Modules.Problem.Shared;
+namespace AlgoDuck.Modules.Problem.Shared.Types;
 
 public class UserSolutionData
 {

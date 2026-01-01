@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
@@ -27,7 +29,8 @@ internal sealed class SubmitService(
     IRabbitMqConnectionService rabbitMqConnectionService,
     IExecutorSubmitRepository executorSubmitRepository,
     IOptions<MessageQueuesConfig> messageQueuesConfig,
-    IDatabase redis
+    IDatabase redis,
+    ISharedProblemRepository sharedProblemRepository
     ) : IExecutorSubmitService, IAsyncDisposable
 {
     private IChannel? _channel;
@@ -74,10 +77,15 @@ internal sealed class SubmitService(
             new RedisValue(JsonSerializer.Serialize(jobData)),
             TimeSpan.FromMinutes(5));
         
-        var exerciseTemplate = await executorSubmitRepository.GetTemplateAsync(submission.ProblemId);
+        var exerciseTemplateResult = await sharedProblemRepository.GetTemplateAsync(submission.ProblemId, cancellationToken: cancellationToken);
+        if (exerciseTemplateResult.IsErr)
+            Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"Template for problem {submission.ProblemId} not found"));
+        
+        
         try
         {
-            var analyzer = new AnalyzerSimple(userSolutionData.FileContents, exerciseTemplate.Template);
+            var analyzer = new AnalyzerSimple(userSolutionData.FileContents, exerciseTemplateResult.AsT0.Template);
             userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Submission));
         }
         catch (JavaSyntaxException)
@@ -90,18 +98,24 @@ internal sealed class SubmitService(
             UserSolutionData = userSolutionData
         };
 
-        var testCases = await executorSubmitRepository.GetTestCasesAsync(submission.ProblemId);
+        var testCases = await sharedProblemRepository.GetTestCasesAsync(submission.ProblemId, cancellationToken);
         
-        helper.InsertTestCases(testCases, userSolutionData.MainClassName);
+        if (testCases.IsErr)
+            Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"Test cases for problem {submission.ProblemId} not found"));
+        
+        helper.InsertTestCases(testCases.AsT0.ToList(), userSolutionData.MainClassName);
         helper.InsertTiming();
         helper.InsertGsonImport();
+
+        Console.WriteLine(userSolutionData.FileContents);
 
         return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
     }
 
     private async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> SendExecutionRequestToQueueAsync(UserSolutionData userSolutionData, Guid userId, CancellationToken cancellationToken = default)
     {
-        var channel = await GetChannelAsync();
+        var channel = await GetChannelAsync(cancellationToken);
         
         var innerBody = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {
