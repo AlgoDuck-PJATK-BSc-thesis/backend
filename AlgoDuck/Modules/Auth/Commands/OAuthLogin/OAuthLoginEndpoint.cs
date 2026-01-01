@@ -66,13 +66,33 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         return Challenge(props, scheme);
     }
 
-    [HttpGet("{provider}/complete")]
+    [HttpGet("{provider}")]
     [AllowAnonymous]
-    public async Task<IActionResult> Complete(
+    public Task<IActionResult> CallbackAlias(
         [FromRoute] string provider,
         [FromQuery] string? returnUrl = null,
         [FromQuery] string? errorUrl = null,
         CancellationToken cancellationToken = default)
+    {
+        return HandleComplete(provider, returnUrl, errorUrl, cancellationToken);
+    }
+
+    [HttpGet("{provider}/complete")]
+    [AllowAnonymous]
+    public Task<IActionResult> Complete(
+        [FromRoute] string provider,
+        [FromQuery] string? returnUrl = null,
+        [FromQuery] string? errorUrl = null,
+        CancellationToken cancellationToken = default)
+    {
+        return HandleComplete(provider, returnUrl, errorUrl, cancellationToken);
+    }
+
+    private async Task<IActionResult> HandleComplete(
+        string provider,
+        string? returnUrl,
+        string? errorUrl,
+        CancellationToken cancellationToken)
     {
         var scheme = ToScheme(provider);
         if (scheme is null)
@@ -83,7 +103,7 @@ public sealed class OAuthLoginEndpoint : ControllerBase
         var providerKey = NormalizeProviderKey(provider);
         var safeReturnUrl = SafeRelative(returnUrl, "/home");
 
-        var oauthError = (Request.Query["error"].ToString() ?? string.Empty).Trim();
+        var oauthError = (Request.Query["error"].ToString()).Trim();
         if (oauthError.Equals("access_denied", StringComparison.OrdinalIgnoreCase))
         {
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);

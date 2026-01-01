@@ -38,6 +38,38 @@ public static class AuthDependencyInitializer
 
     private const string DevFallbackSigningKey = "dev_signing_key_dev_signing_key_dev_signing_key_32+";
 
+    private static string FrontendBaseUrl(IConfiguration configuration)
+    {
+        var raw = configuration["App:FrontendUrl"];
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "http://localhost:5173";
+        }
+        return raw.Trim().TrimEnd('/');
+    }
+
+    private static string BuildOauthErrorRedirect(IConfiguration configuration, string providerKey, string reason)
+    {
+        var baseUrl = FrontendBaseUrl(configuration);
+        return $"{baseUrl}/login?oauthError={Uri.EscapeDataString(reason)}&provider={Uri.EscapeDataString(providerKey)}";
+    }
+
+    private static Task RedirectRemoteFailure(RemoteFailureContext ctx, IConfiguration configuration, string providerKey)
+    {
+        ctx.HandleResponse();
+
+        var error =
+            (ctx.Request.Query["error"].ToString()).Trim();
+
+        var reason =
+            error.Equals("access_denied", StringComparison.OrdinalIgnoreCase)
+                ? "access_denied"
+                : "oauth_failed";
+
+        ctx.Response.Redirect(BuildOauthErrorRedirect(configuration, providerKey, reason));
+        return Task.CompletedTask;
+    }
+
     public static IServiceCollection AddAuthModule(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         services.AddOptions<JwtSettings>()
@@ -247,6 +279,11 @@ public static class AuthDependencyInitializer
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
+
+                o.Events = new OAuthEvents
+                {
+                    OnRemoteFailure = ctx => RedirectRemoteFailure(ctx, configuration, "google")
+                };
             });
         }
 
@@ -274,6 +311,7 @@ public static class AuthDependencyInitializer
 
                 o.Events = new OAuthEvents
                 {
+                    OnRemoteFailure = ctx => RedirectRemoteFailure(ctx, configuration, "github"),
                     OnCreatingTicket = async context =>
                     {
                         var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
@@ -356,6 +394,11 @@ public static class AuthDependencyInitializer
                 o.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 if (environment.IsProduction()) o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                 o.SignInScheme = IdentityConstants.ExternalScheme;
+
+                o.Events = new OAuthEvents
+                {
+                    OnRemoteFailure = ctx => RedirectRemoteFailure(ctx, configuration, "facebook")
+                };
             });
         }
 
@@ -419,6 +462,7 @@ public static class AuthDependencyInitializer
 
                 o.Events = new OpenIdConnectEvents
                 {
+                    OnRemoteFailure = ctx => RedirectRemoteFailure(ctx, configuration, "microsoft"),
                     OnRedirectToIdentityProvider = context =>
                     {
                         if (context.Properties.Items.TryGetValue("prompt", out var prompt))
