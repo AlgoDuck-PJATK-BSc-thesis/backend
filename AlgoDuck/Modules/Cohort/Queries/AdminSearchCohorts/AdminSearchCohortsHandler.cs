@@ -30,7 +30,8 @@ public sealed class AdminSearchCohortsHandler : IAdminSearchCohortsHandler
                     CohortId = c.CohortId,
                     Name = c.Name,
                     IsActive = c.IsActive,
-                    CreatedByUserId = c.CreatedByUserId
+                    CreatedByUserId = c.CreatedByUserId,
+                    CreatedByDisplay = BuildCreatedByDisplay(c.CreatedByUserId, c.CreatedByUserLabel)
                 };
             }
         }
@@ -43,7 +44,8 @@ public sealed class AdminSearchCohortsHandler : IAdminSearchCohortsHandler
                 CohortId = c.CohortId,
                 Name = c.Name,
                 IsActive = c.IsActive,
-                CreatedByUserId = c.CreatedByUserId
+                CreatedByUserId = c.CreatedByUserId,
+                CreatedByDisplay = BuildCreatedByDisplay(c.CreatedByUserId, c.CreatedByUserLabel)
             })
             .ToList();
 
@@ -63,5 +65,27 @@ public sealed class AdminSearchCohortsHandler : IAdminSearchCohortsHandler
                 Items = items
             }
         };
+    }
+
+    private static string BuildCreatedByDisplay(Guid? createdByUserId, string? createdByUserLabel)
+    {
+        var label = (createdByUserLabel ?? string.Empty).Trim();
+
+        if (createdByUserId is null)
+        {
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                return $"Deleted user ({label})";
+            }
+
+            return "Deleted user";
+        }
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            return label;
+        }
+
+        return createdByUserId.Value.ToString();
     }
 }

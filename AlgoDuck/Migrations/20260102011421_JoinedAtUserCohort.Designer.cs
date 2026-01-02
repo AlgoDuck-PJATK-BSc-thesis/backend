@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260102011421_JoinedAtUserCohort")]
+    partial class JoinedAtUserCohort
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -411,10 +414,6 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("difficulty_name");
 
-                    b.Property<decimal>("RewardScaler")
-                        .HasColumnType("numeric")
-                        .HasColumnName("reward_scaler");
-
                     b.HasKey("DifficultyId")
                         .HasName("difficulty_pk");
 
@@ -430,12 +429,6 @@ namespace AlgoDuck.Migrations
                     b.Property<Guid>("EditorThemeId")
                         .HasColumnType("uuid")
                         .HasColumnName("editor_theme_id");
-
-                    b.Property<string>("LayoutName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("layout_name");
 
                     b.Property<Guid>("UserConfigId")
                         .HasColumnType("uuid")

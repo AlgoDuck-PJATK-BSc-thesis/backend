@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class Cohort : IEntityTypeConfiguration<Cohort>
+public class Cohort : IEntityTypeConfiguration<Cohort>
 {
     public Guid CohortId { get; set; }
 
@@ -15,7 +15,11 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
     
     public Guid? CreatedByUserId { get; set; }
 
+    public string? CreatedByUserLabel { get; set; }
+
     public bool IsActive { get; set; } = true;
+
+    public DateTime? EmptiedAt { get; set; }
 
     public virtual ICollection<ApplicationUser> ApplicationUsers { get; set; } = new List<ApplicationUser>();
 
@@ -48,6 +52,14 @@ public partial class Cohort : IEntityTypeConfiguration<Cohort>
 
         builder.Property(e => e.CreatedByUserId)
             .HasColumnName("created_by_user_id");
+
+        builder.Property(e => e.CreatedByUserLabel)
+            .HasMaxLength(256)
+            .HasColumnName("created_by_user_label");
+
+        builder.Property(e => e.EmptiedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasColumnName("emptied_at");
 
         builder.HasOne(e => e.CreatedByUser)
             .WithMany()

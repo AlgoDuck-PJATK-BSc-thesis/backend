@@ -18,12 +18,18 @@ public sealed class AdminGetCohortsHandler : IAdminGetCohortsHandler
         var (cohorts, total) = await _cohortRepository.GetPagedAsync(query.Page, query.PageSize, cancellationToken);
 
         var items = cohorts
-            .Select(c => new AdminCohortItemDto
+            .Select(c =>
             {
-                CohortId = c.CohortId,
-                Name = c.Name,
-                IsActive = c.IsActive,
-                CreatedByUserId = c.CreatedByUserId
+                var display = BuildCreatedByDisplay(c.CreatedByUserId, c.CreatedByUserLabel);
+
+                return new AdminCohortItemDto
+                {
+                    CohortId = c.CohortId,
+                    Name = c.Name,
+                    IsActive = c.IsActive,
+                    CreatedByUserId = c.CreatedByUserId,
+                    CreatedByDisplay = display
+                };
             })
             .ToList();
 
@@ -39,5 +45,27 @@ public sealed class AdminGetCohortsHandler : IAdminGetCohortsHandler
             NextCursor = next,
             Items = items
         };
+    }
+
+    private static string BuildCreatedByDisplay(Guid? createdByUserId, string? createdByUserLabel)
+    {
+        var label = (createdByUserLabel ?? string.Empty).Trim();
+
+        if (createdByUserId is null)
+        {
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                return $"Deleted user ({label})";
+            }
+
+            return "Deleted user";
+        }
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            return label;
+        }
+
+        return createdByUserId.Value.ToString();
     }
 }
