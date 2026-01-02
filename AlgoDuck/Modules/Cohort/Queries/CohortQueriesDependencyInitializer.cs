@@ -5,6 +5,7 @@ using AlgoDuck.Modules.Cohort.Queries.GetCohortMessages;
 using AlgoDuck.Modules.Cohort.Queries.GetUserCohorts;
 using AlgoDuck.Modules.Cohort.Queries.AdminGetCohorts;
 using AlgoDuck.Modules.Cohort.Queries.AdminSearchCohorts;
+using AlgoDuck.Modules.Cohort.Queries.AdminGetCohortMembers;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.Cohort.Queries;
@@ -32,6 +33,9 @@ public static class CohortQueriesDependencyInitializer
 
         services.AddScoped<IAdminSearchCohortsHandler, AdminSearchCohortsHandler>();
         services.AddScoped<IValidator<AdminSearchCohortsDto>, AdminSearchCohortsValidator>();
+
+        services.AddScoped<IAdminGetCohortMembersHandler, AdminGetCohortMembersHandler>();
+        services.AddScoped<IValidator<AdminGetCohortMembersRequestDto>, AdminGetCohortMembersValidator>();
 
         return services;
     }

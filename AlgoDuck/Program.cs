@@ -3,6 +3,7 @@ using AlgoDuck.Modules.Auth.Commands.VerifyEmail;
 using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;
+using AlgoDuck.Modules.Cohort.Shared.Services;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
 using AlgoDuck.Modules.Problem.Commands.CreateProblem;
@@ -27,6 +28,8 @@ builder.Services.Configure<HostOptions>(o =>
 {
     o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
 });
+
+builder.Services.AddHostedService<EmptyCohortCleanupService>();
 
 // general top level stuff
 GeneralDependencyInitializer.Initialize(builder);

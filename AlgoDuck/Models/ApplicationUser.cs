@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
+public class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
     public int Coins { get; set; }
 
@@ -13,6 +13,8 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public int AmountSolved { get; set; }
     
     public Guid? CohortId { get; set; }
+
+    public DateTime? CohortJoinedAt { get; set; }
 
     public virtual Cohort? Cohort { get; set; }
 
@@ -37,6 +39,7 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
     public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
     public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
+
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");
@@ -48,6 +51,11 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
 
         builder.Property(e => e.AmountSolved).HasColumnName("amount_solved");
         builder.Property(e => e.CohortId).HasColumnName("cohort_id");
+
+        builder.Property(e => e.CohortJoinedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasColumnName("cohort_joined_at");
+
         builder.Property(e => e.Coins).HasColumnName("coins");
         builder.Property(e => e.Experience).HasColumnName("experience");
 

@@ -24,6 +24,28 @@ public static class UsernameGenerator
         "tiger","turkey","turtle","walrus","whale","wolf","yak","zebra","orca","kestrel"
     ];
 
+    public static async Task<string> GenerateUniqueDictionaryWithNumbersAsync<TUser>(
+        UserManager<TUser> userManager,
+        CancellationToken cancellationToken)
+        where TUser : class
+    {
+        for (var attempt = 0; attempt < 400; attempt++)
+        {
+            var candidate = BuildDictionaryWithNumbersCandidate4();
+            var existing = await userManager.FindByNameAsync(candidate);
+            if (existing is null) return candidate;
+        }
+
+        for (var attempt = 0; attempt < 400; attempt++)
+        {
+            var candidate = BuildDictionaryWithNumbersCandidate6();
+            var existing = await userManager.FindByNameAsync(candidate);
+            if (existing is null) return candidate;
+        }
+
+        throw new InvalidOperationException("Could not generate unique username.");
+    }
+
     public static async Task<string> GenerateUniqueAsync<TUser>(
         UserManager<TUser> userManager,
         string? displayName,
@@ -31,10 +53,15 @@ public static class UsernameGenerator
         CancellationToken cancellationToken)
         where TUser : class
     {
-        var seedFromName = Normalize(displayName ?? string.Empty);
+        var displayRaw = (displayName ?? string.Empty).Trim();
+        var emailRaw = (email ?? string.Empty).Trim();
+
+        var seedFromName = Normalize(displayRaw);
+        var normalizedEmail = Normalize(emailRaw);
+
         var seeds = new List<string>();
 
-        if (IsValidSeed(seedFromName))
+        if (IsValidSeed(seedFromName) && !LooksLikeEmailSeed(displayRaw, emailRaw, seedFromName, normalizedEmail))
         {
             seeds.Add(TrimTo32(seedFromName));
         }
@@ -54,6 +81,40 @@ public static class UsernameGenerator
         }
 
         throw new InvalidOperationException("Could not generate unique username.");
+    }
+
+    static string BuildDictionaryWithNumbersCandidate4()
+    {
+        var adj = Adjectives[RandomNumberGenerator.GetInt32(0, Adjectives.Length)];
+        var noun = Nouns[RandomNumberGenerator.GetInt32(0, Nouns.Length)];
+        var num = RandomNumberGenerator.GetInt32(1000, 10000);
+        return TrimTo32($"{adj}_{noun}_{num}");
+    }
+
+    static string BuildDictionaryWithNumbersCandidate6()
+    {
+        var adj = Adjectives[RandomNumberGenerator.GetInt32(0, Adjectives.Length)];
+        var noun = Nouns[RandomNumberGenerator.GetInt32(0, Nouns.Length)];
+        var num = RandomNumberGenerator.GetInt32(100000, 1000000);
+        return TrimTo32($"{adj}_{noun}_{num}");
+    }
+
+    static bool LooksLikeEmailSeed(string displayRaw, string emailRaw, string normalizedDisplay, string normalizedEmail)
+    {
+        if (string.IsNullOrWhiteSpace(displayRaw)) return false;
+        if (displayRaw.Contains('@')) return true;
+
+        if (!string.IsNullOrWhiteSpace(emailRaw))
+        {
+            if (string.Equals(displayRaw, emailRaw, StringComparison.OrdinalIgnoreCase)) return true;
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
+            {
+                if (string.Equals(normalizedDisplay, normalizedEmail, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+
+        return false;
     }
 
     static string BuildCandidate(IReadOnlyList<string> seeds, int attempt)

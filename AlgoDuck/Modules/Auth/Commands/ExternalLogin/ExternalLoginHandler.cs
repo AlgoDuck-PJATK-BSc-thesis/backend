@@ -37,7 +37,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
 
         if (user is null)
         {
-            var username = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+            var username = await UsernameGenerator.GenerateUniqueDictionaryWithNumbersAsync(_userManager, cancellationToken);
 
             user = new ApplicationUser
             {
@@ -54,7 +54,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
                 var isDuplicate = createResult.Errors.Any(e => string.Equals(e.Code, "DuplicateUserName", StringComparison.OrdinalIgnoreCase));
                 if (isDuplicate && attempt < 7)
                 {
-                    user.UserName = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+                    user.UserName = await UsernameGenerator.GenerateUniqueDictionaryWithNumbersAsync(_userManager, cancellationToken);
                     continue;
                 }
 
@@ -73,7 +73,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
             {
                 for (var attempt = 0; attempt < 8; attempt++)
                 {
-                    user.UserName = await UsernameGenerator.GenerateUniqueAsync(_userManager, dto.DisplayName, dto.Email, cancellationToken);
+                    user.UserName = await UsernameGenerator.GenerateUniqueDictionaryWithNumbersAsync(_userManager, cancellationToken);
 
                     var updateResult = await _userManager.UpdateAsync(user);
                     if (updateResult.Succeeded) break;

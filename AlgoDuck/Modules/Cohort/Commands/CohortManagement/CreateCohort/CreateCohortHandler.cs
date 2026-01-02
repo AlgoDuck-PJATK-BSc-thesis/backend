@@ -41,6 +41,13 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
             throw new CohortValidationException("User already belongs to a cohort.");
         }
 
+        var now = DateTime.UtcNow;
+
+        var createdByLabel =
+            !string.IsNullOrWhiteSpace(user.UserName) ? user.UserName.Trim() :
+            !string.IsNullOrWhiteSpace(user.Email) ? user.Email.Trim() :
+            userId.ToString();
+
         var joinCode = await CohortJoinCodeGenerator.GenerateUniqueAsync(_cohortRepository, 8, cancellationToken);
 
         var cohort = new Models.Cohort
@@ -49,12 +56,15 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
             Name = dto.Name,
             IsActive = true,
             CreatedByUserId = userId,
+            CreatedByUserLabel = createdByLabel,
+            EmptiedAt = null,
             JoinCode = joinCode
         };
 
         await _cohortRepository.AddAsync(cohort, cancellationToken);
 
         user.CohortId = cohort.CohortId;
+        user.CohortJoinedAt = now;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         return new CreateCohortResultDto

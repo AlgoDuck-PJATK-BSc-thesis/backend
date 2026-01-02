@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands.ExternalLogin;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
@@ -44,7 +45,7 @@ public sealed class ExternalLoginHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenNewExternalUser_ThenCreatesUser_WithGeneratedUsername_NotEmail()
+    public async Task HandleAsync_WhenNewExternalUser_ThenCreatesUser_WithGeneratedUsername_DictionaryWithNumbers()
     {
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
@@ -89,5 +90,6 @@ public sealed class ExternalLoginHandlerTests
         Assert.NotNull(capturedUsers[0].UserName);
         Assert.DoesNotContain("@", capturedUsers[0].UserName!);
         Assert.NotEqual("alice@example.com", capturedUsers[0].UserName);
+        Assert.Matches(new Regex("^[a-z]+_[a-z]+_[0-9]{4,6}$"), capturedUsers[0].UserName!);
     }
 }
