@@ -24,7 +24,7 @@ public sealed class ProblemValidationResultChannelReadWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var connection = await rabbitMqConnectionService.GetConnection();
+        var connection = await rabbitMqConnectionService.GetConnection(stoppingToken);
 
         _channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 

@@ -26,30 +26,20 @@ public class LoadAutoSaveRepository(
                 cancellationToken: cancellationToken);
         
         var objectPath = $"users/{request.UserId}/problems/autosave/{request.ProblemId}.xml";
-        
-        if (!await s3Client.ObjectExistsAsync(objectPath, cancellationToken)) 
-            return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(null);
-        var userCodeRaw = await s3Client.GetDocumentStringByPathAsync(objectPath, cancellationToken);
-        try
-        {
-            var autoSaveObj = XmlToObjectParser.ParseXmlString<AutoSaveDto>(userCodeRaw);
-            if (autoSaveObj == null)
-                return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(null);
 
-            return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(new AutoSaveResponseDto()
-            {
-                ProblemId = autoSaveObj.ProblemId,
-                UserCodeB64 = autoSaveObj.UserCodeB64,
-                TestResults = (result?.TestingSnapshotsResults ?? []).Select(tr => new TestResults
-                {
-                    IsPassed = tr.IsPassed,
-                    TestId = tr.TestCaseId
-                }).ToList()
-            });
-        }
-        catch (Exception)
+        var autoSaveGetResult = await s3Client.GetXmlObjectByPathAsync<AutoSaveDto>(objectPath, cancellationToken);
+        if (autoSaveGetResult.IsErr)
+            return Result<AutoSaveResponseDto?, ErrorObject<string>>.Err(autoSaveGetResult.AsT1);
+        
+        return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(new AutoSaveResponseDto
         {
-            return Result<AutoSaveResponseDto?, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("could not retrieve template"));
-        }
+            ProblemId = autoSaveGetResult.AsT0.ProblemId,
+            UserCodeB64 = autoSaveGetResult.AsT0.UserCodeB64,
+            TestResults = (result?.TestingSnapshotsResults ?? []).Select(tr => new TestResults
+            {
+                IsPassed = tr.IsPassed,
+                TestId = tr.TestCaseId
+            }).ToList()
+        });
     }    
 }

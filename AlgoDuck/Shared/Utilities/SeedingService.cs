@@ -23,6 +23,7 @@ public class DataSeedingService(
         await SeedProblems();
         await SeedTestCases();
         await SeedRolesAsync();
+        await SeedEditorThemes();
         await SeedSeededUsersAsync();
     }
 
@@ -291,7 +292,8 @@ public class DataSeedingService(
             foreach (var testCaseS3Partial in testCaseS3Partials)
             {
                 var objectPath = $"problems/{testCaseS3Partial.ProblemId}/test-cases.xml";
-                if (!await s3Client.ObjectExistsAsync(objectPath))
+                var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
+                if (objectExistsResult is { IsOk: true, AsT0: true })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         testCaseS3Partial);
@@ -339,14 +341,26 @@ public class DataSeedingService(
     {
         if (!await context.Difficulties.AnyAsync())
         {
-            var difficulties = new List<Difficulty>
-            {
-                new Difficulty { DifficultyId = Guid.Parse("79f9390e-4b7f-4c1f-a615-b1c6e2caa411"), DifficultyName = "EASY" },
-                new Difficulty { DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"), DifficultyName = "MEDIUM" },
-                new Difficulty { DifficultyId = Guid.Parse("dc08e91d-c0cd-4dee-80d9-30d7634e0917"), DifficultyName = "HARD" }
-            };
-
-            await context.Difficulties.AddRangeAsync(difficulties);
+            
+            await context.Difficulties.AddRangeAsync(new Difficulty
+                {
+                    DifficultyId = Guid.Parse("79f9390e-4b7f-4c1f-a615-b1c6e2caa411"), 
+                    DifficultyName = "EASY",
+                    RewardScaler = 1m
+                },
+                new Difficulty
+                {
+                    DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
+                    DifficultyName = "MEDIUM",
+                    RewardScaler = 1.7m
+                },
+                new Difficulty
+                {
+                    DifficultyId = Guid.Parse("dc08e91d-c0cd-4dee-80d9-30d7634e0917"),
+                    DifficultyName = "HARD",
+                    RewardScaler = 2.5m
+                }
+            );
             await context.SaveChangesAsync();
         }
     }
@@ -461,6 +475,7 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
                 },
+
                 new DuckItem { 
                     ItemId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55644"), 
                     Name = "algoduck", 
@@ -471,7 +486,16 @@ public class DataSeedingService(
                 },
                 
                 
-                
+                new PlantItem { 
+                    ItemId = Guid.Parse("19f662b6-cb89-49d7-a2f5-e87299e237fb"), 
+                    Name = "Christmas tree", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 4,
+                    Height = 3,
+                },
                 new PlantItem { 
                     ItemId = Guid.Parse("64058fa8-9ae3-435b-bbf8-c2005cad364e"), 
                     Name = "birch", 
@@ -483,8 +507,18 @@ public class DataSeedingService(
                     Height = 5,
                 },
                 new PlantItem { 
+                    ItemId = Guid.Parse("7d819d69-51fb-4528-92ff-26ead5cf825b"), 
+                    Name = "birch #2", 
+                    Description = "description", 
+                    Price = 500, 
+                    Purchasable = true, 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    Width = 2,
+                    Height = 4,
+                },
+                new PlantItem { 
                     ItemId = Guid.Parse("ee46cf1b-0609-49c6-9619-c6b2a6199e44"), 
-                    Name = "berry bush", 
+                    Name = "rose bush", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -494,23 +528,13 @@ public class DataSeedingService(
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("2cee9ac1-78f5-45ad-ae7e-f00610c9911e"), 
-                    Name = "purple bush", 
+                    Name = "violet bush", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 5,
                     Height = 3,
-                },
-                new PlantItem { 
-                    ItemId = Guid.Parse("7d819d69-51fb-4528-92ff-26ead5cf825b"), 
-                    Name = "birch #2", 
-                    Description = "description", 
-                    Price = 500, 
-                    Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
-                    Width = 2,
-                    Height = 4,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("069f8ee0-96bd-4bed-bbcf-e7f76061657e"), 
@@ -524,7 +548,7 @@ public class DataSeedingService(
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("561c0c66-114d-4cb5-b9ba-735ff20ba9dd"), 
-                    Name = "flower #1", 
+                    Name = "iris", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -534,7 +558,7 @@ public class DataSeedingService(
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("0557da00-35bc-47ff-a431-818ffa3ac4ef"), 
-                    Name = "flower #2", 
+                    Name = "daffodil", 
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
@@ -551,22 +575,36 @@ public class DataSeedingService(
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 6,
                     Height = 4,
-                },
-                new PlantItem { 
-                    ItemId = Guid.Parse("19f662b6-cb89-49d7-a2f5-e87299e237fb"), 
-                    Name = "Christmas tree", 
-                    Description = "description", 
-                    Price = 500, 
-                    Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
-                    Width = 4,
-                    Height = 3,
-                },
+                }
             };
 
             await context.Items.AddRangeAsync(items);
             await context.SaveChangesAsync();
         }
+    }
+
+    /* TODO: Lowkey don't know whether we should store this in a dict table. */
+    private async Task SeedEditorThemes()
+    {
+        if (!await context.EditorThemes.AnyAsync())
+        {
+            await context.EditorThemes.AddRangeAsync(new EditorTheme
+            {
+                ThemeName = "vs-dark",
+                EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796")
+            }, new EditorTheme
+            {
+                ThemeName = "vs",
+                EditorThemeId = Guid.Parse("07c5d143-7e8f-439a-acd4-695b9ecc0143")
+            }, new EditorTheme
+            {
+                ThemeName = "dracula",
+                EditorThemeId = Guid.Parse("535fa22e-998d-4e03-aab5-a10a681ab8f6")
+            });
+            await context.SaveChangesAsync();
+
+        }
+            
     }
 
     private async Task SeedProblems()
@@ -614,7 +652,8 @@ public class DataSeedingService(
             foreach (var template in templates)
             {
                 var objectPath = $"problems/{template.ProblemId}/template.xml";
-                if (!await s3Client.ObjectExistsAsync(objectPath))
+                var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
+                if (objectExistsResult is { IsOk: true, AsT0: true })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         template);
@@ -644,7 +683,8 @@ public class DataSeedingService(
             foreach (var info in partialInfos)
             {
                 var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName().ToLowerInvariant()}.xml";
-                if (!await s3Client.ObjectExistsAsync(objectPath))
+                var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
+                if (objectExistsResult is { IsOk: true, AsT0: true })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         info);

@@ -7,7 +7,7 @@ namespace AlgoDuck.Models;
 
 public partial class EditorTheme : IEntityTypeConfiguration<EditorTheme>
 {
-    public Guid EditorThemeId { get; set; }
+    public Guid EditorThemeId { get; set; } = Guid.NewGuid();
 
     public string ThemeName { get; set; } = null!;
 

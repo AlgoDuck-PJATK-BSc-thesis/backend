@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuck.Shared.Http;
@@ -82,6 +83,7 @@ public class CreateProblemService(
         var arranges = problemDto.TestCases.Select(tc =>
         {
             var tcArrange = Encoding.UTF8.GetString(Convert.FromBase64String(tc.ArrangeB64));
+            Console.WriteLine(tcArrange);
             var tcAnalyzer = new AnalyzerSimple(new StringBuilder(tcArrange));
             var tcAnalysisResult = tcAnalyzer.AnalyzeUserCode(ExecutionStyle.Execution);
             var mainLen = tcAnalysisResult.MainMethodIndices == null
@@ -91,7 +93,7 @@ public class CreateProblemService(
             return tcArrange.Substring(tcAnalysisResult.MainMethodIndices?.MethodFileBeginIndex + 1 ?? 0, mainLen);
         }).ToList();
         
-        var testCases = problemDto.TestCases.Select((t, i) => new TestCaseJoined
+        problemDto.TestCaseJoins = problemDto.TestCases.Select((t, i) => new TestCaseJoined
         {
             TestCaseId = Guid.NewGuid(),
             Call = t.CallArgs.Select(ca => ca.Name).ToArray(),
@@ -105,7 +107,7 @@ public class CreateProblemService(
         }).ToList();
         
         helper.InsertGsonImport();
-        helper.InsertTestCases(testCases, solutionData.MainClassName);
+        helper.InsertTestCases(problemDto.TestCaseJoins, solutionData.MainClassName);
 
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {

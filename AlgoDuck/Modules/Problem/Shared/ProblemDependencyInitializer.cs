@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
 using AlgoDuck.Modules.Problem.Commands.CreateProblem;
 using AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
@@ -11,9 +12,12 @@ using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
+using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
+using AlgoDuck.Modules.Problem.Queries.GetCustomUserLayouts;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.S3;
 using AlgoDuckShared;
 using Amazon;
@@ -34,15 +38,6 @@ internal static class ProblemDependencyInitializer
     internal static void Initialize(WebApplicationBuilder builder)
     {
 
-        builder.Services.AddHttpClient("executor", client =>
-        {
-            client.BaseAddress =
-                new Uri($"http://executor:{Environment.GetEnvironmentVariable("EXECUTOR_PORT") ?? "1337"}/api/execute");
-            client.Timeout = TimeSpan.FromSeconds(60);
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        });
-        
-        
         builder.Services.AddSingleton<OpenAIClient>(sp =>
         {
             var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -74,16 +69,12 @@ internal static class ProblemDependencyInitializer
             return new AmazonS3Client(credentials, config);
         });
 
-        builder.Services.AddScoped<IExecutorQueryInterface, ExecutorQueryInterface>();
-        builder.Services.AddScoped<IExecutorDryRunService, DryRunService>();
-        
         builder.Services.AddScoped<IExecutorSubmitService, SubmitService>();
         builder.Services.AddScoped<IExecutorSubmitRepository, SubmitRepository>();
         
         builder.Services.AddScoped<IAwsS3Client, AwsS3Client>();
         builder.Services.Decorate<IAwsS3Client, AwsS3ClientCached>();
         
-        builder.Services.AddScoped<IProblemRepository, ProblemRepository>();
         builder.Services.AddScoped<IProblemService, ProblemService>();
 
         // builder.Services.AddScoped<IAssistantService, AssistantServiceMock>();
@@ -96,7 +87,6 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<ICategoryProblemsRepository, CategoryProblemsRepository>();
         builder.Services.AddScoped<ICategoryProblemsService, CategoryProblemsService>();
 
-        builder.Services.AddScoped<IInsertRepository, InsertRepository>();
         builder.Services.AddScoped<IInsertService, InsertService>();
 
         builder.Services.AddScoped<IAutoSaveService, AutoSaveService>();
@@ -123,6 +113,18 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IUpdateChatNameRepository, UpdateChatNameRepository>();
 
         builder.Services.AddScoped<IExecutionStatisticsRepository, ExecutionStatisticsRepository>();
+        
+        builder.Services.AddScoped<ICreateLayoutService, CreateLayoutService>();
+        builder.Services.AddScoped<ICreateLayoutRepository, CreateLayoutRepository>();
+        
+        builder.Services.AddScoped<ICustomLayoutService, CustomLayoutService>();
+        builder.Services.AddScoped<ICustomLayoutRepository, CustomLayoutRepository>();
+
+        builder.Services.AddScoped<ISharedProblemRepository, SharedProblemRepository>();
+        
+        builder.Services.AddScoped<ICustomLayoutDetailsService, CustomLayoutDetailsService>();
+        builder.Services.AddScoped<ICustomLayoutDetailsRepository, CustomLayoutDetailsRepository>();
+        
         
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {

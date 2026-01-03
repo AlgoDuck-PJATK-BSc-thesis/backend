@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251231040648_AddNameColumnToLayoutTable")]
+    partial class AddNameColumnToLayoutTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -97,10 +100,6 @@ namespace AlgoDuck.Migrations
                     b.Property<Guid?>("CohortId")
                         .HasColumnType("uuid")
                         .HasColumnName("cohort_id");
-
-                    b.Property<DateTime?>("CohortJoinedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cohort_joined_at");
 
                     b.Property<int>("Coins")
                         .HasColumnType("integer")
@@ -320,18 +319,9 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cohort_id");
 
-                    b.Property<Guid?>("CreatedByUserId")
+                    b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
-
-                    b.Property<string>("CreatedByUserLabel")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("created_by_user_label");
-
-                    b.Property<DateTime?>("EmptiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("emptied_at");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
@@ -410,10 +400,6 @@ namespace AlgoDuck.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("difficulty_name");
-
-                    b.Property<decimal>("RewardScaler")
-                        .HasColumnType("numeric")
-                        .HasColumnName("reward_scaler");
 
                     b.HasKey("DifficultyId")
                         .HasName("difficulty_pk");
@@ -1332,7 +1318,8 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("CreatedByUser");
                 });

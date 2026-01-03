@@ -1,6 +1,7 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Utilities;
@@ -18,7 +19,8 @@ public interface ICategoryProblemsRepository
 
 public class CategoryProblemsRepository(
     ApplicationQueryDbContext dbContext,
-    IAwsS3Client awsS3Client
+    IAwsS3Client awsS3Client,
+    ISharedProblemRepository problemRepository
 ) : ICategoryProblemsRepository
 {
     public async Task<Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>> GetAllProblemsForCategoryAsync(string categoryName)
@@ -38,7 +40,7 @@ public class CategoryProblemsRepository(
             })
             .ToDictionaryAsync(p => p.ProblemId, p => p);
 
-        var problemsS3 = problemsRdb.Select(async p => await GetProblemInfoAsync(p.Key)).ToList();
+        var problemsS3 = problemsRdb.Select(async p => await problemRepository.GetProblemInfoAsync(p.Key)).ToList();
 
         await Task.WhenAll(problemsS3);
 
@@ -54,23 +56,6 @@ public class CategoryProblemsRepository(
                 Tags = problemsRdb[t.ProblemId].Tags,
                 Title = t.Title
             }).ToList());
-    }
-
-    private async Task<Result<ProblemS3PartialInfo, ErrorObject<string>>> GetProblemInfoAsync(
-        Guid problemId,
-        SupportedLanguage lang = SupportedLanguage.En)
-    {
-        var objectPath = $"problems/{problemId}/infos/{lang.GetDisplayName().ToLowerInvariant()}.xml";
-        if (!await awsS3Client.ObjectExistsAsync(objectPath))
-        {
-            return Result<ProblemS3PartialInfo, ErrorObject<string>>.Err(ErrorObject<string>.NotFound("not found"));
-        }
-
-        var problemInfosRaw = await awsS3Client.GetDocumentStringByPathAsync(objectPath);
-        var problemInfos = XmlToObjectParser.ParseXmlString<ProblemS3PartialInfo>(problemInfosRaw)
-                           ?? throw new XmlParsingException(objectPath);
-
-        return Result<ProblemS3PartialInfo, ErrorObject<string>>.Ok(problemInfos);
     }
 }
 

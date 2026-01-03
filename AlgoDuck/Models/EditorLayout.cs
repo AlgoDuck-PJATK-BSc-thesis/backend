@@ -7,11 +7,12 @@ namespace AlgoDuck.Models;
 
 public partial class EditorLayout : IEntityTypeConfiguration<EditorLayout>
 {
-    public Guid EditorLayoutId { get; set; }
+    public Guid EditorLayoutId { get; set; } = Guid.NewGuid();
 
     public Guid EditorThemeId { get; set; }
 
     public Guid UserConfigId { get; set; }
+    public required string LayoutName { get; set; }
 
     public virtual EditorTheme EditorTheme { get; set; } = null!;
 
@@ -25,6 +26,11 @@ public partial class EditorLayout : IEntityTypeConfiguration<EditorLayout>
         builder.Property(e => e.EditorLayoutId)
             .ValueGeneratedNever()
             .HasColumnName("editor_layout_id");
+        
+        builder.Property(e => e.LayoutName)
+            .HasMaxLength(256)
+            .HasColumnName("layout_name");
+        
         builder.Property(e => e.EditorThemeId).HasColumnName("editor_theme_id");
         builder.Property(e => e.UserConfigId).HasColumnName("user_config_id");
 

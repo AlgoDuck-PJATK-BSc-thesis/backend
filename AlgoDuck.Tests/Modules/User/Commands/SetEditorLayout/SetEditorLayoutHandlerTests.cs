@@ -178,6 +178,8 @@ public sealed class SetEditorLayoutHandlerTests
             UserConfigId = config.UserId,
             EditorThemeId = theme.EditorThemeId,
             UserConfig = config,
+            LayoutName = "",
+            
             EditorTheme = theme
         };
 

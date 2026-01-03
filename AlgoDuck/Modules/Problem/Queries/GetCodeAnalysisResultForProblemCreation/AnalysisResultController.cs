@@ -50,9 +50,10 @@ public class AnalysisResultService : IAnalysisResultService
 
         var arrangeMainMethodLength = arrangeResult.MainMethodIndices!.MethodFileEndIndex -
                                       arrangeResult.MainMethodIndices!.MethodFileBeginIndex;
-        templateBuilder.Insert(templateResult.MainMethodIndices!.MethodFileBeginIndex - 1,
+        templateBuilder.Insert(templateResult.MainMethodIndices!.MethodFileBeginIndex + 1,
             arrange.AsSpan(arrangeResult.MainMethodIndices!.MethodFileBeginIndex + 1, arrangeMainMethodLength - 1));
 
+        Console.WriteLine(templateBuilder);
         var analyzerFull = new AnalyzerSimple(templateBuilder);
         
         var fullResult = analyzerFull.AnalyzeUserCode(ExecutionStyle.Execution);

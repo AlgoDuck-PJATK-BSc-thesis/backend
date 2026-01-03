@@ -2,6 +2,9 @@ using System.Text;
 using AlgoDuck.DAL;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
+using AlgoDuck.Modules.Problem.Shared.Types;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuck.Shared.Http;
@@ -16,103 +19,89 @@ namespace AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 [Route("api/[controller]")]
 public class TestCaseInsertController(
     IInsertService insertService
-    ) : ControllerBase
+) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> InsertTestCaseIntoUserCodeAsync([FromBody] InsertRequestDto insertRequest, CancellationToken cancellationToken)
+    public async Task<IActionResult> InsertTestCaseIntoUserCodeAsync([FromBody] InsertRequestDto insertRequest,
+        CancellationToken cancellationToken)
     {
-        return Ok(new StandardApiResponse<InsertResultDto>
-        {
-            Body = await insertService.InsertTestCaseAsync(insertRequest, cancellationToken)
-        });
+        var testCaseInsertRes = await insertService.InsertTestCaseAsync(insertRequest, cancellationToken);
+        return testCaseInsertRes.ToActionResult();
     }
 }
 
 public interface IInsertService
 {
-    public Task<InsertResultDto> InsertTestCaseAsync(InsertRequestDto insertRequest, CancellationToken cancellationToken);
+    public Task<Result<InsertResultDto, ErrorObject<string>>> InsertTestCaseAsync(InsertRequestDto insertRequest,
+        CancellationToken cancellationToken = default);
 }
 
 public class InsertService(
-    IInsertRepository insertRepository
-    ) : IInsertService
+    ISharedProblemRepository problemRepository
+) : IInsertService
 {
-    public async Task<InsertResultDto> InsertTestCaseAsync(InsertRequestDto insertRequest, CancellationToken cancellationToken)
+    public async Task<Result<InsertResultDto, ErrorObject<string>>> InsertTestCaseAsync(InsertRequestDto insertRequest,
+        CancellationToken cancellationToken = default)
     {
-        return await insertRepository.InsertTestCaseAsync(insertRequest, cancellationToken);
+        var testCasesResult = await problemRepository.GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
+        if (testCasesResult.IsErr)
+            return Result<InsertResultDto, ErrorObject<string>>.Err(testCasesResult.AsT1);
+
+        var specificTestCaseResult = FindTestCase(testCasesResult.AsT0, insertRequest.ExerciseId);
+        return specificTestCaseResult.IsErr
+            ? Result<InsertResultDto, ErrorObject<string>>.Err(specificTestCaseResult.AsT1)
+            : InsertActualTestCase(insertRequest, specificTestCaseResult.AsT0);
     }
-}
 
-public interface IInsertRepository
-{
-    public Task<InsertResultDto> InsertTestCaseAsync(InsertRequestDto insertRequest, CancellationToken cancellationToken);
-}
 
-public class InsertRepository(
-    IAwsS3Client awsS3Client,
-    ApplicationQueryDbContext dbContext
-    ) : IInsertRepository
-{
-    private async Task<List<TestCaseJoined>> GetTestCasesAsync(Guid exerciseId, CancellationToken cancellationToken)
-    {
-        var exerciseDbPartialTestCases =
-            await dbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId).ToDictionaryAsync(t => t.TestCaseId, t => t, cancellationToken: cancellationToken);
-
-        var exerciseS3PartialTestCases = XmlToObjectParser.ParseXmlString<TestCaseS3WrapperObject>(
-                                             await awsS3Client.GetDocumentStringByPathAsync(
-                                                 $"problems/{exerciseId}/test-cases.xml", cancellationToken))
-                                         ?? throw new XmlParsingException($"problems/{exerciseId}/test-cases.xml");
-        
-        return exerciseS3PartialTestCases.TestCases.Select(t => new
-        {
-            dbTestCase = exerciseDbPartialTestCases[t.TestCaseId],
-            S3TestCase = t
-        }).Select(t => new TestCaseJoined
-        {
-            Call = t.S3TestCase.Call,
-            CallFunc = t.dbTestCase.CallFunc,
-            Display = t.dbTestCase.Display,
-            DisplayRes = t.dbTestCase.DisplayRes,
-            Expected = t.S3TestCase.Expected,
-            IsPublic = t.dbTestCase.IsPublic,
-            ProblemProblemId = exerciseId,
-            Setup = t.S3TestCase.Setup,
-            TestCaseId = t.dbTestCase.TestCaseId
-        }).ToList();
-    }
-    
-    public async Task<InsertResultDto> InsertTestCaseAsync(InsertRequestDto insertRequest, CancellationToken cancellationToken)
+    private static Result<InsertResultDto, ErrorObject<string>> InsertActualTestCase(InsertRequestDto insertRequest,
+        TestCaseJoined testCaseJoined)
     {
         var userSolutionData = new UserSolutionData
         {
-            FileContents = new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
+            FileContents =
+                new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
         };
-        
-        var analyzer = new AnalyzerSimple(userSolutionData.FileContents);
-        userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Execution));
-        var helper = new ExecutorFileOperationHelper
+        try
         {
-            UserSolutionData = userSolutionData
-        };
-        
-        var testCases = await GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
-        var insertedTestCase = testCases
-            .FirstOrDefault(t => t.TestCaseId == insertRequest.TestCaseId)
-                ?? throw new InvalidOperationException($"Unable to find test case {insertRequest.TestCaseId}");
+            var analyzer = new AnalyzerSimple(userSolutionData.FileContents);
+            userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Execution));
+            var helper = new ExecutorFileOperationHelper
+            {
+                UserSolutionData = userSolutionData
+            };
+            helper.ArrangeTestCase(testCaseJoined, userSolutionData.MainClassName);
+            helper.ActTestCase(testCaseJoined);
 
-        helper.ArrangeTestCase(insertedTestCase, userSolutionData.MainClassName);
-        helper.ActTestCase(insertedTestCase);
-
-        return new InsertResultDto
+            return Result<InsertResultDto, ErrorObject<string>>.Ok(new InsertResultDto
+            {
+                ModifiedCodeB64 =
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString()))
+            });
+        }
+        catch (JavaSyntaxException ex)
         {
-            ModifiedCodeB64 = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes(userSolutionData.FileContents.ToString())
-            )
-        };
+            return Result<InsertResultDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.BadRequest($"Could not insert test case: Reason: {ex.Message}"));
+        }
+        catch (Exception)
+        {
+            return Result<InsertResultDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.InternalError("Could not insert test case"));
+        }
+    }
+
+    private static Result<TestCaseJoined, ErrorObject<string>> FindTestCase(ICollection<TestCaseJoined> testCases,
+        Guid toBeFound)
+    {
+        var testCase = testCases.FirstOrDefault(t => t.TestCaseId == toBeFound);
+        if (testCase == null)
+            return Result<TestCaseJoined, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"test case: '{toBeFound}' not found"));
+
+        return Result<TestCaseJoined, ErrorObject<string>>.Ok(testCase);
     }
 }
-
-
 
 public class InsertRequestDto
 {

@@ -1,4 +1,5 @@
 using AlgoDuck.Models;
+using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,7 @@ public class CreateProblemDto
     public required Guid CategoryId { get; set; }
     public List<ProblemTagDto> Tags { get; set; } = [];
     public List<TestCaseDto> TestCases { get; set; } = [];
+    internal List<TestCaseJoined> TestCaseJoins { get; set; } = [];
     internal Guid CreatingUserId { get; set; }
 }
 
