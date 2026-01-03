@@ -15,6 +15,5 @@ public static class AuthConstants
     public const string EmailClaim = "email";
 
     public const string RoleAdmin = "Admin";
-    public const string RoleModerator = "Moderator";
     public const string RoleUser = "User";
 }

@@ -1,8 +1,6 @@
-using System.Text.Json.Serialization;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
-using AlgoDuckShared;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
@@ -13,7 +11,8 @@ namespace AlgoDuck.Shared.Utilities;
 public class DataSeedingService(
     ApplicationCommandDbContext context,
     IAwsS3Client s3Client,
-    RoleManager<IdentityRole<Guid>> roleManager)
+    RoleManager<IdentityRole<Guid>> roleManager,
+    UserManager<ApplicationUser> userManager)
 {
     public async Task SeedDataAsync()
     {
@@ -25,6 +24,7 @@ public class DataSeedingService(
         await SeedTestCases();
         await SeedRolesAsync();
         await SeedEditorThemes();
+        await SeedSeededUsersAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -39,6 +39,99 @@ public class DataSeedingService(
         }
     }
     
+    private async Task SeedSeededUsersAsync()
+    {
+        var adminPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
+        var userPassword = Environment.GetEnvironmentVariable("SEED_USER_PASSWORD");
+
+        if (string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException("Missing env var: SEED_ADMIN_PASSWORD");
+        }
+
+        if (string.IsNullOrWhiteSpace(userPassword))
+        {
+            throw new InvalidOperationException("Missing env var: SEED_USER_PASSWORD");
+        }
+
+        await EnsureUserWithRoleAsync(
+            username: "admin",
+            email: "algoduckpl@gmail.com",
+            password: adminPassword,
+            role: "admin");
+
+        await EnsureUserWithRoleAsync(
+            username: "algoduck",
+            email: "algoduckpl+user@gmail.com",
+            password: userPassword,
+            role: "user");
+    }
+    
+    private async Task EnsureUserWithRoleAsync(string username, string email, string password, string role)
+    {
+        var user = await userManager.FindByNameAsync(username);
+
+        if (user is null)
+        {
+            user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                UserName = username,
+                Email = email,
+                EmailConfirmed = true,
+                Coins = 0,
+                Experience = 0,
+                AmountSolved = 0
+            };
+
+            var createResult = await userManager.CreateAsync(user, password);
+            if (!createResult.Succeeded)
+            {
+                throw new InvalidOperationException($"Failed to create seeded '{username}' user: {IdentityErrorsToString(createResult)}");
+            }
+        }
+        else
+        {
+            if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                var setEmailResult = await userManager.SetEmailAsync(user, email);
+                if (!setEmailResult.Succeeded)
+                {
+                    throw new InvalidOperationException($"Failed to update email for '{username}': {IdentityErrorsToString(setEmailResult)}");
+                }
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                var updateResult = await userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    throw new InvalidOperationException($"Failed to confirm email for '{username}': {IdentityErrorsToString(updateResult)}");
+                }
+            }
+        }
+
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            var roleResult = await userManager.AddToRoleAsync(user, role);
+            if (!roleResult.Succeeded)
+            {
+                throw new InvalidOperationException($"Failed to assign role '{role}' to '{username}': {IdentityErrorsToString(roleResult)}");
+            }
+        }
+    }
+
+    private static string IdentityErrorsToString(IdentityResult result)
+    {
+        var parts = new List<string>();
+        foreach (var e in result.Errors)
+        {
+            parts.Add($"{e.Code}: {e.Description}");
+        }
+        return string.Join(" | ", parts);
+    }
+
     private async Task SeedTestCases()
     {
 
@@ -384,12 +477,12 @@ public class DataSeedingService(
                 },
 
                 new DuckItem { 
-                    ItemId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55642"), 
+                    ItemId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55644"), 
                     Name = "algoduck", 
                     Description = "description", 
                     Price = 0, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55642") 
+                    RarityId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55644") 
                 },
                 
                 

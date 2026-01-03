@@ -1,10 +1,13 @@
+using AlgoDuck.Modules.User.Commands.AdminCreateUser;
+using AlgoDuck.Modules.User.Commands.AdminDeleteUser;
+using AlgoDuck.Modules.User.Commands.AdminUpdateUser;
 using AlgoDuck.Modules.User.Commands.ChangePassword;
 using AlgoDuck.Modules.User.Commands.DeleteAccount;
 using AlgoDuck.Modules.User.Commands.SelectAvatar;
+using AlgoDuck.Modules.User.Commands.SetEditorLayout;
 using AlgoDuck.Modules.User.Commands.SetEditorTheme;
 using AlgoDuck.Modules.User.Commands.UpdatePreferences;
 using AlgoDuck.Modules.User.Commands.UpdateUsername;
-using AlgoDuck.Modules.User.Commands.SetEditorLayout;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Commands;
@@ -30,9 +33,17 @@ public static class UserCommandsDependencyInitializer
 
         services.AddScoped<IValidator<SetEditorThemeDto>, SetEditorThemeValidator>();
         services.AddScoped<ISetEditorThemeHandler, SetEditorThemeHandler>();
-        
+
         services.AddScoped<IValidator<SetEditorLayoutDto>, SetEditorLayoutValidator>();
         services.AddScoped<ISetEditorLayoutHandler, SetEditorLayoutHandler>();
+
+        services.AddScoped<IAdminDeleteUserHandler, AdminDeleteUserHandler>();
+
+        services.AddScoped<IValidator<AdminCreateUserDto>, AdminCreateUserValidator>();
+        services.AddScoped<IAdminCreateUserHandler, AdminCreateUserHandler>();
+
+        services.AddScoped<IValidator<AdminUpdateUserDto>, AdminUpdateUserValidator>();
+        services.AddScoped<IAdminUpdateUserHandler, AdminUpdateUserHandler>();
 
         return services;
     }
