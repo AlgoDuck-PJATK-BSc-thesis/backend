@@ -34,12 +34,18 @@ public sealed class JoinCohortHandler : IJoinCohortHandler
         }
 
         var cohort = await _cohortRepository.GetByIdAsync(cohortId, cancellationToken);
-        if (cohort is null || !cohort.IsActive)
+        if (cohort is null)
+        {
+            throw new CohortNotFoundException(cohortId);
+        }
+
+        if (!cohort.IsActive && cohort.EmptiedAt is null)
         {
             throw new CohortNotFoundException(cohortId);
         }
 
         user.CohortId = cohort.CohortId;
+        user.CohortJoinedAt = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user, cancellationToken);
 

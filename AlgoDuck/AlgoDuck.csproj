@@ -58,7 +58,6 @@
         <Folder Include="Modules\Auth\Queries\GetUserByToken\" />
         <Folder Include="Modules\Auth\Queries\GetUserSessions\" />
         <Folder Include="Modules\Auth\Queries\SearchUsersByEmail\" />
-        <Folder Include="Modules\Auth\Shared\Configuration\" />
         <Folder Include="Modules\Auth\Shared\Exceptions\" />
         <Folder Include="Modules\Auth\Shared\Jwt\" />
         <Folder Include="Modules\Auth\Shared\Mappers\" />

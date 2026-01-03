@@ -1,9 +1,11 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Commands.DeleteAccount;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -16,12 +18,10 @@ public sealed class DeleteAccountHandlerTests
     public async Task HandleAsync_WhenUserIdEmpty_ThenThrowsValidationException()
     {
         var userManager = CreateUserManagerMock();
-        var validator = CreateValidatorMock<DeleteAccountDto>(new DeleteAccountDto
-        {
-            CurrentPassword = "123456"
-        });
+        var validator = CreateValidatorMock<DeleteAccountDto>();
+        using var db = CreateCommandDbContext();
 
-        var handler = new DeleteAccountHandler(userManager.Object, validator.Object);
+        var handler = new DeleteAccountHandler(userManager.Object, validator.Object, db);
 
         await Assert.ThrowsAsync<AlgoDuck.Modules.User.Shared.Exceptions.ValidationException>(() =>
             handler.HandleAsync(Guid.Empty, new DeleteAccountDto
@@ -39,12 +39,10 @@ public sealed class DeleteAccountHandlerTests
         userManager.Setup(x => x.FindByIdAsync(userId.ToString()))
             .ReturnsAsync((ApplicationUser?)null);
 
-        var validator = CreateValidatorMock<DeleteAccountDto>(new DeleteAccountDto
-        {
-            CurrentPassword = "123456"
-        });
+        var validator = CreateValidatorMock<DeleteAccountDto>();
+        using var db = CreateCommandDbContext();
 
-        var handler = new DeleteAccountHandler(userManager.Object, validator.Object);
+        var handler = new DeleteAccountHandler(userManager.Object, validator.Object, db);
 
         await Assert.ThrowsAsync<UserNotFoundException>(() =>
             handler.HandleAsync(userId, new DeleteAccountDto
@@ -66,12 +64,10 @@ public sealed class DeleteAccountHandlerTests
         userManager.Setup(x => x.CheckPasswordAsync(user, "badpass"))
             .ReturnsAsync(false);
 
-        var validator = CreateValidatorMock<DeleteAccountDto>(new DeleteAccountDto
-        {
-            CurrentPassword = "badpass"
-        });
+        var validator = CreateValidatorMock<DeleteAccountDto>();
+        using var db = CreateCommandDbContext();
 
-        var handler = new DeleteAccountHandler(userManager.Object, validator.Object);
+        var handler = new DeleteAccountHandler(userManager.Object, validator.Object, db);
 
         var ex = await Assert.ThrowsAsync<AlgoDuck.Modules.User.Shared.Exceptions.ValidationException>(() =>
             handler.HandleAsync(userId, new DeleteAccountDto
@@ -98,12 +94,10 @@ public sealed class DeleteAccountHandlerTests
         userManager.Setup(x => x.DeleteAsync(user))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "failed" }));
 
-        var validator = CreateValidatorMock<DeleteAccountDto>(new DeleteAccountDto
-        {
-            CurrentPassword = "goodpass"
-        });
+        var validator = CreateValidatorMock<DeleteAccountDto>();
+        using var db = CreateCommandDbContext();
 
-        var handler = new DeleteAccountHandler(userManager.Object, validator.Object);
+        var handler = new DeleteAccountHandler(userManager.Object, validator.Object, db);
 
         var ex = await Assert.ThrowsAsync<AlgoDuck.Modules.User.Shared.Exceptions.ValidationException>(() =>
             handler.HandleAsync(userId, new DeleteAccountDto
@@ -130,12 +124,10 @@ public sealed class DeleteAccountHandlerTests
         userManager.Setup(x => x.DeleteAsync(user))
             .ReturnsAsync(IdentityResult.Success);
 
-        var validator = CreateValidatorMock<DeleteAccountDto>(new DeleteAccountDto
-        {
-            CurrentPassword = "goodpass"
-        });
+        var validator = CreateValidatorMock<DeleteAccountDto>();
+        using var db = CreateCommandDbContext();
 
-        var handler = new DeleteAccountHandler(userManager.Object, validator.Object);
+        var handler = new DeleteAccountHandler(userManager.Object, validator.Object, db);
 
         await handler.HandleAsync(userId, new DeleteAccountDto
         {
@@ -145,11 +137,25 @@ public sealed class DeleteAccountHandlerTests
         userManager.Verify(x => x.DeleteAsync(user), Times.Once);
     }
 
-    static Mock<IValidator<T>> CreateValidatorMock<T>(T dto)
+    static ApplicationCommandDbContext CreateCommandDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationCommandDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        return new ApplicationCommandDbContext(options);
+    }
+
+    static Mock<IValidator<T>> CreateValidatorMock<T>()
     {
         var mock = new Mock<IValidator<T>>();
-        mock.Setup(x => x.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+
+        mock.Setup(x => x.ValidateAsync(It.IsAny<T>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ValidationResult());
+
+        mock.Setup(x => x.ValidateAsync(It.IsAny<ValidationContext<T>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
         return mock;
     }
 

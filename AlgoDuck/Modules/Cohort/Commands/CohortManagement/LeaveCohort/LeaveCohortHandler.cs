@@ -42,14 +42,30 @@ public sealed class LeaveCohortHandler : ILeaveCohortHandler
         }
 
         user.CohortId = null;
+        user.CohortJoinedAt = null;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         var remainingMembers = await _commandDbContext.ApplicationUsers
             .CountAsync(u => u.CohortId == cohortId, cancellationToken);
 
+        var now = DateTime.UtcNow;
+
         if (remainingMembers == 0)
         {
             cohort.IsActive = false;
+            if (cohort.EmptiedAt is null)
+            {
+                cohort.EmptiedAt = now;
+            }
+
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        if (cohort.EmptiedAt is not null || !cohort.IsActive)
+        {
+            cohort.EmptiedAt = null;
+            cohort.IsActive = true;
             await _commandDbContext.SaveChangesAsync(cancellationToken);
         }
     }
