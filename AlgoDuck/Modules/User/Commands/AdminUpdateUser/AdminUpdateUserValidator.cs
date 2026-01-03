@@ -10,7 +10,9 @@ public sealed class AdminUpdateUserValidator : AbstractValidator<AdminUpdateUser
         {
             var hasUsername = x.Username is not null && !string.IsNullOrWhiteSpace(x.Username);
             var hasRole = x.Role is not null && !string.IsNullOrWhiteSpace(x.Role);
-            return hasUsername || hasRole;
+            var hasEmail = x.Email is not null && !string.IsNullOrWhiteSpace(x.Email);
+            var hasPassword = x.Password is not null && !string.IsNullOrWhiteSpace(x.Password);
+            return hasUsername || hasRole || hasEmail || hasPassword;
         });
 
         When(x => x.Username is not null, () =>
@@ -30,6 +32,22 @@ public sealed class AdminUpdateUserValidator : AbstractValidator<AdminUpdateUser
                     var v = r.Trim().ToLowerInvariant();
                     return v == "user" || v == "admin";
                 });
+        });
+
+        When(x => x.Email is not null, () =>
+        {
+            RuleFor(x => x.Email!)
+                .NotEmpty()
+                .EmailAddress()
+                .MaximumLength(256);
+        });
+
+        When(x => x.Password is not null, () =>
+        {
+            RuleFor(x => x.Password!)
+                .NotEmpty()
+                .MinimumLength(8)
+                .MaximumLength(128);
         });
     }
 }
