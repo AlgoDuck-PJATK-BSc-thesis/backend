@@ -49,6 +49,35 @@ public sealed class AdminUpdateUserHandler : IAdminUpdateUserHandler
             }
         }
 
+        if (dto.Email is not null)
+        {
+            var newEmail = dto.Email.Trim();
+
+            var existingEmail = await _userManager.FindByEmailAsync(newEmail);
+            if (existingEmail is not null && existingEmail.Id != user.Id)
+            {
+                throw new Shared.Exceptions.ValidationException("Email already exists.");
+            }
+
+            var setEmail = await _userManager.SetEmailAsync(user, newEmail);
+            if (!setEmail.Succeeded)
+            {
+                var msg = setEmail.Errors.FirstOrDefault()?.Description ?? "Failed to update email.";
+                throw new Shared.Exceptions.ValidationException(msg);
+            }
+        }
+
+        if (dto.Password is not null)
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var reset = await _userManager.ResetPasswordAsync(user, token, dto.Password);
+            if (!reset.Succeeded)
+            {
+                var msg = reset.Errors.FirstOrDefault()?.Description ?? "Failed to update password.";
+                throw new Shared.Exceptions.ValidationException(msg);
+            }
+        }
+
         if (dto.Role is not null)
         {
             var target = dto.Role.Trim().ToLowerInvariant();
