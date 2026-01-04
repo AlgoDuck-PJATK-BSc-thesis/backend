@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.GetUserByToken;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetUserByToken;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.GetUserByToken;
 

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.GetApiKeys;
+using AlgoDuck.Modules.Auth.Queries.ApiKeys.GetApiKeys;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;

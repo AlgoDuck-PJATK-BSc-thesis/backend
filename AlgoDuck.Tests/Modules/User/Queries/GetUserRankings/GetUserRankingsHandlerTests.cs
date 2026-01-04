@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetUserRankings;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetUserRankings;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserRankings;

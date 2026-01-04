@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.ChangeEmailRequest;
+using AlgoDuck.Modules.Auth.Commands.Email.ChangeEmailRequest;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;

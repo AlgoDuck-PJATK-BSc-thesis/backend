@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Queries.GetCurrentUser;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetCurrentUser;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

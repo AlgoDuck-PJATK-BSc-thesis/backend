@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Queries.GetUserByToken;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetUserByToken;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;

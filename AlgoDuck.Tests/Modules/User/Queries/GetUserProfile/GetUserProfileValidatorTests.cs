@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserProfile;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetUserProfile;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserProfile;

@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Commands.UpdateUsername;
+using AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using FluentValidation;
 using FluentValidation.Results;

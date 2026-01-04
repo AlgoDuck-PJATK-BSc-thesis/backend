@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.SearchUsers;
+using AlgoDuck.Modules.User.Queries.User.Profile.SearchUsers;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;
 

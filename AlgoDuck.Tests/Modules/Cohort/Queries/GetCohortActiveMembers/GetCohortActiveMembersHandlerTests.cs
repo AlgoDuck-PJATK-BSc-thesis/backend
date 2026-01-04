@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Queries.GetCohortActiveMembers;
+using AlgoDuck.Modules.Cohort.Queries.User.Members.GetCohortActiveMembers;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;

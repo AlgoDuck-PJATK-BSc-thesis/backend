@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.ChangeEmailConfirm;
+using AlgoDuck.Modules.Auth.Commands.Email.ChangeEmailConfirm;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Moq;

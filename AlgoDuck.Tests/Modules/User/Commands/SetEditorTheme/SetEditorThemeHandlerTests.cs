@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Commands.SetEditorTheme;
+using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorTheme;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using FluentValidation;
 using FluentValidation.Results;

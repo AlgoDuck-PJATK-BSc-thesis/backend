@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserConfig;
+using AlgoDuck.Modules.User.Queries.User.Settings.GetUserConfig;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserConfig;

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.ExternalLogin;
+using AlgoDuck.Modules.Auth.Commands.Login.ExternalLogin;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.ExternalLogin;
 

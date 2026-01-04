@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserById;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetUserById;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserById;

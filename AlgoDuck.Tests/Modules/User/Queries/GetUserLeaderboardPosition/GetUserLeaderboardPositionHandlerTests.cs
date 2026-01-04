@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetUserLeaderboardPosition;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetUserLeaderboardPosition;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetUserActivity;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserActivity;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;
 

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Commands.CohortManagement.CreateCohort;
+using AlgoDuck.Modules.Cohort.Commands.User.Management.CreateCohort;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Commands.CohortManagement.CreateCohort;

@@ -1,10 +1,10 @@
-using AlgoDuck.Modules.Auth.Queries.CheckUserPermissions;
-using AlgoDuck.Modules.Auth.Queries.GetApiKeys;
-using AlgoDuck.Modules.Auth.Queries.GetCurrentUser;
-using AlgoDuck.Modules.Auth.Queries.GetUserByToken;
-using AlgoDuck.Modules.Auth.Queries.GetUserSessions;
-using AlgoDuck.Modules.Auth.Queries.SearchUsersByEmail;
-using AlgoDuck.Modules.Auth.Queries.ValidateToken;
+using AlgoDuck.Modules.Auth.Queries.ApiKeys.GetApiKeys;
+using AlgoDuck.Modules.Auth.Queries.Directory.SearchUsersByEmail;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetCurrentUser;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetUserByToken;
+using AlgoDuck.Modules.Auth.Queries.Permissions.CheckUserPermissions;
+using AlgoDuck.Modules.Auth.Queries.Sessions.GetUserSessions;
+using AlgoDuck.Modules.Auth.Queries.Token.ValidateToken;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.Auth.Queries;

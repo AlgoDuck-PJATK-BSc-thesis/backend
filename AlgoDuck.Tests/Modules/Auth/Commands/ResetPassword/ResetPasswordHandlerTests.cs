@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.ResetPassword;
+using AlgoDuck.Modules.Auth.Commands.Password.ResetPassword;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using AuthValidationException = AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException;

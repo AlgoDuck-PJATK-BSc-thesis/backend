@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetUserConfig;
+using AlgoDuck.Modules.User.Queries.User.Settings.GetUserConfig;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

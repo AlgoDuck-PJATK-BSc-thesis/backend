@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserAchievements;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserAchievements;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserAchievements;

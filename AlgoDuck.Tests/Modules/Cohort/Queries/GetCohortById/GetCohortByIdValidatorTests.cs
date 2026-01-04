@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Queries.GetCohortById;
+using AlgoDuck.Modules.Cohort.Queries.User.Cohorts.GetCohortById;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortById;

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.ChangeEmailConfirm;
+using AlgoDuck.Modules.Auth.Commands.Email.ChangeEmailConfirm;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.ChangeEmailConfirm;
 

@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.EnableTwoFactor;
+using AlgoDuck.Modules.Auth.Commands.TwoFactor.EnableTwoFactor;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 using AuthPermissionException = AlgoDuck.Modules.Auth.Shared.Exceptions.PermissionException;

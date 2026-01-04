@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Commands.SelectAvatar;
+using AlgoDuck.Modules.User.Commands.User.Profile.SelectAvatar;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using FluentValidation;
 using FluentValidation.Results;

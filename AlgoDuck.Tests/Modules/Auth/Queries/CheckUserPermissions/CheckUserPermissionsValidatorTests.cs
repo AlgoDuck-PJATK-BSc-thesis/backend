@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.CheckUserPermissions;
+using AlgoDuck.Modules.Auth.Queries.Permissions.CheckUserPermissions;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.CheckUserPermissions;
 

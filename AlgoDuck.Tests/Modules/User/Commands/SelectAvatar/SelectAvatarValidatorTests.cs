@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.SelectAvatar;
+using AlgoDuck.Modules.User.Commands.User.Profile.SelectAvatar;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.SelectAvatar;

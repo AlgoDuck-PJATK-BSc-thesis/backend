@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetSelectedAvatar;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetSelectedAvatar;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

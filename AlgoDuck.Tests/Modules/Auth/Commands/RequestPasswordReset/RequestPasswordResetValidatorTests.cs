@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.RequestPasswordReset;
+using AlgoDuck.Modules.Auth.Commands.Password.RequestPasswordReset;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.RequestPasswordReset;
 

@@ -1,12 +1,12 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Commands.UpdatePreferences;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Reflection;
+using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.UpdatePreferences;
 

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.SetEditorTheme;
+using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorTheme;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.SetEditorTheme;

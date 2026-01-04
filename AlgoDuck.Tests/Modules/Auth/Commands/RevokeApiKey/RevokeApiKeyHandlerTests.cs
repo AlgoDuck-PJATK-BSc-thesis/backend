@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.RevokeApiKey;
+using AlgoDuck.Modules.Auth.Commands.ApiKeys.RevokeApiKey;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Moq;

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.GetApiKeys;
+using AlgoDuck.Modules.Auth.Queries.ApiKeys.GetApiKeys;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.GetApiKeys;
 

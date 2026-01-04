@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.RevokeOtherSessions;
+using AlgoDuck.Modules.Auth.Commands.Session.RevokeOtherSessions;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.RevokeOtherSessions;
 

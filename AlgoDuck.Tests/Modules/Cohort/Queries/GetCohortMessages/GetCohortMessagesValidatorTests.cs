@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Queries.GetCohortMessages;
+using AlgoDuck.Modules.Cohort.Queries.User.Chat.GetCohortMessages;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortMessages;

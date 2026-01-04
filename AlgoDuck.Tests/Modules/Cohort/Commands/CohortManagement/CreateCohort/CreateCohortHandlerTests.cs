@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Commands.CohortManagement.CreateCohort;
+using AlgoDuck.Modules.Cohort.Commands.User.Management.CreateCohort;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Interfaces;

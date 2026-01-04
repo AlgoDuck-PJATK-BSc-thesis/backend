@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.CheckUserPermissions;
+using AlgoDuck.Modules.Auth.Queries.Permissions.CheckUserPermissions;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Moq;

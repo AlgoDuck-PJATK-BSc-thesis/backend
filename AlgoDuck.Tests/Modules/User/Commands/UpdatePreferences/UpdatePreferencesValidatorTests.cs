@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.UpdatePreferences;
+using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.UpdatePreferences;

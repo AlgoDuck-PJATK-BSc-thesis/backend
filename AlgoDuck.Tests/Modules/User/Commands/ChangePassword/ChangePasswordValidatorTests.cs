@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.ChangePassword;
+using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.ChangePassword;

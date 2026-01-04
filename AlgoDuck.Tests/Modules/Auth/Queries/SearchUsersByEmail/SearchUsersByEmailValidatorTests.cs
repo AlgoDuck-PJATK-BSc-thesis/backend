@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.SearchUsersByEmail;
+using AlgoDuck.Modules.Auth.Queries.Directory.SearchUsersByEmail;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.SearchUsersByEmail;
 
