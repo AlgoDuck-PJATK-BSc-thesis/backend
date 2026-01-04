@@ -58,10 +58,18 @@ RUN wget https://github.com/firecracker-microvm/firecracker/releases/download/v1
     ln -s /usr/local/bin/firecracker-v1.2.0-x86_64 /usr/local/bin/firecracker && \
     export PATH="/usr/local/bin/firecracker:$PATH"
 
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=publish /app/publish .
 COPY ExecutorService/Executor/VmScripts firecracker
-COPY ExecutorService/VmImages firecracker
-    
-RUN find firecracker -name "*.sh" -execdir chmod u+x {} +
+#COPY ExecutorService/VmImages firecracker/images
+COPY ExecutorService/entrypoint.sh /app/entrypoint.sh
 
-ENTRYPOINT ["dotnet", "ExecutorService.dll"]
+RUN chmod +x /app/entrypoint.sh && \
+    find firecracker -name "*.sh" -execdir chmod u+x {} +
+
+ENTRYPOINT ["/app/entrypoint.sh"]

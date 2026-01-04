@@ -66,6 +66,6 @@ internal static class ItemDependencyInitializer
         
         builder.Services.Configure<SpriteLegalFileNamesConfiguration>(
             builder.Configuration.GetSection("SpriteLegalFileNames"));
-
+        
     }
 }

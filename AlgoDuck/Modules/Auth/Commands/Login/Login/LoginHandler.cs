@@ -27,6 +27,7 @@ public sealed class LoginHandler : ILoginHandler
 
     public async Task<LoginResult> HandleAsync(LoginDto dto, CancellationToken cancellationToken)
     {
+        
         await _validator.ValidateAndThrowAsync(dto, cancellationToken);
 
         var user = await FindUserAsync(dto.UserNameOrEmail);

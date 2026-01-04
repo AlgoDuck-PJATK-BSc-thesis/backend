@@ -7,6 +7,7 @@ volumes:
   dataprotection_keys:
   rabbitmq_data:
   redis_data:
+  firecracker_images:
 
 services:
   executor:
@@ -24,6 +25,8 @@ services:
     depends_on:
       - mq
       - redis
+    volumes:
+      - firecracker_images:/app/firecracker/images
     develop:
       watch:
         - action: rebuild

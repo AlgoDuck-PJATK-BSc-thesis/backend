@@ -15,7 +15,7 @@ public sealed class AssistantHub(
     IAssistantService assistantService
     ) : Hub<IAssistantClient>
 {
-    public async IAsyncEnumerable<IApiResponse> GetAssistance(AssistantRequestDto assistantRequest, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<IApiResponse> GetAssistance(AssistantRequestDto assistantRequest)
     {
         var userId = Context.User?.GetUserId();
         if (userId == null || userId.IsErr)
@@ -28,6 +28,7 @@ public sealed class AssistantHub(
             yield break;
         }
 
+        Console.WriteLine(assistantRequest.Query);
         assistantRequest.UserId = userId.AsOk;
 
         await foreach (var chatCompletionPartial in  assistantService.GetAssistanceAsync(assistantRequest))

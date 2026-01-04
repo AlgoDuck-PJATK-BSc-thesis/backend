@@ -78,6 +78,7 @@ public class TestCaseDto
     public List<FunctionParam> CallArgs { get; set; } = [];
     public required FunctionParam Expected { get; set; }
     public required bool IsPublic { get; set; }
+    public required bool OrderMatters { get; set; }
     internal string? ResolvedFunctionCall { get; set; }
 }
 

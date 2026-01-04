@@ -9,6 +9,7 @@ using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
+using AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
@@ -128,7 +129,10 @@ internal static class ProblemDependencyInitializer
         
         builder.Services.AddScoped<IUserSolutionRepository, UserSolutionRepository>();
         builder.Services.AddScoped<IUserSolutionService, UserSolutionService>();
-        
+
+        builder.Services.AddScoped<IAllDifficultiesRepository, AllDifficultiesRepository>();
+        builder.Services.AddScoped<IAllDifficultiesService, AllDifficultiesService>();
+
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
