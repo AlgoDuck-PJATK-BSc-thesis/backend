@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.GetCurrentUser;
+using AlgoDuck.Modules.Auth.Queries.Identity.GetCurrentUser;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.GetCurrentUser;
 

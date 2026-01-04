@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Queries.GetCohortMembers;
+using AlgoDuck.Modules.Cohort.Queries.User.Members.GetCohortMembers;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.DTOs;

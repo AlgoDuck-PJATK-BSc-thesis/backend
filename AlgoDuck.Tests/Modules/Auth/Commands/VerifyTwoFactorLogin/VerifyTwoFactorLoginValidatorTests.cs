@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.VerifyTwoFactorLogin;
+using AlgoDuck.Modules.Auth.Commands.TwoFactor.VerifyTwoFactorLogin;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.VerifyTwoFactorLogin;
 

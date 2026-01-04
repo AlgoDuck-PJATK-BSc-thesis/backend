@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.RevokeSession;
+using AlgoDuck.Modules.Auth.Commands.Session.RevokeSession;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;

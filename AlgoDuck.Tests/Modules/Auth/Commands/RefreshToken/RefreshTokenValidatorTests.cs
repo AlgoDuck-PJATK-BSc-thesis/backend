@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.RefreshToken;
+using AlgoDuck.Modules.Auth.Commands.Session.RefreshToken;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.RefreshToken;
 

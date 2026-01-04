@@ -1,13 +1,13 @@
-using AlgoDuck.Modules.User.Commands.AdminCreateUser;
-using AlgoDuck.Modules.User.Commands.AdminDeleteUser;
-using AlgoDuck.Modules.User.Commands.AdminUpdateUser;
-using AlgoDuck.Modules.User.Commands.ChangePassword;
-using AlgoDuck.Modules.User.Commands.DeleteAccount;
-using AlgoDuck.Modules.User.Commands.SelectAvatar;
-using AlgoDuck.Modules.User.Commands.SetEditorLayout;
-using AlgoDuck.Modules.User.Commands.SetEditorTheme;
-using AlgoDuck.Modules.User.Commands.UpdatePreferences;
-using AlgoDuck.Modules.User.Commands.UpdateUsername;
+using AlgoDuck.Modules.User.Commands.CreateUser;
+using AlgoDuck.Modules.User.Commands.DeleteUser;
+using AlgoDuck.Modules.User.Commands.UpdateUser;
+using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
+using AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
+using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorLayout;
+using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorTheme;
+using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
+using AlgoDuck.Modules.User.Commands.User.Profile.SelectAvatar;
+using AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Commands;
@@ -37,13 +37,13 @@ public static class UserCommandsDependencyInitializer
         services.AddScoped<IValidator<SetEditorLayoutDto>, SetEditorLayoutValidator>();
         services.AddScoped<ISetEditorLayoutHandler, SetEditorLayoutHandler>();
 
-        services.AddScoped<IAdminDeleteUserHandler, AdminDeleteUserHandler>();
+        services.AddScoped<IDeleteUserHandler, DeleteUserHandler>();
 
-        services.AddScoped<IValidator<AdminCreateUserDto>, AdminCreateUserValidator>();
-        services.AddScoped<IAdminCreateUserHandler, AdminCreateUserHandler>();
+        services.AddScoped<IValidator<CreateUserDto>, CreateUserValidator>();
+        services.AddScoped<ICreateUserHandler, CreateUserHandler>();
 
-        services.AddScoped<IValidator<AdminUpdateUserDto>, AdminUpdateUserValidator>();
-        services.AddScoped<IAdminUpdateUserHandler, AdminUpdateUserHandler>();
+        services.AddScoped<IValidator<UpdateUserDto>, UpdateUserValidator>();
+        services.AddScoped<IUpdateUserHandler, UpdateUserHandler>();
 
         return services;
     }

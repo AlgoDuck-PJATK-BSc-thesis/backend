@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserStatistics;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserStatistics;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserStatistics;

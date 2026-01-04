@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetCohortLeaderboard;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetCohortLeaderboard;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Xunit.Abstractions;

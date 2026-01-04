@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetTwoFactorEnabled;
+using AlgoDuck.Modules.User.Queries.User.Settings.GetTwoFactorEnabled;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

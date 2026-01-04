@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Commands.CohortManagement.UpdateCohort;
+using AlgoDuck.Modules.Cohort.Commands.User.Management.UpdateCohort;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Commands.CohortManagement.UpdateCohort;

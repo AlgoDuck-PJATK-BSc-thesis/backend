@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Queries.GetUserSessions;
+using AlgoDuck.Modules.Auth.Queries.Sessions.GetUserSessions;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;

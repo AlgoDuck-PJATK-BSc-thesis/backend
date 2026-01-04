@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserStatistics;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserStatistics;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

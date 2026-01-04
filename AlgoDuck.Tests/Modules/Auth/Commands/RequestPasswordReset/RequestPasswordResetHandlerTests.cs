@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.RequestPasswordReset;
+using AlgoDuck.Modules.Auth.Commands.Password.RequestPasswordReset;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;

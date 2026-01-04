@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserActivity;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserActivity;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserActivity;

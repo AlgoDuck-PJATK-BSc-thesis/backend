@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Queries.GetCohortById;
+using AlgoDuck.Modules.Cohort.Queries.User.Cohorts.GetCohortById;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Interfaces;

@@ -1,5 +1,5 @@
 using System.Text;
-using AlgoDuck.Modules.Cohort.Commands.Chat.UploadMedia;
+using AlgoDuck.Modules.Cohort.Commands.User.Chat.UploadMedia;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;

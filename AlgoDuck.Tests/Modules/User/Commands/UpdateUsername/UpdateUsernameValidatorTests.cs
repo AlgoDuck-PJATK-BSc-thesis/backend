@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.UpdateUsername;
+using AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.UpdateUsername;

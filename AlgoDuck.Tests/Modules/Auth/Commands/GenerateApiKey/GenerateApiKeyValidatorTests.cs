@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.GenerateApiKey;
+using AlgoDuck.Modules.Auth.Commands.ApiKeys.GenerateApiKey;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.GenerateApiKey;
 

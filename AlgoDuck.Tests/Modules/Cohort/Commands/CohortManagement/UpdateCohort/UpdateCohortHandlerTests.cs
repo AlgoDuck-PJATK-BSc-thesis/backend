@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Commands.CohortManagement.UpdateCohort;
+using AlgoDuck.Modules.Cohort.Commands.User.Management.UpdateCohort;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;

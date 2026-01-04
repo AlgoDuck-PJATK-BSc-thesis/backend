@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.Logout;
+using AlgoDuck.Modules.Auth.Commands.Login.Logout;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Services;

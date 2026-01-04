@@ -8,7 +8,7 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace AlgoDuck.Tests.Shared.Middleware;
+namespace AlgoDuck.Tests.Shared.MIddleware;
 
 public sealed class ErrorHandlerTests
 {

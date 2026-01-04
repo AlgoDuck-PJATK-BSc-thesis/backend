@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.ExternalLogin;
+using AlgoDuck.Modules.Auth.Commands.Login.ExternalLogin;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;

@@ -1,5 +1,5 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.Auth.Commands.VerifyEmail;
+using AlgoDuck.Modules.Auth.Commands.Email.VerifyEmail;
 using AlgoDuck.Modules.Auth.Shared.Middleware;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Modules.Cohort.Shared.Hubs;

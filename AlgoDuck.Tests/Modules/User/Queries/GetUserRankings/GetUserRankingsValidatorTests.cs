@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserRankings;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetUserRankings;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserRankings;

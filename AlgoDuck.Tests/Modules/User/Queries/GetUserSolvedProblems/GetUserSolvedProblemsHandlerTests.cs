@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserSolvedProblems;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserSolvedProblems;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

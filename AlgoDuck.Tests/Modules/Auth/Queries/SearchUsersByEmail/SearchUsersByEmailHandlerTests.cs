@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Queries.SearchUsersByEmail;
+using AlgoDuck.Modules.Auth.Queries.Directory.SearchUsersByEmail;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.SearchUsersByEmail;

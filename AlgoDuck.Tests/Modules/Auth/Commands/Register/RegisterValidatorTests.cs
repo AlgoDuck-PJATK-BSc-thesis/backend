@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.Register;
+using AlgoDuck.Modules.Auth.Commands.Login.Register;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.Register;
 

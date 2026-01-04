@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.StartEmailVerification;
+using AlgoDuck.Modules.Auth.Commands.Email.StartEmailVerification;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.StartEmailVerification;
 

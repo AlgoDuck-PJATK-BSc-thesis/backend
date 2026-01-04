@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserAchievements;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserAchievements;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

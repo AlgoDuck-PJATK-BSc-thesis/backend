@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.ValidateToken;
+using AlgoDuck.Modules.Auth.Queries.Token.ValidateToken;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.ValidateToken;
 

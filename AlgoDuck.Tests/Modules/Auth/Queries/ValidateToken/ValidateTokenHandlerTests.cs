@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using AlgoDuck.Modules.Auth.Queries.ValidateToken;
+using AlgoDuck.Modules.Auth.Queries.Token.ValidateToken;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;

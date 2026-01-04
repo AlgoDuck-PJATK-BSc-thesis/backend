@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Commands.ChangePassword;
+using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Identity;

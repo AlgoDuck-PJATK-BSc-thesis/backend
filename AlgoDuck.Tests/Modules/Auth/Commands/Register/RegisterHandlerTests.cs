@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Auth.Commands.Register;
+using AlgoDuck.Modules.Auth.Commands.Login.Register;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;

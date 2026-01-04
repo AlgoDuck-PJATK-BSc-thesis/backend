@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Queries.GetUserSessions;
+using AlgoDuck.Modules.Auth.Queries.Sessions.GetUserSessions;
 
 namespace AlgoDuck.Tests.Modules.Auth.Queries.GetUserSessions;
 

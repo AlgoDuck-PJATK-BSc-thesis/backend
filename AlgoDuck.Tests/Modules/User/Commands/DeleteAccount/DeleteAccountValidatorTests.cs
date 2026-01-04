@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.DeleteAccount;
+using AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.DeleteAccount;

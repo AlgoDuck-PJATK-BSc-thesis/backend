@@ -1,5 +1,6 @@
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands.Login;
+using AlgoDuck.Modules.Auth.Commands.Login.Login;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;

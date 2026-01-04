@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Commands.SetEditorLayout;
+using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorLayout;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Commands.SetEditorLayout;

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserProfile;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetUserProfile;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Moq;

@@ -1,20 +1,22 @@
-using AlgoDuck.Modules.User.Queries.GetCohortLeaderboard;
-using AlgoDuck.Modules.User.Queries.GetLeaderboardGlobal;
-using AlgoDuck.Modules.User.Queries.GetSelectedAvatar;
-using AlgoDuck.Modules.User.Queries.GetTwoFactorEnabled;
-using AlgoDuck.Modules.User.Queries.GetUserActivity;
-using AlgoDuck.Modules.User.Queries.GetUserAchievements;
-using AlgoDuck.Modules.User.Queries.GetUserById;
-using AlgoDuck.Modules.User.Queries.GetUserProfile;
-using AlgoDuck.Modules.User.Queries.GetUserSolvedProblems;
-using AlgoDuck.Modules.User.Queries.GetUserStatistics;
-using AlgoDuck.Modules.User.Queries.GetUserConfig;
-using AlgoDuck.Modules.User.Queries.GetUserLeaderboardPosition;
-using AlgoDuck.Modules.User.Queries.SearchUsers;
-using AlgoDuck.Modules.User.Queries.GetUserRankings;
-using AlgoDuck.Modules.User.Queries.GetVerifiedEmail;
-using AlgoDuck.Modules.User.Queries.AdminGetUsers;
-using AlgoDuck.Modules.User.Queries.AdminSearchUsers;
+using AlgoDuck.Modules.User.Queries.Admin.GetUsers;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserAchievements;
+using AlgoDuck.Modules.User.Queries.User.Activity.GetUserActivity;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetCohortLeaderboard;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetLeaderboardGlobal;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetUserLeaderboardPosition;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetUserRankings;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetSelectedAvatar;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetUserById;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetUserProfile;
+using AlgoDuck.Modules.User.Queries.User.Profile.GetVerifiedEmail;
+using AlgoDuck.Modules.User.Queries.User.Settings.GetTwoFactorEnabled;
+using AlgoDuck.Modules.User.Queries.User.Settings.GetUserConfig;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserSolvedProblems;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserStatistics;
+using ISearchUsersHandler = AlgoDuck.Modules.User.Queries.Admin.SearchUsers.ISearchUsersHandler;
+using SearchUsersDto = AlgoDuck.Modules.User.Queries.Admin.SearchUsers.SearchUsersDto;
+using SearchUsersHandler = AlgoDuck.Modules.User.Queries.Admin.SearchUsers.SearchUsersHandler;
+using SearchUsersValidator = AlgoDuck.Modules.User.Queries.Admin.SearchUsers.SearchUsersValidator;
 using FluentValidation;
 
 namespace AlgoDuck.Modules.User.Queries;
@@ -44,8 +46,8 @@ public static class UserQueriesDependencyInitializer
         services.AddScoped<IGetUserConfigHandler, GetUserConfigHandler>();
         services.AddScoped<GetUserConfigValidator>();
 
-        services.AddScoped<ISearchUsersHandler, SearchUsersHandler>();
-        services.AddScoped<IValidator<SearchUsersDto>, SearchUsersValidator>();
+        services.AddScoped<User.Profile.SearchUsers.ISearchUsersHandler, User.Profile.SearchUsers.SearchUsersHandler>();
+        services.AddScoped<IValidator<User.Profile.SearchUsers.SearchUsersDto>, User.Profile.SearchUsers.SearchUsersValidator>();
 
         services.AddScoped<IGetUserRankingsHandler, GetUserRankingsHandler>();
         services.AddScoped<GetUserRankingsValidator>();
@@ -62,11 +64,11 @@ public static class UserQueriesDependencyInitializer
 
         services.AddScoped<IGetCohortLeaderboardHandler, GetCohortLeaderboardHandler>();
 
-        services.AddScoped<IAdminGetUsersHandler, AdminGetUsersHandler>();
-        services.AddScoped<IValidator<AdminGetUsersDto>, AdminGetUsersValidator>();
+        services.AddScoped<IGetUsersHandler, GetUsersHandler>();
+        services.AddScoped<IValidator<GetUsersDto>, GetUsersValidator>();
 
-        services.AddScoped<IAdminSearchUsersHandler, AdminSearchUsersHandler>();
-        services.AddScoped<IValidator<AdminSearchUsersDto>, AdminSearchUsersValidator>();
+        services.AddScoped<ISearchUsersHandler, SearchUsersHandler>();
+        services.AddScoped<IValidator<SearchUsersDto>, SearchUsersValidator>();
 
         return services;
     }

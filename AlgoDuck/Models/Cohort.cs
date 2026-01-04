@@ -17,6 +17,8 @@ public class Cohort : IEntityTypeConfiguration<Cohort>
 
     public string? CreatedByUserLabel { get; set; }
 
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     public bool IsActive { get; set; } = true;
 
     public DateTime? EmptiedAt { get; set; }
@@ -47,15 +49,19 @@ public class Cohort : IEntityTypeConfiguration<Cohort>
             .IsUnique()
             .HasDatabaseName("cohort_join_code_uq");
 
-        builder.Property(e => e.IsActive)
-            .HasColumnName("is_active");
-
         builder.Property(e => e.CreatedByUserId)
             .HasColumnName("created_by_user_id");
 
         builder.Property(e => e.CreatedByUserLabel)
             .HasMaxLength(256)
             .HasColumnName("created_by_user_label");
+
+        builder.Property(e => e.CreatedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasColumnName("created_at");
+
+        builder.Property(e => e.IsActive)
+            .HasColumnName("is_active");
 
         builder.Property(e => e.EmptiedAt)
             .HasColumnType("timestamp with time zone")

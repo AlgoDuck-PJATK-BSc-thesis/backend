@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Auth.Commands.ChangeEmailRequest;
+using AlgoDuck.Modules.Auth.Commands.Email.ChangeEmailRequest;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.ChangeEmailRequest;
 

@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Queries.GetCohortActiveMembers;
+using AlgoDuck.Modules.Cohort.Queries.User.Members.GetCohortActiveMembers;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.Cohort.Queries.GetCohortActiveMembers;

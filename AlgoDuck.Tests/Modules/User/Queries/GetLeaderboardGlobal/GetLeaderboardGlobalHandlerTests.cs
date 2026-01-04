@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.User.Queries.GetLeaderboardGlobal;
+using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetLeaderboardGlobal;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetLeaderboardGlobal;

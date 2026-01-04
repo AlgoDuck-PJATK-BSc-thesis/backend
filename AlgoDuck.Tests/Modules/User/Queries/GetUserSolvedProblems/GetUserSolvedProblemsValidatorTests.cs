@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.GetUserSolvedProblems;
+using AlgoDuck.Modules.User.Queries.User.Stats.GetUserSolvedProblems;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.GetUserSolvedProblems;

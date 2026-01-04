@@ -1,4 +1,5 @@
 using AlgoDuck.Modules.Auth.Commands.Login;
+using AlgoDuck.Modules.Auth.Commands.Login.Login;
 
 namespace AlgoDuck.Tests.Modules.Auth.Commands.Login;
 

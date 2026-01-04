@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.User.Queries.SearchUsers;
+using AlgoDuck.Modules.User.Queries.User.Profile.SearchUsers;
 using FluentValidation.TestHelper;
 
 namespace AlgoDuck.Tests.Modules.User.Queries.SearchUsers;
