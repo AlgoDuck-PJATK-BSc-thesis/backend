@@ -32,7 +32,44 @@ public class ExecutorFileOperationHelper
     private const string TimeControlSymbol = "-time:";
     private const int UuidLength = 36;
     private const int SigningKeyStringLen = UuidLength + 4; // "ctr-70fcae06-b1ac-453b-b0a0-57812ba86cf4". 4 chars for "ctr-" + uuid length
-    private const string JavaGsonImport = "import com.google.gson.Gson;\n"; 
+    private const string JavaGsonImport = "import com.google.gson.Gson;\n";
+
+    const string NormalizerClassName = "Normalizer7423d798e0454599918af7e204faf588";
+    const string NormalizerCode = """
+                                          final class Normalizer7423d798e0454599918af7e204faf588 {
+                                              public static Comparable<?> normalize(Object obj, boolean orderMatters) {
+                                                  if (obj == null) return null;
+                                              
+                                                  if (obj instanceof Number || obj instanceof String || obj instanceof Boolean) {
+                                                      return obj.toString();
+                                                  }
+                                              
+                                                  if (obj.getClass().isArray()) {
+                                                      java.util.List<String> normalized = new java.util.ArrayList<>();
+                                                      int len = java.lang.reflect.Array.getLength(obj);
+                                                      for (int i = 0; i < len; i++) {
+                                                          normalized.add(normalize(java.lang.reflect.Array.get(obj, i), orderMatters).toString());
+                                                      }
+                                                      if (!orderMatters) {
+                                                          java.util.Collections.sort(normalized);
+                                                      }
+                                                      return normalized.toString();
+                                                  }
+                                              
+                                                  if (obj instanceof java.util.Collection<?> coll) {
+                                                      java.util.List<String> normalized = coll.stream()
+                                                              .map(e -> normalize(e, orderMatters).toString())
+                                                              .collect(java.util.stream.Collectors.toList());
+                                                      if (!orderMatters) {
+                                                          java.util.Collections.sort(normalized);
+                                                      }
+                                                      return normalized.toString();
+                                                  }
+                                              
+                                                  return new com.google.gson.Gson().toJson(obj);
+                                              }
+                                          }
+                                          """;
     
     public required UserSolutionData UserSolutionData { get; set; }
 
@@ -95,13 +132,11 @@ public class ExecutorFileOperationHelper
 
     public void InsertTestCases(List<TestCaseJoined> testCases, string mainClassName)
     {
-        var gsonInstanceName = $"{GetHelperVariableNamePrefix()}_gson";
-        var gsonVariableInitialization = $"Gson {gsonInstanceName} = new Gson();\n";
-        InsertAtEndOfMainMethod(gsonVariableInitialization);
+        UserSolutionData.FileContents.Append(NormalizerCode);
         
         testCases.ForEach(t => ArrangeTestCase(t, mainClassName));
         testCases.ForEach(ActTestCase);
-        testCases.ForEach(t => AssertTestCase(t, gsonInstanceName));
+        testCases.ForEach(AssertTestCase);
     }
 
     public void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
@@ -120,10 +155,10 @@ public class ExecutorFileOperationHelper
         return $"a{guid.ToString().Replace('-', '_')}";
     }
 
-    private void AssertTestCase(TestCaseJoined testCase, string gsonInstanceName)
+    private void AssertTestCase(TestCaseJoined testCase)
     {
         InsertAtEndOfMainMethod(CreateSignedPrintStatement(
-            $"\" tc_id:{testCase.TestCaseId} \" + {gsonInstanceName}.toJson({testCase.Expected}).equals({gsonInstanceName}.toJson({ConvertGuidToJavaVariableName(testCase.TestCaseId)}))",
+            $"\" tc_id:{testCase.TestCaseId} \" + {NormalizerClassName}.normalize({testCase.Expected}, {testCase.OrderMatters.ToString().ToLowerInvariant()}).equals({NormalizerClassName}.normalize({ConvertGuidToJavaVariableName(testCase.TestCaseId)}, {testCase.OrderMatters.ToString().ToLowerInvariant()}))",
             SigningType.Answer));
     }
 

@@ -8,14 +8,14 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 
 public interface IAllPlantsRepository
 {
-    public Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWAttribution pagedRequest, CancellationToken cancellationToken = default);
+    public Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default);
 }
 
 public class AllPlantsRepository(
     ApplicationQueryDbContext dbContext
     ) : IAllPlantsRepository
 {
-    public async Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWAttribution pagedRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)
     {
         var totalItems = await dbContext.PlantItems.CountAsync(cancellationToken);
 

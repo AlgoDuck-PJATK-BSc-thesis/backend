@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
+using AlgoDuck.Modules.Item.Commands.DeleteItem;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Utilities;
 using Amazon.S3;
@@ -226,11 +227,10 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(IFormFile file, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents, string? contentType = null, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
         try
         {
-            await using var stream = file.OpenReadStream();
             var request = new PutObjectRequest
             {
                 BucketName = bucketType switch
@@ -239,9 +239,9 @@ public class AwsS3Client(
                     S3BucketType.Data => s3Settings.Value.DataBucketSettings.BucketName,
                     _ => throw new ArgumentOutOfRangeException(nameof(bucketType), bucketType, null)
                 },
-                Key = file.FileName,
-                InputStream = stream,
-                ContentType = file.ContentType
+                Key = path,
+                InputStream = fileContents,
+                ContentType = contentType ?? "application/octet-stream"
             };
 
             var response = await s3Client.PutObjectAsync(request, cancellationToken);
@@ -250,9 +250,9 @@ public class AwsS3Client(
             {
                 return Result<bool, ErrorObject<string>>.Err(response.HttpStatusCode switch
                 {
-                    HttpStatusCode.Forbidden => ErrorObject<string>.Forbidden($"Post file failed for {file.FileName}"),
-                    HttpStatusCode.BadRequest => ErrorObject<string>.BadRequest($"Post file failed for {file.FileName}"),
-                    _ => ErrorObject<string>.InternalError($"Post file failed for {file.FileName}")
+                    HttpStatusCode.Forbidden => ErrorObject<string>.Forbidden($"Post file failed for {path}"),
+                    HttpStatusCode.BadRequest => ErrorObject<string>.BadRequest($"Post file failed for {path}"),
+                    _ => ErrorObject<string>.InternalError($"Post file failed for {path}")
                 });
             }
 
@@ -270,7 +270,7 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -296,6 +296,43 @@ public class AwsS3Client(
         {
             return Result<bool, ErrorObject<string>>.Err(
                 ErrorObject<string>.InternalError($"Could not delete: {ex.Message}"));
+        }
+    }
+
+    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix, S3BucketType bucketType = S3BucketType.Data, CancellationToken cancellationToken = default)
+    {
+        var bucketName = s3Settings.Value.DataBucketSettings.BucketName;
+    
+        var objects = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+        {
+            BucketName = bucketName,
+            Prefix = prefix,
+        }, cancellationToken);
+
+        var deletedVersions = new Dictionary<string, string>();
+    
+        try
+        {
+            foreach (var obj in objects.S3Objects)
+            {
+                var deleteResponse = await s3Client.DeleteObjectAsync(bucketName, obj.Key, cancellationToken);
+                deletedVersions[obj.Key] = deleteResponse.VersionId;
+            }
+
+            return Result<ICollection<string>, ErrorObject<string>>.Ok(deletedVersions.Select(kv => kv.Key).ToList());
+        }
+        catch
+        {
+            foreach (var (key, versionId) in deletedVersions)
+            {
+                await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    VersionId = versionId 
+                }, cancellationToken);
+            }
+            return Result<ICollection<string>, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"failed deleting {prefix}"));
         }
     }
 }

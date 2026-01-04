@@ -474,16 +474,13 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("name");
 
                     b.Property<int>("Price")
-                        .HasColumnType("integer")
-                        .HasColumnName("price");
+                        .HasColumnType("integer");
 
                     b.Property<bool>("Purchasable")
-                        .HasColumnType("boolean")
-                        .HasColumnName("purchasable");
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("RarityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("rarity_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("type")
                         .IsRequired()

@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using OneOf;
 
@@ -70,8 +71,14 @@ public enum ErrorType
     InternalError
 }
 
-public static class ResultExtensions
+public static class ResultHttpExtensions
 {
+    public static async Task<IActionResult> ToActionResultAsync<T, TE>(this Task<Result<T, ErrorObject<TE>>> resultTask)
+    {
+        var result = await resultTask;
+        return result.ToActionResult();
+    } 
+    
     public static IActionResult ToActionResult<T, TE>(
         this Result<T, ErrorObject<TE>> result)
     {
@@ -116,3 +123,54 @@ public static class ResultExtensions
         );
     }
 }
+
+public static class ResultToolingExtensions
+{
+    public static Result<TNew, TE> Bind<T, TNew, TE>(
+        this Result<T, TE> result, 
+        Func<T, Result<TNew, TE>> mapper)
+    {
+        return result.Match(
+            mapper,
+            Result<TNew, TE>.Err
+        );
+    }
+
+    /*
+     * binds to result if IsOk and executes a mapping function
+     * short circuits and returns if result IsErr
+     */
+    public static async Task<Result<TNew, TE>> BindAsync<T, TNew, TE>(
+        this Result<T, TE> result, 
+        Func<T, Task<Result<TNew, TE>>> mapper)
+    {
+        return await result.Match(
+            async ok => await mapper(ok),
+            err => Task.FromResult(Result<TNew, TE>.Err(err))
+        );
+    }
+
+    public static async Task<Result<TNew, TE>> MapAsync<T, TNew, TE>(
+        this Task<Result<T, TE>> resultTask,
+        Func<T, Result<TNew, TE>> mapper)
+    {
+        var result = await resultTask;
+        return result.Match(
+            ok => mapper(ok),
+            err => Result<TNew, TE>.Err(err));
+    }
+        
+
+    public static async Task<Result<TNew, TE>> BindAsync<T, TNew, TE>(
+        this Task<Result<T, TE>> resultTask, 
+        Func<T, Task<Result<TNew, TE>>> mapper)
+    {
+        var result = await resultTask;
+        return await result.Match(
+            async ok => await mapper(ok),
+            err => Task.FromResult(Result<TNew, TE>.Err(err))
+        );
+    }
+}
+
+
