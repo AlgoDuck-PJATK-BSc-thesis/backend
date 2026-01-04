@@ -281,7 +281,7 @@ public class DataSeedingService(
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
-                            Expected = "new int[]{2, 4}",
+                            Expected = "new int[]{2, 3}",
                             Call = ["twoSumTest4_nums", "10"],
                             Setup = "int[] twoSumTest4_nums = new int[] {1, 5, 3, 7, 9, 2};"
                         }
@@ -293,7 +293,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{testCaseS3Partial.ProblemId}/test-cases.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         testCaseS3Partial);
@@ -653,7 +653,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{template.ProblemId}/template.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         template);
@@ -684,7 +684,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName().ToLowerInvariant()}.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         info);

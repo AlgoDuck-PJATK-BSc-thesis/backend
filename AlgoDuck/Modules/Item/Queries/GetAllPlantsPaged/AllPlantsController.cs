@@ -23,7 +23,7 @@ public class AllPlantsController(
         if (userIdRes.IsErr)
             return userIdRes.ToActionResult();
 
-        var res = await allPlantsService.GetAllPlantsPagedAsync(new PagedRequestWAttribution()
+        var res = await allPlantsService.GetAllPlantsPagedAsync(new PagedRequestWithAttribution()
         {
             PageSize = pageSize,
             CurrPage = currentPage,

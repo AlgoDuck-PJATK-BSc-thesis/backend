@@ -31,10 +31,14 @@ public partial class EditorLayout : IEntityTypeConfiguration<EditorLayout>
             .HasMaxLength(256)
             .HasColumnName("layout_name");
         
-        builder.Property(e => e.EditorThemeId).HasColumnName("editor_theme_id");
-        builder.Property(e => e.UserConfigId).HasColumnName("user_config_id");
+        builder.Property(e => e.EditorThemeId)
+            .HasColumnName("editor_theme_id");
+        
+        builder.Property(e => e.UserConfigId)
+            .HasColumnName("user_config_id");
 
-        builder.HasOne(d => d.EditorTheme).WithMany(p => p.EditorLayouts)
+        builder.HasOne(d => d.EditorTheme)
+            .WithMany(p => p.EditorLayouts)
             .HasForeignKey(d => d.EditorThemeId)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("editor_layout_editor_theme");

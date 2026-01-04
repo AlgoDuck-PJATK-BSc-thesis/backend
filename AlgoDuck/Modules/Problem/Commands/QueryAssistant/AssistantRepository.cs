@@ -15,8 +15,9 @@ public interface IAssistantRepository
     public Task<Result<AssistantChat, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
         CancellationToken cancellationToken = default);
 
-    public Task<Result<AssistanceMessage, ErrorObject<string>>> CreateNewChatMessage(ChatMessageInsertDto chatMessage,
-        CancellationToken cancellationToken = default);
+    public Task<Result<int, ErrorObject<string>>> CreateNewChatMessagesAsync(
+        CancellationToken cancellationToken = default,
+        params ChatMessageInsertDto[] request); /* I hate the fact that cancellation token is not last in the arg list */
 }
 
 public class AssistantRepository(
@@ -36,46 +37,48 @@ public class AssistantRepository(
             : Result<AssistantChat, ErrorObject<string>>.Ok(result);
     }
 
-
-    public async Task<Result<AssistanceMessage, ErrorObject<string>>> CreateNewChatMessage(
-        ChatMessageInsertDto chatMessage,
-        CancellationToken cancellationToken = default)
+    public async Task<Result<int, ErrorObject<string>>> CreateNewChatMessagesAsync(
+        CancellationToken cancellationToken = default, params ChatMessageInsertDto[] request)
     {
-        var chat = await dbContext.AssistantChats
-            .Where(m => m.ProblemId == chatMessage.ProblemId && m.UserId == chatMessage.UserId &&
-                        m.Name == chatMessage.ChatName)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (chat == null)
+        var chatMessagesGrouped = request.GroupBy(e => e.ChatId).ToList();
+        var messageCounter = 0;
+        foreach (var chatMessageInsertDto in chatMessagesGrouped)
         {
-            chat = new AssistantChat
+            Console.WriteLine(chatMessageInsertDto.Key);
+            var assistantChat = await dbContext.AssistantChats.FirstOrDefaultAsync(
+                ch => ch.Id == chatMessageInsertDto.Key,
+                cancellationToken: cancellationToken);
+            Console.WriteLine(assistantChat == null);
+
+            if (assistantChat == null)
             {
-                Name = chatMessage.ChatName,
-                ProblemId = chatMessage.ProblemId,
-                UserId = chatMessage.UserId,
-            };
-            dbContext.AssistantChats.Add(chat);
+                var firstMessage = chatMessageInsertDto.ToList().First(); 
+                assistantChat = new AssistantChat
+                {
+                    Id = firstMessage.ChatId,
+                    Name = firstMessage.ChatName,
+                    ProblemId = firstMessage.ProblemId,
+                    UserId = firstMessage.UserId,
+                };
+                dbContext.AssistantChats.Add(assistantChat);
+            }
+            
+            foreach (var chatMessage in chatMessageInsertDto.ToList())
+            {
+                messageCounter++;
+                assistantChat.Messages.Add(new AssistanceMessage
+                {
+                    Fragments = chatMessage.ChatFragments.Select(chf => new AssistantMessageFragment
+                    {
+                        Content = chf.MessageContents.ToString(),
+                        FragmentType = chf.FragmentType
+                    }).ToList(),
+                    IsUserMessage = chatMessage.Author == MessageAuthor.User
+                });
+            }
         }
-
-        var fragments = chatMessage.TextFragments.Select(f => new AssistantMessageFragment
-        {
-            Content = f.Message,
-            FragmentType = FragmentType.Text,
-        }).ToList();
-
-        fragments.AddRange(chatMessage.CodeFragments.Select(f => new AssistantMessageFragment
-        {
-            Content = f.Message,
-            FragmentType = FragmentType.Code,
-        }).ToList());
-
-        var newMessage = new AssistanceMessage
-        {
-            Fragments = fragments,
-            IsUserMessage = chatMessage.Author == MessageAuthor.User,
-        };
-        chat.Messages.Add(newMessage);
+        
         await dbContext.SaveChangesAsync(cancellationToken);
-        return Result<AssistanceMessage, ErrorObject<string>>.Ok(newMessage);
+        return Result<int, ErrorObject<string>>.Ok(messageCounter);
     }
 }

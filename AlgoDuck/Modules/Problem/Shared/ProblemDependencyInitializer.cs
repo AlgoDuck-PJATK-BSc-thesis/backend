@@ -16,6 +16,7 @@ using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
 using AlgoDuck.Modules.Problem.Queries.GetCustomUserLayouts;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
+using AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.S3;
@@ -125,6 +126,8 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<ICustomLayoutDetailsService, CustomLayoutDetailsService>();
         builder.Services.AddScoped<ICustomLayoutDetailsRepository, CustomLayoutDetailsRepository>();
         
+        builder.Services.AddScoped<IUserSolutionRepository, UserSolutionRepository>();
+        builder.Services.AddScoped<IUserSolutionService, UserSolutionService>();
         
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {

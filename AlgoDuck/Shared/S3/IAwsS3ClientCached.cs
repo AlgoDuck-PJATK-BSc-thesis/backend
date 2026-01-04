@@ -129,24 +129,40 @@ public class AwsS3ClientCached(
         return result;
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(IFormFile file, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents, string? contentType = null,
+        S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
-        var result = await awsS3Client.PostRawFileAsync(file, bucketType, cancellationToken);
+        var result = await awsS3Client.PostRawFileAsync(path, fileContents, contentType, bucketType, cancellationToken);
 
         if (result.IsOk)
         {
-            await InvalidateCacheForPathAsync(file.FileName);
+            await InvalidateCacheForPathAsync(path);
         }
 
         return result;
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
-        var result = await awsS3Client.DeleteDocumentAsync(path, cancellationToken);
+        var result = await awsS3Client.DeleteDocumentAsync(path, bucketType, cancellationToken);
 
         await InvalidateCacheForPathAsync(path);
 
+        return result;
+    }
+
+    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix, S3BucketType bucketType = S3BucketType.Data,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await awsS3Client.DeleteAllByPrefixAsync(prefix, bucketType, cancellationToken);
+        
+        if (result.IsErr)
+            return result;
+        
+        foreach (var objectKey in result.AsOk!)
+        {
+            await InvalidateCacheForPathAsync(objectKey);
+        }
         return result;
     }
 
