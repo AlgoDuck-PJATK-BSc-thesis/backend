@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
@@ -24,6 +25,7 @@ public class CreateProblemRepository(
     public async Task<Result<Guid, ErrorObject<string>>> CreateProblemAsync(
         CreateProblemDto problemDto, CancellationToken cancellationToken = default)
     {
+        Console.WriteLine(JsonSerializer.Serialize(problemDto));
         List<TestCaseS3Partial> partialTestCasesS3 = [];
         List<TestCase> partialTestCasesRdb = [];
 
@@ -52,10 +54,10 @@ public class CreateProblemRepository(
         var problem = new Models.Problem
         {
             ProblemTitle = problemDto.ProblemTitle,
-            Description = problemDto.ProblemDescription,
             CreatedAt = DateTime.UtcNow,
             DifficultyId = problemDto.DifficultyId,
             TestCases = partialTestCasesRdb,
+            CreatedByUserId = problemDto.CreatingUserId,
             CategoryId = problemDto.CategoryId,
             Tags = problemDto.Tags.Select(t => new Tag
             {
@@ -79,7 +81,7 @@ public class CreateProblemRepository(
             {
                 ProblemId = problem.ProblemId,
                 CountryCode = SupportedLanguage.En,
-                Description = problem.Description,
+                Description = problemDto.ProblemDescription,
                 Title = problemDto.ProblemTitle
             }, cancellationToken);
 

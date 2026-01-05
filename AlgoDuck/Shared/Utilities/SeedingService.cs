@@ -16,15 +16,15 @@ public class DataSeedingService(
 {
     public async Task SeedDataAsync()
     {
+        await SeedRolesAsync();
+        await SeedSeededUsersAsync();
         await SeedRarities();
         await SeedCategories();
         await SeedDifficulties();
         await SeedItems();
         await SeedProblems();
         await SeedTestCases();
-        await SeedRolesAsync();
         await SeedEditorThemes();
-        await SeedSeededUsersAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -58,16 +58,18 @@ public class DataSeedingService(
             username: "admin",
             email: "algoduckpl@gmail.com",
             password: adminPassword,
-            role: "admin");
+            role: "admin",
+            userId: Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"));
 
         await EnsureUserWithRoleAsync(
             username: "algoduck",
             email: "algoduckpl+user@gmail.com",
             password: userPassword,
-            role: "user");
+            role: "user",
+            userId: Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab"));
     }
     
-    private async Task EnsureUserWithRoleAsync(string username, string email, string password, string role)
+    private async Task EnsureUserWithRoleAsync(string username, string email, string password, string role, Guid? userId = null)
     {
         var user = await userManager.FindByNameAsync(username);
 
@@ -75,7 +77,7 @@ public class DataSeedingService(
         {
             user = new ApplicationUser
             {
-                Id = Guid.NewGuid(),
+                Id = userId ?? Guid.NewGuid(),
                 UserName = username,
                 Email = email,
                 EmailConfirmed = true,
@@ -281,7 +283,7 @@ public class DataSeedingService(
                         new TestCaseS3Partial
                         {
                             TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
-                            Expected = "new int[]{2, 4}",
+                            Expected = "new int[]{2, 3}",
                             Call = ["twoSumTest4_nums", "10"],
                             Setup = "int[] twoSumTest4_nums = new int[] {1, 5, 3, 7, 9, 2};"
                         }
@@ -293,7 +295,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{testCaseS3Partial.ProblemId}/test-cases.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         testCaseS3Partial);
@@ -377,7 +379,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("052b219a-ec0b-430a-a7db-95c5db35dfce"), 
@@ -385,7 +389,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("03a4dced-f802-4cc5-b239-e0d4c3be9dcd"), 
@@ -393,7 +399,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") , 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("182769e6-ff23-4584-a6fd-83d1c71725e8"), 
@@ -401,7 +409,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") , 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("3cf1b82e-704a-4f2b-8bc0-af22b41dec14"), 
@@ -409,7 +419,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("56ef2a57-707e-43d4-b62e-0c69ed4e8c65"), 
@@ -417,7 +429,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("6239a5ed-45e7-4316-80c2-b3b4c7eeab5f"), 
@@ -425,7 +439,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") , 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("660d65f2-6b1f-49c0-ac05-cfc0af7dc080"), 
@@ -433,7 +449,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") , 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("6e231d75-91ff-4112-8d25-7f289b6e6f04"), 
@@ -441,7 +459,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") , 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("833e927f-55cf-43e1-9653-647819e09bf2"), 
@@ -449,7 +469,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("88ae6422-cb6f-4245-8367-cf46e381d886"), 
@@ -457,7 +479,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("8e32fcf2-a192-4cd1-ad41-2e4362b6007d"), 
@@ -465,7 +489,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
                 new DuckItem { 
                     ItemId = Guid.Parse("be99f3f8-412a-4503-99d6-52fee988ad88"), 
@@ -473,7 +499,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 500, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
 
                 new DuckItem { 
@@ -482,7 +510,9 @@ public class DataSeedingService(
                     Description = "description", 
                     Price = 0, 
                     Purchasable = true, 
-                    RarityId = Guid.Parse("016a1fce-3d78-46cd-8b25-b0f911c55644") 
+                    RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"), 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow, 
                 },
                 
                 
@@ -494,7 +524,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 4,
-                    Height = 3,
+                    Height = 3, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("64058fa8-9ae3-435b-bbf8-c2005cad364e"), 
@@ -504,7 +536,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 3,
-                    Height = 5,
+                    Height = 5, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("7d819d69-51fb-4528-92ff-26ead5cf825b"), 
@@ -514,7 +548,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 2,
-                    Height = 4,
+                    Height = 4, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("ee46cf1b-0609-49c6-9619-c6b2a6199e44"), 
@@ -524,7 +560,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 2,
-                    Height = 2,
+                    Height = 2, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("2cee9ac1-78f5-45ad-ae7e-f00610c9911e"), 
@@ -534,7 +572,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 5,
-                    Height = 3,
+                    Height = 3, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("069f8ee0-96bd-4bed-bbcf-e7f76061657e"), 
@@ -544,7 +584,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 4,
-                    Height = 3,
+                    Height = 3, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("561c0c66-114d-4cb5-b9ba-735ff20ba9dd"), 
@@ -554,7 +596,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 1,
-                    Height = 1,
+                    Height = 1, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("0557da00-35bc-47ff-a431-818ffa3ac4ef"), 
@@ -564,7 +608,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 1,
-                    Height = 1,
+                    Height = 1, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 },
                 new PlantItem { 
                     ItemId = Guid.Parse("f56993d3-2052-4ef4-a48c-392025f10721"), 
@@ -574,7 +620,9 @@ public class DataSeedingService(
                     Purchasable = true, 
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     Width = 6,
-                    Height = 4,
+                    Height = 4, 
+                    CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
+                    CreatedAt = DateTime.UtcNow,
                 }
             };
 
@@ -617,18 +665,18 @@ public class DataSeedingService(
                 {
                     ProblemId = Guid.Parse("3152daea-43cd-426b-be3b-a7e6d0e376e1"),
                     ProblemTitle = "Linked List Cycle Detection",
-                    Description = "Implement a method to detect cycles in a linked list using the tortoise and hare algorithm. The solution should include a Node class with next and previous references, and a method that checks for cycles starting from a given node.",
                     CreatedAt = DateTime.UtcNow,
                     CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
+                    CreatedByUserId = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
                     DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"),
                 },
                 new Problem
                 {
                     ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
                     ProblemTitle = "Two Sum",
-                    Description = "Given an array of integers and a target value, return the indices of two numbers that add up to the target. Each input has exactly one solution, and you cannot use the same element twice.",
                     CreatedAt = DateTime.UtcNow,
                     CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"),
+                    CreatedByUserId = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
                     DifficultyId = Guid.Parse("07c41ca9-9077-471a-ae30-3ff8f0b40c9a"), 
                 }
             };
@@ -653,7 +701,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{template.ProblemId}/template.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         template);
@@ -684,7 +732,7 @@ public class DataSeedingService(
             {
                 var objectPath = $"problems/{info.ProblemId}/infos/{info.CountryCode.GetDisplayName().ToLowerInvariant()}.xml";
                 var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
-                if (objectExistsResult is { IsOk: true, AsT0: true })
+                if (objectExistsResult is { IsOk: true, AsOk: false })
                 {
                     await s3Client.PostXmlObjectAsync(objectPath,
                         info);

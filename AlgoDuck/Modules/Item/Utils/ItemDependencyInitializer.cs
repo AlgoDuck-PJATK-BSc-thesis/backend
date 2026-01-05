@@ -1,11 +1,15 @@
 using AlgoDuck.Modules.Item.Commands.CreateItem;
+using AlgoDuck.Modules.Item.Commands.DeleteItem;
 using AlgoDuck.Modules.Item.Commands.DropItemAsActive;
 using AlgoDuck.Modules.Item.Commands.EmplacePlantOnHomePage;
 using AlgoDuck.Modules.Item.Commands.PurchaseItem;
 using AlgoDuck.Modules.Item.Commands.SelectItemAsActive;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
+using AlgoDuck.Modules.Item.Queries.GetAllItemPaged;
+using AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
+using AlgoDuck.Modules.Item.Queries.GetFullItemDetails;
 using AlgoDuck.Modules.Item.Queries.GetOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
@@ -45,9 +49,23 @@ internal static class ItemDependencyInitializer
         builder.Services.AddScoped<IEmplacePlantService, EmplacePlantService>();
         builder.Services.AddScoped<IEmplacePlantRepository, EmplacePlantRepository>();
         
+        builder.Services.AddScoped<IAllItemsPagedRepository, AllItemsPagedRepository>();
+        builder.Services.AddScoped<IAllItemsPagedService, AllItemsPagedService>();
+
+        builder.Services.AddScoped<IFullItemDetailsService, FullItemDetailsService>();
+        builder.Services.AddScoped<IFullItemDetailsRepository, FullItemDetailsRepository>();
+
+        builder.Services.AddScoped<IDeleteItemService, DeleteItemService>();
+        builder.Services.AddScoped<IDeleteItemRepository, DeleteItemRepository>();
+        
+        builder.Services.AddScoped<IAllItemRaritiesRepository, AllItemRaritiesRepository>();
+        builder.Services.AddScoped<IAllItemRaritiesService, AllItemRaritiesService>();
         
         builder.Services.Configure<AwardsConfig>(
             builder.Configuration.GetSection("Awards"));
-
+        
+        builder.Services.Configure<SpriteLegalFileNamesConfiguration>(
+            builder.Configuration.GetSection("SpriteLegalFileNames"));
+        
     }
 }

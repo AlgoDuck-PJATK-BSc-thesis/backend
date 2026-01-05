@@ -9,6 +9,7 @@ using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
+using AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
@@ -16,6 +17,7 @@ using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
 using AlgoDuck.Modules.Problem.Queries.GetCustomUserLayouts;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
+using AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.S3;
@@ -125,7 +127,12 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<ICustomLayoutDetailsService, CustomLayoutDetailsService>();
         builder.Services.AddScoped<ICustomLayoutDetailsRepository, CustomLayoutDetailsRepository>();
         
-        
+        builder.Services.AddScoped<IUserSolutionRepository, UserSolutionRepository>();
+        builder.Services.AddScoped<IUserSolutionService, UserSolutionService>();
+
+        builder.Services.AddScoped<IAllDifficultiesRepository, AllDifficultiesRepository>();
+        builder.Services.AddScoped<IAllDifficultiesService, AllDifficultiesService>();
+
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();

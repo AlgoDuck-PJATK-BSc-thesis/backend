@@ -23,7 +23,7 @@ public class AllDucksController(
         if (userIdRes.IsErr)
             return userIdRes.ToActionResult();
 
-        var res = await allDucksService.GetAllDucksPagedAsync(new PagedRequestWAttribution()
+        var res = await allDucksService.GetAllDucksPagedAsync(new PagedRequestWithAttribution()
         {
             PageSize = pageSize,
             CurrPage = currentPage,
@@ -35,11 +35,20 @@ public class AllDucksController(
 }
 
 
-public class PagedRequestWAttribution
+public class PagedRequestWithAttribution
 {
     public required int CurrPage { get; set; }
     public required int PageSize { get; set; }
     public required Guid UserId { get; set; }
+}
+
+
+public class PagedRequestWithAttribution<TData>
+{
+    public required int CurrPage { get; set; }
+    public required int PageSize { get; set; }
+    public required Guid UserId { get; set; }
+    public required TData FurtherData { get; set; }
 }
 
 public class DuckItemDto

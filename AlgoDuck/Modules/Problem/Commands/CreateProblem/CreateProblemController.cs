@@ -22,14 +22,12 @@ public class CreateProblemController(
     public async Task<IActionResult> CreateProblemAsync([FromBody] CreateProblemDto createProblemDto,
         CancellationToken cancellation)
     {
-        var userId = User.GetUserId();
-        
-        if (userId.IsErr)
-            return userId.ToActionResult();
-        
-        createProblemDto.CreatingUserId = userId.AsT0;
-        var result = await createProblemService.CreateProblemAsync(createProblemDto, cancellation);
-        return result.ToActionResult();
+        return await User.GetUserId()
+            .BindAsync(async userId =>
+            {
+                createProblemDto.CreatingUserId = userId;
+                return await createProblemService.CreateProblemAsync(createProblemDto, cancellation);
+            }).ToActionResultAsync();
     }
 }
 
@@ -78,6 +76,7 @@ public class TestCaseDto
     public List<FunctionParam> CallArgs { get; set; } = [];
     public required FunctionParam Expected { get; set; }
     public required bool IsPublic { get; set; }
+    public required bool OrderMatters { get; set; }
     internal string? ResolvedFunctionCall { get; set; }
 }
 

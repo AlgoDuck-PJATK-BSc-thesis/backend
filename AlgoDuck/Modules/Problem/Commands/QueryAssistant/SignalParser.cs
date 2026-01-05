@@ -93,7 +93,16 @@ public class SignalParser
                     case '<':
                         if (_state == ParserState.InContent)
                         {
-                            _writeBuffer.Clear();
+                            if (_valueAccum.Length > 0)
+                            {
+                                yield return new ChatCompletionStreamedDto
+                                {
+                                    Message = _valueAccum.ToString(),
+                                    Type = _contentType,
+                                };
+                                _valueAccum.Clear();
+                            }
+                        
                             _writeBufferIndex = 0;
                             SwapBuffers();
                             _state = ParserState.InTag;
@@ -115,10 +124,8 @@ public class SignalParser
                         break;
                 }
             }
-            if (_valueAccum.Length == 0)
-            {
-                continue;
-            }
+
+            if (_valueAccum.Length <= 0) continue;
             
             yield return new ChatCompletionStreamedDto
             {
@@ -134,5 +141,5 @@ public class SignalParser
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ContentType
 {
-    Name, Code, Text
+    Name, Code, Text, Id
 }

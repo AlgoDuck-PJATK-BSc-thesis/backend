@@ -50,7 +50,7 @@ public class SubmitRepository(
 
         var objectPath = $"users/{solution.UserId}/problems/autosave/{solution.ProblemId}.xml";
 
-        await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken);
+        await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
         
         return await PostUserSolutionCodeToS3Async(new UserSolutionPartialS3
         {
@@ -122,7 +122,7 @@ public class SubmitRepository(
     private async Task<Result<bool, ErrorObject<string>>> DropLastCheckpointAsync(AutoSaveDropDto dropDto, CancellationToken cancellationToken = default)
     {
         var objectPath = $"users/{dropDto.UserId}/problems/autosave/{dropDto.ProblemId}.xml";
-        return await awsS3Client.DeleteDocumentAsync(objectPath,  cancellationToken);
+        return await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
     }
 }
 public class SubmissionInsertDto

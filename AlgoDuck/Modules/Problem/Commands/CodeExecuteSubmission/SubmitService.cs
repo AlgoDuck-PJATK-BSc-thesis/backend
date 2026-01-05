@@ -106,7 +106,6 @@ internal sealed class SubmitService(
         
         helper.InsertTestCases(testCases.AsT0.ToList(), userSolutionData.MainClassName);
         helper.InsertTiming();
-        helper.InsertGsonImport();
 
         Console.WriteLine(userSolutionData.FileContents);
 

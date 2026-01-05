@@ -479,6 +479,13 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("item_id");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)")
@@ -509,6 +516,8 @@ namespace AlgoDuck.Migrations
 
                     b.HasKey("ItemId")
                         .HasName("shop_pk");
+
+                    b.HasIndex("CreatedById");
 
                     b.HasIndex("RarityId");
 
@@ -612,11 +621,8 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("description");
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("DifficultyId")
                         .HasColumnType("uuid")
@@ -635,6 +641,8 @@ namespace AlgoDuck.Migrations
                         .HasName("problem_pk");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("DifficultyId");
 
@@ -1374,12 +1382,19 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.Item", b =>
                 {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedBy")
+                        .WithMany("CreatedItems")
+                        .HasForeignKey("CreatedById")
+                        .IsRequired();
+
                     b.HasOne("AlgoDuck.Models.Rarity", "Rarity")
                         .WithMany("Items")
                         .HasForeignKey("RarityId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("item_rarity_ref");
+
+                    b.Navigation("CreatedBy");
 
                     b.Navigation("Rarity");
                 });
@@ -1435,6 +1450,12 @@ namespace AlgoDuck.Migrations
                         .IsRequired()
                         .HasConstraintName("problem_category_ref");
 
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("AlgoDuck.Models.Difficulty", "Difficulty")
                         .WithMany("Problems")
                         .HasForeignKey("DifficultyId")
@@ -1443,6 +1464,8 @@ namespace AlgoDuck.Migrations
                         .HasConstraintName("problem_difficulty_ref");
 
                     b.Navigation("Category");
+
+                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Difficulty");
                 });
@@ -1698,6 +1721,8 @@ namespace AlgoDuck.Migrations
                     b.Navigation("AssistantChats");
 
                     b.Navigation("CodeExecutionStatistics");
+
+                    b.Navigation("CreatedItems");
 
                     b.Navigation("Messages");
 

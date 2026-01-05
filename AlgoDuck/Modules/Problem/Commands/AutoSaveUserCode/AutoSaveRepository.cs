@@ -84,7 +84,7 @@ public class AutoSaveRepository(
         
         var objectPath = $"users/{deleteAutoSaveDto.UserId}/problems/autosave/{deleteAutoSaveDto.ProblemId}.xml";
         
-        var result = await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken);
+        var result = await awsS3Client.DeleteDocumentAsync(objectPath,cancellationToken: cancellationToken);
         if (result.IsErr)
         {
             return result;

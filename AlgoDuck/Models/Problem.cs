@@ -10,10 +10,9 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
     public Guid ProblemId { get; set; } = Guid.NewGuid();
 
     public string ProblemTitle { get; set; } = null!;
-
-    public string Description { get; set; } = null!;
-
     public DateTime CreatedAt { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public ApplicationUser? CreatedByUser { get; set; }
 
     public Guid CategoryId { get; set; }
 
@@ -43,13 +42,13 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
                 .ValueGeneratedNever()
                 .HasColumnName("problem_id");
         builder.Property(e => e.CategoryId).HasColumnName("category_id");
+        
         builder.Property(e => e.CreatedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
-        builder.Property(e => e.Description)
-                .HasMaxLength(1024)
-                .HasColumnName("description");
-        builder.Property(e => e.DifficultyId).HasColumnName("difficulty_id");
+        
+        builder.Property(e => e.DifficultyId)
+            .HasColumnName("difficulty_id");
         builder.Property(e => e.ProblemTitle)
                 .HasMaxLength(256)
                 .HasColumnName("problem_title");

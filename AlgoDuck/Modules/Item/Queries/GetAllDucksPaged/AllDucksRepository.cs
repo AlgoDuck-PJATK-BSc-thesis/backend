@@ -7,14 +7,14 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 
 public interface IAllDucksRepository
 {
-    public Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWAttribution pagedRequest, CancellationToken cancellationToken = default);
+    public Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default);
 }
 
 public class AllDucksRepository(
     ApplicationQueryDbContext dbContext
     ) : IAllDucksRepository
 {
-    public async Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWAttribution pagedRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)
     {
         var totalItems = await dbContext.DuckItems.CountAsync(cancellationToken);
 

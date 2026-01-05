@@ -1,5 +1,5 @@
-using AlgoDuck.Shared.Exceptions;
-using AlgoDuck.Shared.Extensions;
+using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -15,24 +15,37 @@ public sealed class AssistantHub(
     IAssistantService assistantService
     ) : Hub<IAssistantClient>
 {
-    public async IAsyncEnumerable<ChatCompletionStreamedDto> GetAssistance(AssistantRequestDto assistantRequest)
+    public async IAsyncEnumerable<IApiResponse> GetAssistance(AssistantRequestDto assistantRequest)
     {
-        
-        assistantRequest.UserId = Context.User?.GetUserId() 
-                                  ?? throw new NotFoundException("User not found");
-        
+        var userId = Context.User?.GetUserId();
+        if (userId == null || userId.IsErr)
+        {
+            yield return new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = userId!.AsErr!.Body,
+            };
+            yield break;
+        }
+
+        Console.WriteLine(assistantRequest.Query);
+        assistantRequest.UserId = userId.AsOk;
+
         await foreach (var chatCompletionPartial in  assistantService.GetAssistanceAsync(assistantRequest))
         {
             if (chatCompletionPartial.IsErr)
             {
-                yield return new ChatCompletionStreamedDto()
+                yield return new StandardApiResponse
                 {
-                    Message = chatCompletionPartial.AsT1.Body,
-                    Type = ContentType.Text
+                    Status = Status.Error,
+                    Message = chatCompletionPartial.AsErr!.Body,
                 };
                 yield break;
             }
-            yield return chatCompletionPartial.AsT0;
+            yield return new StandardApiResponse<ChatCompletionStreamedDto>
+            {
+                Body = chatCompletionPartial.AsOk
+            };
         }
         
         await Clients.Caller.StreamCompleted();

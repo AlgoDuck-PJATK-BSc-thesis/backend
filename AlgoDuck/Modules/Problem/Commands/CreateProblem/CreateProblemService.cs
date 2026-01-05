@@ -3,6 +3,7 @@ using System.Text.Json;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.Problem.Shared.Types;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstAnalyzer;
 using AlgoDuck.Shared.Http;
@@ -59,10 +60,18 @@ public class CreateProblemService(
             FileContents = new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(problemDto.TemplateB64)))
         };
 
-        var analyzer = new AnalyzerSimple(solutionData.FileContents);
-
-        var analysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
-        solutionData.IngestCodeAnalysisResult(analysisResult);
+        AnalyzerSimple analyzer;
+        CodeAnalysisResult analysisResult;
+        try
+        {
+            analyzer = new AnalyzerSimple(solutionData.FileContents);
+            analysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
+            solutionData.IngestCodeAnalysisResult(analysisResult);
+        }
+        catch (JavaSyntaxException ex)
+        {
+            return Result<CreateUnverifiedProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.ValidationError("cannot parse template"));
+        }
         
         var helper = new ExecutorFileOperationHelper
         {
@@ -83,7 +92,6 @@ public class CreateProblemService(
         var arranges = problemDto.TestCases.Select(tc =>
         {
             var tcArrange = Encoding.UTF8.GetString(Convert.FromBase64String(tc.ArrangeB64));
-            Console.WriteLine(tcArrange);
             var tcAnalyzer = new AnalyzerSimple(new StringBuilder(tcArrange));
             var tcAnalysisResult = tcAnalyzer.AnalyzeUserCode(ExecutionStyle.Execution);
             var mainLen = tcAnalysisResult.MainMethodIndices == null
@@ -106,7 +114,6 @@ public class CreateProblemService(
             Setup = arranges[i]
         }).ToList();
         
-        helper.InsertGsonImport();
         helper.InsertTestCases(problemDto.TestCaseJoins, solutionData.MainClassName);
 
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
@@ -128,25 +135,21 @@ public class CreateProblemService(
             body: body, 
             cancellationToken: cancellationToken);
         
-        var addResult = await createProblemRepository.CreateProblemAsync(problemDto, cancellationToken);
-
-
-        return await addResult.Match<Task<Result<CreateUnverifiedProblemDto, ErrorObject<string>>>>(
-            async ok =>
+        return await createProblemRepository.CreateProblemAsync(problemDto, cancellationToken).BindAsync(async createRes =>
             {
                 var jobData = JsonSerializer.Serialize(new JobData
                 {
                     CommissioningUserId = problemDto.CreatingUserId,
-                    ProblemId = ok
+                    ProblemId = createRes
                 });
                 await redis.StringSetAsync(new RedisKey(solutionData.ExecutionId.ToString()), new RedisValue(jobData), TimeSpan.FromMinutes(5));
                 return Result<CreateUnverifiedProblemDto, ErrorObject<string>>.Ok(new CreateUnverifiedProblemDto
                 {
                     JobId = solutionData.ExecutionId,
-                    ProblemId = ok
+                    ProblemId = createRes
                 });
-            }, 
-            err => Task.FromResult(Result<CreateUnverifiedProblemDto, ErrorObject<string>>.Err(err)));
+            });
+
     }
 }
 

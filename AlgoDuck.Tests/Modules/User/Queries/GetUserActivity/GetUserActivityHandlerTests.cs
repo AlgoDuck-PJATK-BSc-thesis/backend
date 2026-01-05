@@ -61,7 +61,6 @@ public sealed class GetUserActivityHandlerTests
         {
             ProblemId = problemId,
             ProblemTitle = "Two Sum",
-            Description = "d",
             CreatedAt = DateTime.UtcNow,
             CategoryId = Guid.NewGuid(),
             DifficultyId = Guid.NewGuid(),
