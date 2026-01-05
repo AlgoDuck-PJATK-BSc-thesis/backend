@@ -42,6 +42,15 @@ public class PagedRequestWithAttribution
     public required Guid UserId { get; set; }
 }
 
+
+public class PagedRequestWithAttribution<TData>
+{
+    public required int CurrPage { get; set; }
+    public required int PageSize { get; set; }
+    public required Guid UserId { get; set; }
+    public required TData FurtherData { get; set; }
+}
+
 public class DuckItemDto
 {
     public required Guid ItemId { get; set; }

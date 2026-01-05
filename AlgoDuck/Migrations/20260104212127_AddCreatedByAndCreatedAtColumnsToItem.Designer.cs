@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260104212127_AddCreatedByAndCreatedAtColumnsToItem")]
+    partial class AddCreatedByAndCreatedAtColumnsToItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -621,8 +624,11 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("description");
 
                     b.Property<Guid>("DifficultyId")
                         .HasColumnType("uuid")
@@ -641,8 +647,6 @@ namespace AlgoDuck.Migrations
                         .HasName("problem_pk");
 
                     b.HasIndex("CategoryId");
-
-                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("DifficultyId");
 
@@ -1450,12 +1454,6 @@ namespace AlgoDuck.Migrations
                         .IsRequired()
                         .HasConstraintName("problem_category_ref");
 
-                    b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("AlgoDuck.Models.Difficulty", "Difficulty")
                         .WithMany("Problems")
                         .HasForeignKey("DifficultyId")
@@ -1464,8 +1462,6 @@ namespace AlgoDuck.Migrations
                         .HasConstraintName("problem_difficulty_ref");
 
                     b.Navigation("Category");
-
-                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Difficulty");
                 });

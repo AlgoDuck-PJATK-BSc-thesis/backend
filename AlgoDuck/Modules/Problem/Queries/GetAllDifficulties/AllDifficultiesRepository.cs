@@ -16,10 +16,13 @@ public class AllDifficultiesRepository(
 {
     public async Task<Result<ICollection<DifficultyDto>, ErrorObject<string>>> GetAllDifficultiesAsync(CancellationToken cancellationToken = default)
     {
-        return Result<ICollection<DifficultyDto>, ErrorObject<string>>.Ok(await dbContext.Difficulties.Select(d => new DifficultyDto()
-        {
-            Name = d.DifficultyName,
-            Id = d.DifficultyId
-        }).ToListAsync(cancellationToken: cancellationToken));
+        return Result<ICollection<DifficultyDto>, ErrorObject<string>>.Ok(
+            await dbContext.Difficulties
+                .OrderBy(d => d.RewardScaler)
+                .Select(d => new DifficultyDto
+                {
+                    Name = d.DifficultyName,
+                    Id = d.DifficultyId
+                }).ToListAsync(cancellationToken: cancellationToken));
     }
 }

@@ -149,6 +149,8 @@ public static class ResultToolingExtensions
             err => Task.FromResult(Result<TNew, TE>.Err(err))
         );
     }
+    
+    
 
     public static async Task<Result<TNew, TE>> MapAsync<T, TNew, TE>(
         this Task<Result<T, TE>> resultTask,

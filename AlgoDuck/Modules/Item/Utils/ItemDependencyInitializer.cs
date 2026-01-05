@@ -5,7 +5,7 @@ using AlgoDuck.Modules.Item.Commands.EmplacePlantOnHomePage;
 using AlgoDuck.Modules.Item.Commands.PurchaseItem;
 using AlgoDuck.Modules.Item.Commands.SelectItemAsActive;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetAllItemPages;
+using AlgoDuck.Modules.Item.Queries.GetAllItemPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;

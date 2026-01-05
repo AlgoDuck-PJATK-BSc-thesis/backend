@@ -11,9 +11,9 @@ public abstract class Item : IEntityTypeConfiguration<Item>
     public int Price { get; set; }
     public bool Purchasable { get; set; }
     public Guid RarityId { get; set; }
-    // public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    // public ApplicationUser? CreatedBy { get; set; }
-    // public Guid CreatedById { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ApplicationUser? CreatedBy { get; set; }
+    public Guid CreatedById { get; set; }
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
     public virtual ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
     public virtual Rarity Rarity { get; set; } = null!;
@@ -39,23 +39,23 @@ public abstract class Item : IEntityTypeConfiguration<Item>
             .HasMaxLength(256)
             .HasColumnName("name");
 
-        // builder.Property(e => e.CreatedAt)
-        //     .HasColumnName("created_at")
-        //     .HasColumnType("timestamp with time zone");
-        //
-        // builder.Property(e => e.Price)
-        //     .HasColumnName("price");
-        //
-        // builder.Property(e => e.Purchasable)
-        //     .HasColumnName("purchasable");
-        //
-        // builder.Property(e => e.RarityId)
-        //     .HasColumnName("rarity_id");
+         builder.Property(e => e.CreatedAt)
+             .HasColumnName("created_at")
+             .HasColumnType("timestamp with time zone");
+        
+         builder.Property(e => e.Price)
+             .HasColumnName("price");
+        
+         builder.Property(e => e.Purchasable)
+             .HasColumnName("purchasable");
+        
+         builder.Property(e => e.RarityId)
+             .HasColumnName("rarity_id");
 
-        // builder.HasOne(d => d.CreatedBy)
-        //     .WithMany(c => c.CreatedItems)
-        //     .HasForeignKey(d => d.CreatedById)
-        //     .OnDelete(DeleteBehavior.ClientSetNull);
+         builder.HasOne(d => d.CreatedBy)
+             .WithMany(c => c.CreatedItems)
+             .HasForeignKey(d => d.CreatedById)
+             .OnDelete(DeleteBehavior.ClientSetNull);
 
         builder.HasOne(d => d.Rarity).WithMany(p => p.Items)
             .HasForeignKey(d => d.RarityId)

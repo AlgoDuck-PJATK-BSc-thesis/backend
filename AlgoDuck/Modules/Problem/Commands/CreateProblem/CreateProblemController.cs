@@ -22,14 +22,12 @@ public class CreateProblemController(
     public async Task<IActionResult> CreateProblemAsync([FromBody] CreateProblemDto createProblemDto,
         CancellationToken cancellation)
     {
-        var userId = User.GetUserId();
-        
-        if (userId.IsErr)
-            return userId.ToActionResult();
-        
-        createProblemDto.CreatingUserId = userId.AsT0;
-        var result = await createProblemService.CreateProblemAsync(createProblemDto, cancellation);
-        return result.ToActionResult();
+        return await User.GetUserId()
+            .BindAsync(async userId =>
+            {
+                createProblemDto.CreatingUserId = userId;
+                return await createProblemService.CreateProblemAsync(createProblemDto, cancellation);
+            }).ToActionResultAsync();
     }
 }
 
