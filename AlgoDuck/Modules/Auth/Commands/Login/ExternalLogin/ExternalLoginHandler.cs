@@ -2,6 +2,7 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Auth.Shared.Utils;
+using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 
@@ -12,15 +13,18 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IValidator<ExternalLoginDto> _validator;
+    private readonly IDefaultDuckService _defaultDuckService;
 
     public ExternalLoginHandler(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
-        IValidator<ExternalLoginDto> validator)
+        IValidator<ExternalLoginDto> validator,
+        IDefaultDuckService defaultDuckService)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _validator = validator;
+        _defaultDuckService = defaultDuckService;
     }
 
     public async Task<AuthResponse> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken)
@@ -106,6 +110,8 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
                 throw new Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
             }
         }
+
+        await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
 
         var existingByLogin = await _userManager.FindByLoginAsync(provider, dto.ExternalUserId);
         if (existingByLogin is not null && existingByLogin.Id != user.Id)

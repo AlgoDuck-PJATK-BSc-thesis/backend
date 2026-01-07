@@ -1,6 +1,6 @@
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 
-namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+namespace AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 
 public sealed class SendMessageResultDto
 {

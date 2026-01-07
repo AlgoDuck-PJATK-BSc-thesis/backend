@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace AlgoDuck.Modules.User.Commands.CreateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
 public static class UsernameGenerator
 {

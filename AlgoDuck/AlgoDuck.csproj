@@ -50,7 +50,6 @@
         <Folder Include="Modules\Auth\Commands\Session\" />
         <Folder Include="Modules\Auth\Commands\TwoFactor\" />
         <Folder Include="Modules\Auth\Queries\ApiKeys\" />
-        <Folder Include="Modules\Auth\Queries\Directory\" />
         <Folder Include="Modules\Auth\Queries\Identity\" />
         <Folder Include="Modules\Auth\Queries\Permissions\" />
         <Folder Include="Modules\Auth\Queries\Sessions\" />

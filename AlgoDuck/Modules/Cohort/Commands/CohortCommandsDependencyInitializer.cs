@@ -4,7 +4,6 @@ using AdminCreate = AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.CreateCohort;
 using AdminDelete = AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.DeleteCohort;
 using AdminUpdate = AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.UpdateCohort;
 using UserCreate = AlgoDuck.Modules.Cohort.Commands.User.Management.CreateCohort;
-using AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
 using AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 using AlgoDuck.Modules.Cohort.Commands.User.Chat.UploadMedia;
 using AlgoDuck.Modules.Cohort.Commands.User.Management.JoinCohort;

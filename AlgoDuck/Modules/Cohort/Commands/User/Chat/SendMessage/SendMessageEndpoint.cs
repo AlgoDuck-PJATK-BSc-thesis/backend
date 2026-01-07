@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+namespace AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 
 [ApiController]
 [Route("api/cohorts/{cohortId:guid}/chat/messages")]

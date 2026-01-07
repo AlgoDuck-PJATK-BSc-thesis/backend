@@ -1,5 +1,4 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Utils;

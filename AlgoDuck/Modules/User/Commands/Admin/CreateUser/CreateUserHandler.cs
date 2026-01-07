@@ -1,18 +1,24 @@
 using AlgoDuck.Models;
+using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 
-namespace AlgoDuck.Modules.User.Commands.CreateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
 public sealed class CreateUserHandler : ICreateUserHandler
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IValidator<CreateUserDto> _validator;
+    private readonly IDefaultDuckService _defaultDuckService;
 
-    public CreateUserHandler(UserManager<ApplicationUser> userManager, IValidator<CreateUserDto> validator)
+    public CreateUserHandler(
+        UserManager<ApplicationUser> userManager,
+        IValidator<CreateUserDto> validator,
+        IDefaultDuckService defaultDuckService)
     {
         _userManager = userManager;
         _validator = validator;
+        _defaultDuckService = defaultDuckService;
     }
 
     public async Task<CreateUserResultDto> HandleAsync(CreateUserDto dto, CancellationToken cancellationToken)
@@ -53,6 +59,11 @@ public sealed class CreateUserHandler : ICreateUserHandler
         {
             var msg = addRole.Errors.FirstOrDefault()?.Description ?? "Failed to assign role.";
             throw new ValidationException(msg);
+        }
+
+        if (roleToAssign != "admin")
+        {
+            await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
         }
 
         return new CreateUserResultDto

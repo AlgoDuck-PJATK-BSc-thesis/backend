@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.User.Commands.DeleteUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.DeleteUser;
 
 [ApiController]
 [Route("api/admin/users")]

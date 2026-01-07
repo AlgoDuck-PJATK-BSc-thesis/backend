@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.User.Commands.CreateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
 public sealed class CreateUserDto
 {

@@ -4,7 +4,7 @@ using AlgoDuck.Modules.User.Shared.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.User.Commands.DeleteUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.DeleteUser;
 
 public sealed class DeleteUserHandler : IDeleteUserHandler
 {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.User.Commands.CreateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
 [ApiController]
 [Route("api/admin/users")]
