@@ -136,7 +136,6 @@ app.UseStatusCodePages(async statusContext =>
     {
         Status = Status.Error,
         Message = message,
-        Body = null
     });
 });
 

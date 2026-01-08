@@ -189,17 +189,7 @@ public sealed class StandardApiResponseResultFilter : IAsyncResultFilter
 
     private static bool IsAlreadyStandardApiResponse(object? value)
     {
-        if (value is null) return false;
-
-        var t = value.GetType();
-        if (t == typeof(StandardApiResponse)) return true;
-
-        if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StandardApiResponse<>))
-        {
-            return true;
-        }
-
-        return false;
+        return value is IApiResponse;
     }
 
     private static string ExtractMessage(object? value, int statusCode)

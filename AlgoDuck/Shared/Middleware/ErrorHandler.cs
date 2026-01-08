@@ -74,7 +74,6 @@ public class ErrorHandler
             {
                 Status = Status.Error,
                 Message = message,
-                Body = body
             });
         }
     }

@@ -6,18 +6,19 @@ using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 namespace AlgoDuck.Shared.Utilities.DependencyInitializers;
 
-
-// Use sparingly
 internal static class GeneralDependencyInitializer
 {
     internal static void Initialize(WebApplicationBuilder builder)
     {
         builder.Services.AddHttpContextAccessor();
         builder.Configuration.AddEnvironmentVariables();
-        
-        var keysPath = builder.Environment.IsDevelopment()
+
+        var isDevLike = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+
+        var keysPath = isDevLike
             ? Path.Combine(builder.Environment.ContentRootPath, "keys")
             : "/var/app-keys";
+
         Directory.CreateDirectory(keysPath);
 
         builder.Services.AddDataProtection()
@@ -25,8 +26,7 @@ internal static class GeneralDependencyInitializer
             .SetApplicationName("AlgoDuck");
 
         builder.Services.AddMemoryCache();
-        
-        
+
         if (builder.Environment.IsDevelopment())
         {
             builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -68,8 +68,5 @@ internal static class GeneralDependencyInitializer
                 o.ExcludedHosts.Add("[::1]");
             });
         }
-
-        
-        // builder.Services.AddScoped<IExampleServiceAbstr, ExampleServiceImpl>();
     }
 }
