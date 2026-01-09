@@ -23,9 +23,6 @@ internal class StandardApiResponse : IApiResponse
 
     [JsonPropertyOrder(1)]
     public string Message { get; set; } = string.Empty;
-
-    [JsonPropertyOrder(2)]
-    public object? Body { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

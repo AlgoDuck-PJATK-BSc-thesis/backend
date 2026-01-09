@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.Cohort.Shared.Dtos;
+namespace AlgoDuck.Modules.Cohort.Shared.DTOs;
 
 public sealed class CohortItemDto
 {

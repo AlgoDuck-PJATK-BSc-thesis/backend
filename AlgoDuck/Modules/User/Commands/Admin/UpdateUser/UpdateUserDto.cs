@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.User.Commands.UpdateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 
 public sealed class UpdateUserDto
 {

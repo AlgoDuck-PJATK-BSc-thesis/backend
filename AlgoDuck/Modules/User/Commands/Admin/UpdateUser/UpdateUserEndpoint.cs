@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.User.Commands.UpdateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 
 [ApiController]
 [Route("api/admin/users/{userId:guid}")]

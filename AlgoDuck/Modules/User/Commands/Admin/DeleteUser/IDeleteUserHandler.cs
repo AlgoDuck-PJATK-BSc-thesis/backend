@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.User.Commands.DeleteUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.DeleteUser;
 
 public interface IDeleteUserHandler
 {

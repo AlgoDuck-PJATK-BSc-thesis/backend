@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.Cohort.Shared.Dtos;
+using AlgoDuck.Modules.Cohort.Shared.DTOs;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using FluentValidation;

@@ -1,5 +1,5 @@
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+using AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 using AlgoDuck.Modules.Cohort.Queries.User.Chat.GetCohortMessages;
 using AlgoDuck.Modules.User.Shared.DTOs;
 

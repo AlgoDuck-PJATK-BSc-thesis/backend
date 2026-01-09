@@ -244,7 +244,6 @@ public static class AuthDependencyInitializer
                         {
                             Status = Status.Error,
                             Message = msg,
-                            Body = null
                         });
                     },
                     OnForbidden = async context =>
@@ -261,7 +260,6 @@ public static class AuthDependencyInitializer
                         {
                             Status = Status.Error,
                             Message = "Forbidden.",
-                            Body = null
                         });
                     }
                 };

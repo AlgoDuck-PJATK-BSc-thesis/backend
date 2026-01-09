@@ -1583,6 +1583,7 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
                         .WithOne("UserConfig")
                         .HasForeignKey("AlgoDuck.Models.UserConfig", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("user_config_application_user");
 

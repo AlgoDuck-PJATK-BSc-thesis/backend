@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+using AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using Microsoft.AspNetCore.Authorization;

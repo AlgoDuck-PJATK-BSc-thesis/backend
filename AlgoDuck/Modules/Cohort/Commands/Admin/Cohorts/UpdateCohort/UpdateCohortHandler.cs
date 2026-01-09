@@ -1,5 +1,5 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Modules.Cohort.Shared.Dtos;
+using AlgoDuck.Modules.Cohort.Shared.DTOs;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;

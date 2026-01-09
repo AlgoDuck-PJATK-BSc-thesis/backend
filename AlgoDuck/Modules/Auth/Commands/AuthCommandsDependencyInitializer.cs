@@ -22,6 +22,8 @@ public static class AuthCommandsDependencyInitializer
 {
     public static IServiceCollection AddAuthCommands(this IServiceCollection services)
     {
+        services.AddScoped<AlgoDuck.Shared.Utilities.IDefaultDuckService, AlgoDuck.Shared.Utilities.DefaultDuckService>();
+
         services.AddScoped<IValidator<RegisterDto>, RegisterValidator>();
         services.AddScoped<IRegisterHandler, RegisterHandler>();
 

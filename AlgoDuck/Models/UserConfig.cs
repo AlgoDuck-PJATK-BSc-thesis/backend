@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class UserConfig : IEntityTypeConfiguration<UserConfig>
+public class UserConfig : IEntityTypeConfiguration<UserConfig>
 {
     public Guid UserId { get; set; }
 
@@ -16,6 +16,7 @@ public partial class UserConfig : IEntityTypeConfiguration<UserConfig>
     public bool EmailNotificationsEnabled { get; set; }
     
     public bool PushNotificationsEnabled { get; set; }
+    
 
     public virtual ICollection<EditorLayout> EditorLayouts { get; set; } = new List<EditorLayout>();
 
@@ -40,7 +41,7 @@ public partial class UserConfig : IEntityTypeConfiguration<UserConfig>
 
         builder.HasOne(d => d.User).WithOne(p => p.UserConfig)
             .HasForeignKey<UserConfig>(d => d.UserId)
-            .OnDelete(DeleteBehavior.ClientSetNull)
+            .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("user_config_application_user");
     }
 }

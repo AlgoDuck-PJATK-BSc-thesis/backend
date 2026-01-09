@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace AlgoDuck.Modules.User.Commands.UpdateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 
 public sealed class UpdateUserValidator : AbstractValidator<UpdateUserDto>
 {
