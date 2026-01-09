@@ -1,9 +1,11 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
+using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
 
-namespace AlgoDuck.Modules.Problem.Shared;
+namespace AlgoDuck.Modules.Problem.Shared.Repositories;
 
 public interface IExecutionStatisticsRepository
 {
@@ -21,12 +23,25 @@ public class ExecutionStatisticsRepository(
             return Result<bool, ErrorObject<string>>.Err(status.AsT1);
         try
         {
+            var codeExecutionId = Guid.NewGuid();
             await applicationCommandDbContext.CodeExecutionStatisticss.AddAsync(new CodeExecutionStatistics
             {
+                CodeExecutionId = codeExecutionId,
                 UserId = executionData.UserId,
                 ProblemId = executionData.ProblemId,
                 Result = status.AsT0,
-                TestCaseResult = executionData.Result
+                TestCaseResult = executionData.Result,
+                ExecutionType = executionData.ExecutionType,
+                ExecutionStartNs = executionData.ExecutionStartNs,
+                ExecutionEndNs = executionData.ExecutionEndNs,
+                JvmPeakMemKb = executionData.JvmMemPeakKb,
+                ExitCode = executionData.ExitCode,
+                TestingResults = executionData.TestingResults.Select(t => new TestingResult
+                {
+                    IsPassed = t.IsTestPassed,
+                    CodeExecutionId = codeExecutionId,
+                    TestCaseId = t.TestId
+                }).ToList()
             }, cancellationToken);
             await applicationCommandDbContext.SaveChangesAsync(cancellationToken);
         }
@@ -66,5 +81,10 @@ public class ExecutionDataDto
     public required Guid? ProblemId { get; set; }
     public required SubmitExecuteRequestRabbitStatus Status { get; set; }
     public required TestCaseResult Result { get; set; }
-    
+    public required JobType ExecutionType { get; set; }
+    public required long ExecutionStartNs { get; set; }
+    public required long ExecutionEndNs { get; set; }
+    public required long JvmMemPeakKb { get; set; }
+    public required int ExitCode { get; set; }
+    public ICollection<TestResultDto> TestingResults { get; set; } = [];
 }

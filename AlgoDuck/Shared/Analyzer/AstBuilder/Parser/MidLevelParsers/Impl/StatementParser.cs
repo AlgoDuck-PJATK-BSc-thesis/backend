@@ -1,5 +1,6 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Abstr;
@@ -46,7 +47,7 @@ public class StatementParser(List<Token> tokens, FilePosition filePosition, Symb
                 }
             };
         }
-        catch (Exception e)
+        catch (JavaSyntaxException e)
         {
             // ignored
         }

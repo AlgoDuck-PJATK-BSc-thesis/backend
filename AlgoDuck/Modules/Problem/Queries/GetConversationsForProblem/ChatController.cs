@@ -55,7 +55,8 @@ public class ChatRepository(
         return new ChatList
         {
             Chats = await dbContext.AssistantChats
-                .Where(c => c.ProblemId == request.ProblemId && c.UserId == request.UserId)
+                .Include(c => c.Messages)
+                .Where(c => c.ProblemId == request.ProblemId && c.UserId == request.UserId && c.Messages.Count > 0)
                 .Select(c => new ChatDetail
                 {
                     ChatName = c.Name,

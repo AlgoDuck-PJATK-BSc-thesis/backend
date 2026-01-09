@@ -1,3 +1,4 @@
+using System.Text;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Lexer.HelperLexers;
 
@@ -118,7 +119,7 @@ public class LexerSimple :
                     break;
             }
         }
-        
+
         return _tokens;
     }
 

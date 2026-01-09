@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Attributes;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +12,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace AlgoDuck.Modules.Item.Commands.CreateItem;
 
 [ApiController]
-[Route("/api/[controller]")]
+[Route("/api/admin/item")]
 [Authorize(Roles = "admin")]
 public class CreateItemController(
     ICreateItemService createItemService

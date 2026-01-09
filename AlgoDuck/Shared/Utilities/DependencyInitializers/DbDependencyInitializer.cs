@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Shared.S3;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -12,22 +13,10 @@ internal static class DbDependencyInitializer
                                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
 
         builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-            {
-                npgsql.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorCodesToAdd: null);
-            }));
+            options.UseNpgsql(connectionString));
 
         builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-            {
-                npgsql.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorCodesToAdd: null);
-            }));
+            options.UseNpgsql(connectionString));
 
         builder.Services.AddScoped<DataSeedingService>();
 
@@ -36,11 +25,18 @@ internal static class DbDependencyInitializer
             var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
             return ConnectionMultiplexer.Connect(configuration);
         });
+        
         builder.Services.AddSingleton<IDatabase>(sp =>
         {
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             return redis.GetDatabase();
         });
+        
+        
+        builder.Services.Configure<RedisCachePrefixes>(
+            builder.Configuration.GetSection("RedisCachePrefixes"));
+        
+        
         
     }
 }

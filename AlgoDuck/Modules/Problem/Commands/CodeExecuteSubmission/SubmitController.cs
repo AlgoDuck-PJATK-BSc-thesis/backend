@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +44,14 @@ public class ExecutionQueueJobData
     public required string UserCodeB64 { get; set; } 
     public required JobType JobType { get; set; }
     public List<SubmitExecuteResponse> CachedResponses { get; set; } = [];
+}
 
+public class ExecutionQueueJobDataPublic
+{
+    public required Guid JobId { get; set; }
+    public required Guid UserId { get; set; }
+    public Guid? ProblemId { get; set; }
+    public List<SubmitExecuteResponse> CachedResponses { get; set; } = [];
 }
 
 public enum JobType : byte

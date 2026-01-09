@@ -11,10 +11,11 @@ public partial class EditorTheme : IEntityTypeConfiguration<EditorTheme>
 
     public string ThemeName { get; set; } = null!;
 
-    public virtual ICollection<EditorLayout> EditorLayouts { get; set; } = new List<EditorLayout>();
+    public virtual ICollection<UserConfig> UserConfigs { get; set; } = new List<UserConfig>();
     public void Configure(EntityTypeBuilder<EditorTheme> builder)
     {
-        builder.HasKey(e => e.EditorThemeId).HasName("editor_theme_pk");
+        builder.HasKey(e => e.EditorThemeId)
+            .HasName("editor_theme_pk");
 
         builder.ToTable("editor_theme");
 

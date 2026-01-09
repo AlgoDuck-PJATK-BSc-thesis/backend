@@ -61,6 +61,7 @@ public abstract partial class BaseDbContext : IdentityDbContext<ApplicationUser,
     public virtual DbSet<AssistanceMessage> AssistanceMessages { get; set; }
     public virtual DbSet<UserSolutionSnapshot> UserSolutionSnapshots { get; set; }
     public virtual DbSet<CodeExecutionStatistics> CodeExecutionStatisticss { get; set; }
+    public virtual DbSet<OwnsLayout> OwnsLayouts { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

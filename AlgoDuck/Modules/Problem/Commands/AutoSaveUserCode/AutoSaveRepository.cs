@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Shared.Http;
@@ -8,69 +9,79 @@ namespace AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 
 public interface IAutoSaveRepository
 {
-    public Task<Result<bool, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(AutoSaveDto autoSaveDto,
+    public Task<Result<AutoSaveResultDto, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken = default);
 
-    public Task<Result<bool, ErrorObject<string>>> UpdateSolutionSnapshotTestingAsync(
+    public Task<Result<bool, ErrorObject<string>>> UpsertSolutionSnapshotTestingAsync(
         TestingResultSnapshotUpdate updateDto, CancellationToken cancellationToken = default);
 
     public Task<Result<bool, ErrorObject<string>>> DeleteSolutionSnapshotCodeAsync(DeleteAutoSaveDto deleteAutoSaveDto,
         CancellationToken cancellationToken = default);
 }
 
-public class AutoSaveRepository(
-    IAwsS3Client awsS3Client,
-    ApplicationCommandDbContext dbContext
-) : IAutoSaveRepository
+public class AutoSaveRepository : IAutoSaveRepository
 {
-    public async Task<Result<bool, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(AutoSaveDto autoSaveDto,
+    private readonly IAwsS3Client _awsS3Client;
+        private readonly ApplicationCommandDbContext _dbContext;
+
+        public AutoSaveRepository(IAwsS3Client awsS3Client, ApplicationCommandDbContext dbContext)
+        {
+            _awsS3Client = awsS3Client;
+            _dbContext = dbContext;
+        }
+
+        public async Task<Result<AutoSaveResultDto, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken = default)
     {
-        var rowsChanged = await dbContext.UserSolutionSnapshots
+        var rowsChanged = await _dbContext.UserSolutionSnapshots
             .Where(s => s.ProblemId == autoSaveDto.ProblemId && autoSaveDto.UserId == s.UserId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.CreatedAt, DateTime.UtcNow), cancellationToken);
-
         if (rowsChanged == 0)
         {
-            await dbContext.UserSolutionSnapshots.AddAsync(new UserSolutionSnapshot
+            await _dbContext.UserSolutionSnapshots.AddAsync(new UserSolutionSnapshot
             {
                 CreatedAt = DateTime.UtcNow,
                 ProblemId = autoSaveDto.ProblemId,
                 UserId = autoSaveDto.UserId,
             }, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         var objectPath = $"users/{autoSaveDto.UserId}/problems/autosave/{autoSaveDto.ProblemId}.xml";
 
-        var res = await awsS3Client.PostXmlObjectAsync(objectPath, autoSaveDto, cancellationToken);
-        return res.Match<Result<bool, ErrorObject<string>>>(
-            ok => Result<bool, ErrorObject<string>>.Ok(true),
-            err => Result<bool, ErrorObject<string>>.Err(err));
+         return await _awsS3Client.PostXmlObjectAsync(objectPath, autoSaveDto, cancellationToken)
+             .MapToResultAsync(dto => new AutoSaveResultDto
+             {
+                 ProblemId = dto.ProblemId
+             });
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> UpdateSolutionSnapshotTestingAsync(
+    public async Task<Result<bool, ErrorObject<string>>> UpsertSolutionSnapshotTestingAsync(
         TestingResultSnapshotUpdate updateDto,
         CancellationToken cancellationToken = default)
     {
-        var snapshot = await dbContext.UserSolutionSnapshots
-            .Include(s => s.TestingSnapshotsResults)
+        var snapshot = await _dbContext.CodeExecutionStatisticss
+            .Include(s => s.TestingResults)
             .FirstOrDefaultAsync(s => s.ProblemId == updateDto.ProblemId && s.UserId == updateDto.UserId,
                 cancellationToken);
 
         if (snapshot == null)
-            return Result<bool, ErrorObject<string>>.Ok(false);
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Execution data for {updateDto.ProblemId} {updateDto.UserId} not found"));
 
-        var testResultsLookup = snapshot.TestingSnapshotsResults.ToDictionary(t => t.TestCaseId);
+        var allRestCases = await _dbContext.TestCases.Where(t => t.ProblemProblemId == updateDto.ProblemId)
+            .ToDictionaryAsync(t => t.TestCaseId, t => t, cancellationToken: cancellationToken);
+        
+        if (allRestCases.Count == 0)
+            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Test cases not found for problem: {updateDto.ProblemId}"));
 
-        foreach (var tr in updateDto.TestingResults)
+        snapshot.TestingResults.AddRange(updateDto.TestingResults.Where(tr => allRestCases.ContainsKey(tr.TestId)).Select(t => new TestingResult
         {
-            if (testResultsLookup.TryGetValue(tr.TestCaseId, out var existingResult))
-            {
-                existingResult.IsPassed = tr.Passed;
-            }
-        }
+            CodeExecutionId = snapshot.CodeExecutionId,
+            TestCaseId = t.TestId,
+            IsPassed = t.IsTestPassed,
+        }));
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
         return Result<bool, ErrorObject<string>>.Ok(true);
     }
 
@@ -78,13 +89,13 @@ public class AutoSaveRepository(
         DeleteAutoSaveDto deleteAutoSaveDto,
         CancellationToken cancellationToken = default)
     {
-        var rowsAffected = await dbContext.UserSolutionSnapshots
+        var rowsAffected = await _dbContext.UserSolutionSnapshots
             .Where(e => e.ProblemId == deleteAutoSaveDto.ProblemId && e.UserId == deleteAutoSaveDto.UserId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
         
         var objectPath = $"users/{deleteAutoSaveDto.UserId}/problems/autosave/{deleteAutoSaveDto.ProblemId}.xml";
         
-        var result = await awsS3Client.DeleteDocumentAsync(objectPath,cancellationToken: cancellationToken);
+        var result = await _awsS3Client.DeleteDocumentAsync(objectPath,cancellationToken: cancellationToken);
         if (result.IsErr)
         {
             return result;

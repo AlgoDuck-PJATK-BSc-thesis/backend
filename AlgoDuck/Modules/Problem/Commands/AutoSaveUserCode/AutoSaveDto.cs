@@ -1,3 +1,5 @@
+using AlgoDuck.Modules.Problem.Shared.Types;
+
 namespace AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 
 public class AutoSaveDto
@@ -11,11 +13,5 @@ public class TestingResultSnapshotUpdate
 {
     public required Guid ProblemId { get; set; }
     public required Guid UserId { get; set; }
-    public ICollection<TestingResult> TestingResults { get; set; } = [];
-}
-
-public class TestingResult
-{
-    public required Guid TestCaseId { get; set; }
-    public required bool Passed { get; set; }
+    public ICollection<TestResultDto> TestingResults { get; set; } = [];
 }

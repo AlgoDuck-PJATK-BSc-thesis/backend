@@ -117,6 +117,7 @@ public class SharedProblemRepository(
         {
             Call = t.S3TestCase.Call,
             CallFunc = t.dbTestCase.CallFunc,
+            VariableCount = t.dbTestCase.ArrangeVariableCount,
             Display = t.dbTestCase.Display,
             DisplayRes = t.dbTestCase.DisplayRes,
             Expected = t.S3TestCase.Expected,

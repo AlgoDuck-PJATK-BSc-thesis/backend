@@ -19,7 +19,7 @@ public class RemovePlantRepository(
     {
         var rowsChanged = await dbContext.PlantOwnerships
             .Where(p => p.UserId == removePlantDto.UserId && p.ItemId == removePlantDto.ItemId)
-            .ExecuteDeleteAsync(cancellationToken: cancellationToken);
+            .ExecuteUpdateAsync(setters => setters.SetProperty(io => io.GridX,(byte?) null).SetProperty(io => io.GridY,(byte?) null), cancellationToken: cancellationToken);
         
         if (rowsChanged == 0)
             return Result<Guid, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Could not attribute item {removePlantDto.ItemId} to user {removePlantDto.UserId}"));

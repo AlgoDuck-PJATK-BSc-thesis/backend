@@ -81,14 +81,16 @@ internal sealed class SubmitService(
         if (exerciseTemplateResult.IsErr)
             Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Template for problem {submission.ProblemId} not found"));
-        
-        
+
+
+        CodeAnalysisResult codeAnalysisResult;
         try
         {
             var analyzer = new AnalyzerSimple(userSolutionData.FileContents, exerciseTemplateResult.AsT0.Template);
-            userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Submission));
+            codeAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Submission);
+            userSolutionData.IngestCodeAnalysisResult(codeAnalysisResult);
         }
-        catch (JavaSyntaxException)
+        catch (JavaSyntaxException ex)
         {
             return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
         }
@@ -104,10 +106,7 @@ internal sealed class SubmitService(
             Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Test cases for problem {submission.ProblemId} not found"));
         
-        helper.InsertTestCases(testCases.AsT0.ToList(), userSolutionData.MainClassName);
-        helper.InsertTiming();
-
-        Console.WriteLine(userSolutionData.FileContents);
+        helper.InsertTestCases(testCases.AsT0.ToList(), codeAnalysisResult);
 
         return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
     }

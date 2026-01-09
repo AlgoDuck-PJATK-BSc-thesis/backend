@@ -16,7 +16,8 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTab
             return ConsumeToken();
         }
         
-        throw new JavaSyntaxException(expectedTokenMsg);
+        
+        throw new JavaSyntaxException($"expected: {string.Join(" or ", tokenType)} got: {peekedToken.Type}");
     }
 
     protected bool SkipIfOfType(TokenType expectedTokenType)
