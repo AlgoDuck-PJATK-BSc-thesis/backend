@@ -28,7 +28,7 @@ public class CategoryProblemsRepository(
         var problemsRdb = await dbContext.Problems
             .Include(p => p.Category)
             .Include(p => p.Difficulty)
-            .Where(p => p.Category.CategoryName == categoryName)
+            .Where(p => p.Category.CategoryName == categoryName && p.Status == ProblemStatus.Verified)
             .Select(p => new ProblemDisplayDbPartial
             {
                 ProblemId = p.ProblemId,
@@ -45,7 +45,7 @@ public class CategoryProblemsRepository(
         await Task.WhenAll(problemsS3);
 
         return Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>.Ok(problemsS3.Select(t => t.Result)
-            .Where(t => t.IsOk).Select(t => t.AsT0).Select(t => new ProblemDisplayDto()
+            .Where(t => t.IsOk).Select(t => t.AsT0).Select(t => new ProblemDisplayDto
             {
                 Difficulty = new DifficultyDto
                 {

@@ -9,7 +9,7 @@ namespace AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorTheme;
 [Route("api/user/editor/theme")]
 public sealed class SetEditorThemeEndpoint : ControllerBase
 {
-    private readonly ISetEditorThemeHandler _handler;
+    /*private readonly ISetEditorThemeHandler _handler;
     private readonly IValidator<SetEditorThemeDto> _validator;
 
     public SetEditorThemeEndpoint(
@@ -46,5 +46,6 @@ public sealed class SetEditorThemeEndpoint : ControllerBase
         }
 
         return Guid.TryParse(claim.Value, out var id) ? id : Guid.Empty;
-    }
+    }*/
+    
 }

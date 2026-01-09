@@ -32,13 +32,13 @@ public class AssistantService(
     public async IAsyncEnumerable<Result<ChatCompletionStreamedDto, ErrorObject<string>>> GetAssistanceAsync(AssistantRequestDto request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var chatDataResult = await assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
-        if (chatDataResult.IsErr && chatDataResult.AsT1.Type != ErrorType.NotFound)
+        if (chatDataResult.IsErr)
         {
             yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Err(chatDataResult.AsT1);
             yield break;
         }
         
-        var chatData = chatDataResult.IsErr && chatDataResult.AsT1.Type == ErrorType.NotFound ? null : chatDataResult.AsT0;
+        var chatData = chatDataResult.AsOk!;
 
         var problemDataResult = await problemRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
         
@@ -48,19 +48,12 @@ public class AssistantService(
             yield break;
         }
 
-        var chatId = request.ChatId ?? Guid.NewGuid();
-
-        Console.WriteLine(chatId);
-        
-        yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Ok(new ChatCompletionStreamedDto
-        {
-            Message = chatId.ToString(),
-            Type = ContentType.Id
-        });
-        
         var assistantQueryJson = BuildAssistantQuery(request, problemDataResult.AsT0, chatData);
+        Console.WriteLine(assistantQueryJson);
         var message = ChatMessage.CreateUserMessage(assistantQueryJson);
 
+        Console.WriteLine(message);
+        
         var parser = new SignalParser();
         AsyncCollectionResult<StreamingChatCompletionUpdate> completionUpdates = openAiClient
             .GetChatClient("gpt-5-nano")
@@ -111,13 +104,13 @@ public class AssistantService(
 
         var generatedChatName = nameBuilder.ToString().Trim();
 
-        Console.WriteLine($"User query: {request.Query}");
+        Console.WriteLine(generatedChatName);
         await assistantRepository.CreateNewChatMessagesAsync(cancellationToken, new ChatMessageInsertDto
         {
             Author = MessageAuthor.User,
             UserId = request.UserId,
             ProblemId = request.ExerciseId,
-            ChatId = chatId,
+            ChatId = request.ChatId,
             ChatName = generatedChatName,
             ChatFragments = [new ChatFragmentBuilder
             {
@@ -128,7 +121,7 @@ public class AssistantService(
         {
             Author = MessageAuthor.Assistant,
             UserId = request.UserId,
-            ChatId = chatId,
+            ChatId = request.ChatId,
             ProblemId = request.ExerciseId,
             ChatName = generatedChatName,
             ChatFragments = fragmentList,
@@ -161,9 +154,8 @@ public class AssistantService(
             ChatName = chatData?.Name,
             ProblemDescription = problemData.Description,
             ProvidedTemplate = problemData.TemplateContents,
-            Role = $"{duckType} a helpful programming ducky/ADS field expert",
-            Instructions =
-                "Help out the user with the exercise. If a chatName is not provided generate it based on user query and exercise contents. Use markdown where possible to emphasise points. Titles do not need to be continuous strings; \"some title\" this is preferred to \"some-title\"",
+            Role = $"{duckType} - a helpful programming ducky/ADS field expert",
+            Instructions = "Help out the user with the exercise. generate a chat name based on the user query and exercise contents. Use markdown where possible to emphasise points. Titles do not need to be continuous strings; \"some title\" this is preferred to \"some-title\"",
             UserCode = Encoding.UTF8.GetString(Convert.FromBase64String(request.CodeB64)),
             UserQueryToAssistant = Encoding.UTF8.GetString(Convert.FromBase64String(request.Query)),
             PublicTestCases = problemData.TestCases.Select(t => new TestCaseData

@@ -12,6 +12,8 @@ public partial class TestCase : IEntityTypeConfiguration<TestCase>
     public string CallFunc { get; set; } = null!;
 
     public bool IsPublic { get; set; }
+    public bool OrderMatters { get; set; }
+    public int ArrangeVariableCount { get; set; }
 
     public Guid ProblemProblemId { get; set; }
 
@@ -37,9 +39,17 @@ public partial class TestCase : IEntityTypeConfiguration<TestCase>
         builder.Property(e => e.CallFunc)
             .HasMaxLength(256)
             .HasColumnName("call_func");
+
+        builder.Property(e => e.OrderMatters)
+            .HasColumnName("order_matters");
+
+        builder.Property(e => e.ArrangeVariableCount)
+            .HasColumnName("arrange_variable_count");
+        
         builder.Property(e => e.Display)
             .HasMaxLength(1024)
             .HasColumnName("display");
+        
         builder.Property(e => e.DisplayRes)
             .HasMaxLength(1024)
             .HasColumnName("display_res");
@@ -48,7 +58,7 @@ public partial class TestCase : IEntityTypeConfiguration<TestCase>
 
         builder.HasOne(d => d.ProblemProblem).WithMany(p => p.TestCases)
             .HasForeignKey(d => d.ProblemProblemId)
-            .OnDelete(DeleteBehavior.ClientSetNull)
+            .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("test_case_problem");
     }
 }

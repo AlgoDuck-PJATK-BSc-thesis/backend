@@ -1,5 +1,6 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/item/plant")]
 [Authorize]
 public class AllPlantsController(
     IAllPlantsService allPlantsService

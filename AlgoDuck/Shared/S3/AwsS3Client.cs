@@ -2,9 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
-using AlgoDuck.Modules.Item.Commands.DeleteItem;
 using AlgoDuck.Shared.Http;
-using AlgoDuck.Shared.Utilities;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
@@ -298,6 +296,8 @@ public class AwsS3Client(
                 ErrorObject<string>.InternalError($"Could not delete: {ex.Message}"));
         }
     }
+    
+
 
     public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix, S3BucketType bucketType = S3BucketType.Data, CancellationToken cancellationToken = default)
     {
@@ -334,5 +334,16 @@ public class AwsS3Client(
             }
             return Result<ICollection<string>, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"failed deleting {prefix}"));
         }
+    }
+    
+    private string ExtractBucketName(S3BucketType? bucketType = null)
+    {
+        return bucketType switch
+        {
+            S3BucketType.Content => s3Settings.Value.ContentBucketSettings.BucketName,
+            S3BucketType.Data => s3Settings.Value.DataBucketSettings.BucketName,
+            null => s3Settings.Value.DataBucketSettings.BucketName,
+            _ => throw new ArgumentOutOfRangeException(nameof(bucketType), bucketType, null)
+        };
     }
 }

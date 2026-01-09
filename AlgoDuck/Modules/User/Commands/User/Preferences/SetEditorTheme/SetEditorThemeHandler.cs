@@ -21,6 +21,8 @@ public sealed class SetEditorThemeHandler : ISetEditorThemeHandler
 
     public async Task HandleAsync(Guid userId, SetEditorThemeDto dto, CancellationToken cancellationToken)
     {
+        throw new NotImplementedException();
+        /*
         await _validator.ValidateAndThrowAsync(dto, cancellationToken);
 
         if (userId == Guid.Empty)
@@ -51,19 +53,16 @@ public sealed class SetEditorThemeHandler : ISetEditorThemeHandler
         {
             layout = new EditorLayout
             {
+                UserId =  config.UserId,
                 EditorLayoutId = Guid.NewGuid(),
                 UserConfigId = config.UserId,
                 LayoutName = "",
-                EditorThemeId = dto.EditorThemeId
             };
 
             await _dbContext.EditorLayouts.AddAsync(layout, cancellationToken);
         }
-        else
-        {
-            layout.EditorThemeId = dto.EditorThemeId;
-        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    */
     }
 }

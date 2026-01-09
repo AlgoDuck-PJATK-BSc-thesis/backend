@@ -2,11 +2,17 @@ using System.Net.Http.Headers;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
-using AlgoDuck.Modules.Problem.Commands.CreateProblem;
+using AlgoDuck.Modules.Problem.Commands.CreateEmptyAssistantChat;
 using AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
+using AlgoDuck.Modules.Problem.Commands.DeleteProblem;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.CreateProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.LoadProblemCreateFormStateFromProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpdateProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertUtils;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
+using AlgoDuck.Modules.Problem.Commands.UpdateEditorPreferences;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
@@ -16,7 +22,9 @@ using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
 using AlgoDuck.Modules.Problem.Queries.GetCustomUserLayouts;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
+using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetProblemsByCategory;
+using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
@@ -132,7 +140,36 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<IAllDifficultiesRepository, AllDifficultiesRepository>();
         builder.Services.AddScoped<IAllDifficultiesService, AllDifficultiesService>();
+        
+        builder.Services.AddScoped<IValidationJobPublisher, ValidationJobPublisher>();
+        builder.Services.AddScoped<ITestCaseProcessor, TestCaseProcessor>();
+        builder.Services.AddScoped<IRabbitMqChannelFactory, RabbitMqChannelFactory>();
 
+        builder.Services.AddScoped<IFormStateLoadService, FormStateLoadService>();
+        builder.Services.AddScoped<IFormStateLoadRepository, FormStateLoadLoadRepository>();
+
+        builder.Services.AddScoped<IExecutorDryRunService, DryRunService>();
+        
+        builder.Services.AddScoped<IUpdateProblemService, UpdateProblemService>();
+        builder.Services.AddScoped<IUpdateProblemRepository, UpdateProblemRepository>();
+
+        builder.Services.AddScoped<IProblemDetailsAdminService, ProblemDetailsAdminService>();
+        builder.Services.AddScoped<IProblemDetailsAdminRepository, ProblemDetailsAdminRepository>();
+        
+        builder.Services.AddScoped<IDeleteProblemRepository, DeleteProblemRepository>();
+        builder.Services.AddScoped<IDeleteProblemService, DeleteProblemService>();
+        
+        builder.Services.AddScoped<IPagedProblemDetailsAdminRepository, PagedProblemDetailsAdminRepository>();
+        builder.Services.AddScoped<IPagedProblemDetailsAdminService, PagedProblemDetailsAdminService>();
+        
+        builder.Services.AddScoped<ISharedTestCaseRepository, SharedTestCaseRepository>();
+        
+        builder.Services.AddScoped<ICreateEmptyAssistantChatService, CreateEmptyAssistantChatService>();
+        builder.Services.AddScoped<ICreateEmptyAssistantChatRepository, CreateEmptyAssistantChatRepository>();
+        
+        builder.Services.AddScoped<IUpdateEditorPreferencesRepository, UpdateEditorPreferencesRepository>();
+        builder.Services.AddScoped<IUpdateEditorPreferencesService, UpdateEditorPreferencesService>();
+        
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();

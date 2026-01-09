@@ -21,49 +21,46 @@ public sealed class SetEditorLayoutHandler : ISetEditorLayoutHandler
 
     public async Task HandleAsync(Guid userId, SetEditorLayoutDto dto, CancellationToken cancellationToken)
     {
-        await _validator.ValidateAndThrowAsync(dto, cancellationToken);
-
-        if (userId == Guid.Empty)
-        {
-            throw new Shared.Exceptions.ValidationException("User identifier is invalid.");
-        }
-
-        var config = await _dbContext.UserConfigs
-            .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
-
-        if (config is null)
-        {
-            throw new UserNotFoundException("User configuration not found.");
-        }
-
-        var theme = await _dbContext.EditorThemes
-            .FirstOrDefaultAsync(t => t.EditorThemeId == dto.EditorThemeId, cancellationToken);
-
-        if (theme is null)
-        {
-            throw new Shared.Exceptions.ValidationException("Editor theme not found.");
-        }
-
-        var layout = await _dbContext.EditorLayouts
-            .FirstOrDefaultAsync(l => l.UserConfigId == config.UserId, cancellationToken);
-
-        if (layout is null)
-        {
-            layout = new EditorLayout
-            {
-                EditorLayoutId = Guid.NewGuid(),
-                UserConfigId = config.UserId,
-                LayoutName = "",
-                EditorThemeId = dto.EditorThemeId
-            };
-
-            await _dbContext.EditorLayouts.AddAsync(layout, cancellationToken);
-        }
-        else
-        {
-            layout.EditorThemeId = dto.EditorThemeId;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        throw new NotImplementedException();
+        // await _validator.ValidateAndThrowAsync(dto, cancellationToken);
+        //
+        // if (userId == Guid.Empty)
+        // {
+        //     throw new Shared.Exceptions.ValidationException("User identifier is invalid.");
+        // }
+        //
+        // var config = await _dbContext.UserConfigs
+        //     .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+        //
+        // if (config is null)
+        // {
+        //     throw new UserNotFoundException("User configuration not found.");
+        // }
+        //
+        // var theme = await _dbContext.EditorThemes
+        //     .FirstOrDefaultAsync(t => t.EditorThemeId == dto.EditorThemeId, cancellationToken);
+        //
+        // if (theme is null)
+        // {
+        //     throw new Shared.Exceptions.ValidationException("Editor theme not found.");
+        // }
+        //
+        // var layout = await _dbContext.EditorLayouts
+        //     .FirstOrDefaultAsync(l => l.UserConfigId == config.UserId, cancellationToken);
+        //
+        // if (layout is null)
+        // {
+        //     layout = new EditorLayout
+        //     {
+        //         UserId = userId,
+        //         EditorLayoutId = Guid.NewGuid(),
+        //         UserConfigId = config.UserId,
+        //         LayoutName = "",
+        //     };
+        //
+        //     await _dbContext.EditorLayouts.AddAsync(layout, cancellationToken);
+        // }
+        //
+        // await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

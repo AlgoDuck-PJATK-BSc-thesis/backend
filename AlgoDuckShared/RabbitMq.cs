@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -58,6 +56,10 @@ public class ExecutionResponseRabbit
     public required SubmitExecuteRequestRabbitStatus Status { get; set; }
     public string Out { get; set; } = string.Empty;
     public string Err { get; set; } = string.Empty;
+    public int ExitCode { get; set; }
+    public long StartNs { get; set; }
+    public long EndNs { get; set; }
+    public long MaxMemoryKb { get; set; }
 }
 
 public interface IRabbitMqConnectionService
@@ -135,34 +137,67 @@ internal class ChannelSetupOpts
     internal List<string> ChannelNames { get; set; } = [];
 }
 
-internal static class RabbitMqUtils
+public record QueueDeclareOptions(bool Durable, bool Exclusive, bool AutoDelete);
+
+internal static class ChannelExtensions
 {
-    internal static async Task WriteToChannelDefaultAsync<T>(ChannelWriteOpts<T> writeOpts, CancellationToken cancellationToken = default) where T : class
+    public static Task QueueDeclareAsync(this IChannel channel, string queue, QueueDeclareOptions options)
     {
-        var message = JsonSerializer.Serialize(writeOpts);
-        var body = Encoding.UTF8.GetBytes(message);
-        await writeOpts.Channel.BasicPublishAsync(
-            exchange: "",
-            routingKey: writeOpts.ChannelName,
-            mandatory: false,
-            basicProperties: new BasicProperties
-            {
-                Persistent = true
-            },
-            body: body,
-            cancellationToken: cancellationToken);
+        return channel.QueueDeclareAsync(
+            queue: queue,
+            durable: options.Durable,
+            exclusive: options.Exclusive,
+            autoDelete: options.AutoDelete);
+    }
+}
+
+public class ChannelDeclareDto
+{
+    public required string ChannelName { get; set; }
+    public required QueueDeclareOptions QueueDeclareOptions { get; set; }
+}
+
+public interface IRabbitMqChannelFactory
+{
+    public Task<IChannel> GetChannelAsync(params ChannelDeclareDto[] declareDtoList);
+}
+
+public class RabbitMqChannelFactory(IRabbitMqConnectionService connectionService) : IRabbitMqChannelFactory
+{
+    private IChannel? _channel;
+
+    private static class QueueNames
+    {
+        public const string ValidationRequests = "problem_validation_requests";
+        public const string ValidationResults = "problem_validation_results";
     }
 
-    internal static async Task SetupChannelsAsync(ChannelSetupOpts channelSetupOpts, CancellationToken cancellationToken = default)
+    public async Task<IChannel> GetChannelAsync(params ChannelDeclareDto[] declareDtoList)
     {
-        foreach (var channelName in channelSetupOpts.ChannelNames)
+        if (_channel is { IsOpen: true })
+            return _channel;
+
+        var connection = await connectionService.GetConnection();
+        _channel = await connection.CreateChannelAsync();
+
+        foreach (var channelDeclareDto in declareDtoList)
         {
-            await channelSetupOpts.Channel.QueueDeclareAsync(
-                queue: channelName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                cancellationToken: cancellationToken);
+            await DeclareQueuesAsync(_channel, channelDeclareDto);
+            
         }
+        return _channel;
+    }
+
+    private static async Task DeclareQueuesAsync(IChannel channel, ChannelDeclareDto channelDeclareDto)
+    {
+        // var queueOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false);
+
+        var queueOptions = new QueueDeclareOptions(
+            Durable: channelDeclareDto.QueueDeclareOptions.Durable,
+            Exclusive: channelDeclareDto.QueueDeclareOptions.Exclusive,
+            AutoDelete: channelDeclareDto.QueueDeclareOptions.AutoDelete);
+
+        await channel.QueueDeclareAsync(channelDeclareDto.ChannelName, queueOptions);
+
     }
 }

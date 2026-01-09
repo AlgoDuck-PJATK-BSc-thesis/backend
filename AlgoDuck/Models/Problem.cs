@@ -12,7 +12,8 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
     public string ProblemTitle { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public Guid CreatedByUserId { get; set; }
-    public ApplicationUser? CreatedByUser { get; set; }
+    public ApplicationUser CreatedByUser { get; set; } = null!;
+    public DateTime? LastUpdatedAt { get; set; }
 
     public Guid CategoryId { get; set; }
 
@@ -45,7 +46,12 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
         
         builder.Property(e => e.CreatedAt)
                 .HasColumnType("timestamp with time zone")
-                .HasColumnName("created_at");
+                .HasColumnName("created_at");    
+        
+        builder.Property(e => e.LastUpdatedAt)
+                .HasColumnType("timestamp with time zone")
+                .IsRequired(false)
+                .HasColumnName("updated_at");
         
         builder.Property(e => e.DifficultyId)
             .HasColumnName("difficulty_id");

@@ -1,11 +1,12 @@
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 
-[Route("api/[controller]")]
+[Route("api/user/item/plant")]
 [Authorize]
 public class OwnedPlantsController(
     IOwnedPlantsService ownedPlantsService

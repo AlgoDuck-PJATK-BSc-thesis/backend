@@ -1,17 +1,17 @@
 using System.Text;
 using System.Text.Json;
-using AlgoDuck.DAL;
-using AlgoDuck.Models;
-using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.CreateProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpdateProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertTypes;
+using AlgoDuck.Shared.Extensions;
 using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using StackExchange.Redis;
 
-namespace AlgoDuck.Modules.Problem.Commands.CreateProblem;
+namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertUtils;
 
 public sealed class ProblemValidationResultChannelReadWorker(
     IRabbitMqConnectionService rabbitMqConnectionService,
@@ -21,6 +21,8 @@ public sealed class ProblemValidationResultChannelReadWorker(
 ) : BackgroundService, IAsyncDisposable
 {
     private IChannel? _channel;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions().WithInternalFields();
+    
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -64,34 +66,39 @@ public sealed class ProblemValidationResultChannelReadWorker(
         {
             var validationResponse = new ValidationResponse
             {
-                Status = NarrowDownExecutorResponseStatus(response.Status)
+                Status = NarrowDownExecutorResponseStatus(response.Status),
+                Message = response.Err /* The reason why we only bounce Err is the client here is only interested in potential failures, i.e. illegal statements in template causing compilation failures, not actual execution output */
             };
 
-            var jobDataResult = await GetJobDataAsync(response.JobId);
+            var jobDataResult = await GetJobDataFromCacheAsync(response.JobId);
 
             if (jobDataResult.IsErr)
                 return;
             var jobData = jobDataResult.AsT0;
 
             jobData.CachedResponses.Add(validationResponse);
-            
+
             await redis.StringSetAsync(
                 key: new RedisKey(response.JobId.ToString()),
-                value: JsonSerializer.Serialize(jobData),
+                value: JsonSerializer.Serialize(jobData, _jsonSerializerOptions),
                 expiry: TimeSpan.FromMinutes(3));
+            
             await hubContext.Clients.Group(response.JobId.ToString()).SendAsync(
                 method: "ValidationStatusUpdated",
-                arg1: validationResponse,
+                arg1: new StandardApiResponse<ValidationResponse>
+                {
+                    Body = validationResponse
+                },
                 cancellationToken: cancellationToken);
             
             /* ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault - other cases intentionally falling through*/
             switch (validationResponse.Status)
             {
                 case ValidationResponseStatus.Succeeded:
-                    await HandleSuccessAsync(jobData.ProblemId, cancellationToken);
+                    await HandleSuccessAsync(jobData, cancellationToken);
                     break;
                 case ValidationResponseStatus.Failed:
-                    await HandleFailureAsync(jobData.ProblemId, cancellationToken);
+                    await HandleFailureAsync(jobData, cancellationToken);
                     break;
             }
         }
@@ -100,40 +107,39 @@ public sealed class ProblemValidationResultChannelReadWorker(
     }
 
     /*TODO: make these service s3 as well as the rdb*/
-    private async Task HandleSuccessAsync(Guid problemId, CancellationToken cancellationToken = default)
+    private async Task<Result<Guid, ErrorObject<string>>> HandleSuccessAsync(JobData<UpsertProblemDto> upsertProblemDto, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
         
-        await dbContext.Problems
-            .Where(p => p.ProblemId == problemId)
-            .ExecuteUpdateAsync(setters =>
-                setters.SetProperty(p => p.Status, ProblemStatus.Verified), cancellationToken: cancellationToken);
-        
-        await dbContext.SaveChangesAsync(cancellationToken);
+        switch (upsertProblemDto.UpsertJobType)
+        {
+            case UpsertJobType.Update:
+                if (upsertProblemDto.JobBody == null)
+                    return Result<Guid, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"Could not update problem {upsertProblemDto.ProblemId}"));
+                var updateContext = scope.ServiceProvider.GetRequiredService<IUpdateProblemRepository>();
+                return await updateContext.UpdateProblemAsync(upsertProblemDto.JobBody, upsertProblemDto.ProblemId, cancellationToken);
+            case UpsertJobType.Insert:
+                var insertContext = scope.ServiceProvider.GetRequiredService<ICreateProblemRepository>();
+                return await insertContext.ConfirmProblemUponValidationSuccessAsync(upsertProblemDto.ProblemId, cancellationToken);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
     }
 
-    private async Task HandleFailureAsync(Guid problemId, CancellationToken cancellationToken = default)
+    private async Task<Result<Guid, ErrorObject<string>>> HandleFailureAsync(JobData<UpsertProblemDto> upsertProblemDto, CancellationToken cancellationToken = default)
     {
         using var scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
-        
-        await dbContext.TestCases
-            .Where(t => t.ProblemProblemId == problemId)
-            .ExecuteDeleteAsync(cancellationToken: cancellationToken);
+        var dbContext = scope.ServiceProvider.GetRequiredService<ICreateProblemRepository>();
 
-        await dbContext.Problems
-            .Where(p => p.ProblemId == problemId)
-            .ExecuteDeleteAsync(cancellationToken: cancellationToken);
-
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+        return await dbContext.DeleteProblemUponValidationFailureAsync(upsertProblemDto.ProblemId, cancellationToken);
     }
     
     private static Result<T, string> GetResponseObject<T>(BasicDeliverEventArgs eventArgs)
     {
         try
         {
+            
             var body = eventArgs.Body;
             var message = Encoding.UTF8.GetString(body.ToArray());
             var response = DefaultJsonSerializer.Deserialize<T>(message);
@@ -145,21 +151,24 @@ public sealed class ProblemValidationResultChannelReadWorker(
         }
     }
 
-    private async Task<Result<JobData, string>> GetJobDataAsync(Guid jobId)
+    private async Task<Result<JobData<UpsertProblemDto>, string>> GetJobDataFromCacheAsync(Guid jobId)
     {
         var jobDataRaw = await redis.StringGetAsync(jobId.ToString());
         if (jobDataRaw.IsNullOrEmpty)
-            return Result<JobData, string>.Err("could not get job data");
+            return Result<JobData<UpsertProblemDto>, string>.Err("could not get job data");
         try
         {
-            var jobData = JsonSerializer.Deserialize<JobData>(jobDataRaw.ToString());
+            var jobData = JsonSerializer.Deserialize<JobData<UpsertProblemDto>>(
+                jobDataRaw.ToString(), 
+                _jsonSerializerOptions);
+            
             return jobData == null
-                ? Result<JobData, string>.Err("could not get jobId")
-                : Result<JobData, string>.Ok(jobData);
+                ? Result<JobData<UpsertProblemDto>, string>.Err("could not get jobId")
+                : Result<JobData<UpsertProblemDto>, string>.Ok(jobData);
         }
         catch(Exception)
         {
-            return Result<JobData, string>.Err("could not get jobId");
+            return Result<JobData<UpsertProblemDto>, string>.Err("could not get jobId");
         }
     }
     
@@ -172,6 +181,8 @@ public sealed class ProblemValidationResultChannelReadWorker(
             SubmitExecuteRequestRabbitStatus.Executing => ValidationResponseStatus.Pending,
             SubmitExecuteRequestRabbitStatus.Completed => ValidationResponseStatus.Succeeded,
             SubmitExecuteRequestRabbitStatus.ServiceFailure => ValidationResponseStatus.Failed,            
+            SubmitExecuteRequestRabbitStatus.CompilationFailure => ValidationResponseStatus.Failed,
+            SubmitExecuteRequestRabbitStatus.RuntimeError => ValidationResponseStatus.Failed,
             SubmitExecuteRequestRabbitStatus.Timeout => ValidationResponseStatus.Failed,
             _ => throw new ArgumentOutOfRangeException()
         };

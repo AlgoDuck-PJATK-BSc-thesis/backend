@@ -9,10 +9,10 @@ public class AssistantChat : IEntityTypeConfiguration<AssistantChat>
     public string Name { get; set; } = string.Empty;
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
-    public Guid UserId { get; set; }
+    public required Guid UserId { get; set; }
     public ApplicationUser? User { get; set; }
 
-    public Guid ProblemId { get; set; }
+    public required Guid ProblemId { get; set; }
     public Problem? Problem { get; set; }
 
 

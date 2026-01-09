@@ -73,18 +73,19 @@ public enum ErrorType
 
 public static class ResultHttpExtensions
 {
-    public static async Task<IActionResult> ToActionResultAsync<T, TE>(this Task<Result<T, ErrorObject<TE>>> resultTask)
+    public static async Task<IActionResult> ToActionResultAsync<T, TE>(this Task<Result<T, ErrorObject<TE>>> resultTask, string message = "")
     {
         var result = await resultTask;
         return result.ToActionResult();
     } 
     
     public static IActionResult ToActionResult<T, TE>(
-        this Result<T, ErrorObject<TE>> result)
+        this Result<T, ErrorObject<TE>> result, string message = "")
     {
         return result.Match(
             ok => new OkObjectResult(new StandardApiResponse<T>
             {
+                Message = message,
                 Body = ok
             }),
             err => err.Type switch
@@ -92,31 +93,37 @@ public static class ResultHttpExtensions
                 ErrorType.BadRequest or ErrorType.ValidationError => new BadRequestObjectResult(new StandardApiResponse<TE>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = err.Body
                 }),
                 ErrorType.NotFound => new NotFoundObjectResult(new StandardApiResponse<TE>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = err.Body
                 }),
                 ErrorType.Unauthorized => new UnauthorizedObjectResult(new StandardApiResponse<TE>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = err.Body
                 }),
                 ErrorType.Forbidden => new ObjectResult(new StandardApiResponse<TE>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = err.Body
                 }) { StatusCode = 403 },
                 ErrorType.Conflict => new ConflictObjectResult(new StandardApiResponse<TE>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = err.Body
                 }),
                 _ => new ObjectResult(new StandardApiResponse<string>
                 {
                     Status = Status.Error,
+                    Message = message,
                     Body = "An unexpected error occurred"
                 }) { StatusCode = 500 }
             }
@@ -150,6 +157,17 @@ public static class ResultToolingExtensions
         );
     }
     
+    public static async Task<Result<TNew, TE>> BindResult<T, TNew, TE>(
+        this Task<Result<T, TE>> resultTask, 
+        Func<T, Result<TNew, TE>> mapper)
+    {
+        var result = await resultTask;
+        return result.Match(
+            ok => mapper(ok),
+            err => Result<TNew, TE>.Err(err)
+        );
+    }
+    
     
 
     public static async Task<Result<TNew, TE>> MapAsync<T, TNew, TE>(
@@ -159,6 +177,26 @@ public static class ResultToolingExtensions
         var result = await resultTask;
         return result.Match(
             ok => mapper(ok),
+            err => Result<TNew, TE>.Err(err));
+    }
+
+
+    public static Result<TNew, TE> Map<T, TNew, TE>(
+        this Result<T, TE> result,
+        Func<T, TNew> mapper)
+    {
+        return result.Match(
+            ok => Result<TNew, TE>.Ok(mapper(ok)),
+            err => Result<TNew, TE>.Err(err));
+    }
+
+    public static async Task<Result<TNew, TE>> MapToResultAsync<T, TNew, TE>(
+        this Task<Result<T, TE>> resultTask,
+        Func<T, TNew> mapper)
+    {
+        var result = await resultTask;
+        return result.Match(
+            ok => Result<TNew, TE>.Ok(mapper(ok)),
             err => Result<TNew, TE>.Err(err));
     }
         

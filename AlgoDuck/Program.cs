@@ -6,7 +6,7 @@ using AlgoDuck.Modules.Cohort.Shared.Hubs;
 using AlgoDuck.Modules.Cohort.Shared.Services;
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using AlgoDuck.Modules.Item.Utils;
-using AlgoDuck.Modules.Problem.Commands.CreateProblem;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertUtils;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.User.Shared.Utils;
@@ -17,6 +17,7 @@ using AlgoDuck.Shared.Utilities.DependencyInitializers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -155,37 +156,26 @@ app.MapHub<AssistantHub>("/api/hubs/assistant");
 app.MapHub<ExecutionStatusHub>("/api/hubs/execution-status");
 app.MapHub<CreateProblemUpdatesHub>("/api/hubs/validation-status");
 
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
-        var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
-
-        var attempts = 0;
-        const int maxAttempts = 10;
-        while (true)
+var retryPolicy = Policy
+    .Handle<Exception>()
+    .WaitAndRetryAsync(
+        retryCount: 10,
+        sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Min(3 * attempt, 30)),
+        onRetry: (exception, timeSpan, retryCount, context) =>
         {
-            try
-            {
-                db.Database.SetCommandTimeout(60);
-                db.Database.Migrate();
-                await seeder.SeedDataAsync();
-                break;
-            }
-            catch (System.Net.Sockets.SocketException) when (attempts++ < maxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            }
-            catch (Exception ex) when (attempts++ < maxAttempts)
-            {
-                Console.WriteLine($"DB not ready yet, retry {attempts}/{maxAttempts}: {ex.Message}");
-                await Task.Delay(TimeSpan.FromSeconds(3));
-            }
-        }
-    }
-}
+            Console.WriteLine($"DB not ready yet, retry {retryCount}/10: {exception.Message}");
+        });
+
+await retryPolicy.ExecuteAsync(async () =>
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationCommandDbContext>();
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
+    
+    db.Database.SetCommandTimeout(60);
+    await db.Database.MigrateAsync();
+    await seeder.SeedDataAsync();
+});
 
 app.Run();
 
-public partial class Program;

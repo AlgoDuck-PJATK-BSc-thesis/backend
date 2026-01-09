@@ -57,6 +57,7 @@ public sealed class ValidatorBackgroundWorker(
             var status = ex switch
             {
                 VmQueryTimedOutException => SubmitExecuteRequestRabbitStatus.Timeout,
+                CompilationException => SubmitExecuteRequestRabbitStatus.CompilationFailure,
                 _ => SubmitExecuteRequestRabbitStatus.ServiceFailure
             };
             

@@ -29,6 +29,7 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
         <PackageReference Include="OneOf" Version="3.0.271" />
         <PackageReference Include="OpenAI" Version="2.7.0" />
+        <PackageReference Include="Polly" Version="8.6.5" />
         <PackageReference Include="Postmark" Version="5.2.0" />
         <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
         <PackageReference Include="Scrutor" Version="7.0.0" />
@@ -65,7 +66,6 @@
         <Folder Include="Modules\Cohort\Queries\Admin\Cohorts\" />
         <Folder Include="Modules\Cohort\Queries\Admin\Members\" />
         <Folder Include="Modules\Cohort\Queries\User\Chat\" />
-        <Folder Include="Modules\Problem\Commands\CreateProblem\" />
         <Folder Include="Modules\User\Commands\Admin\" />
         <Folder Include="Modules\User\Commands\User\Account\" />
         <Folder Include="Modules\User\Commands\User\Preferences\" />
@@ -83,6 +83,12 @@
 
     <ItemGroup>
         <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Polly">
+        <HintPath>..\..\..\..\.nuget\packages\polly\8.6.3\lib\net6.0\Polly.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

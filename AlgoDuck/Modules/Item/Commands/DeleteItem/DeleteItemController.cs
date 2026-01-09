@@ -6,7 +6,7 @@ namespace AlgoDuck.Modules.Item.Commands.DeleteItem;
 
 [Authorize("admin")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/admin/item")]
 public class DeleteItemController(
     IDeleteItemService deleteItemService
     ) : Controller

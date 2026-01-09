@@ -17,11 +17,12 @@ public class RenameLayoutRepository(
     public async Task<Result<RenameLayoutResultDto, ErrorObject<string>>> RenameLayoutAsync(RenameLayoutRequestDto renameRequest,
         CancellationToken cancellationToken = default)
     {
-        var rowsChanged = await dbContext.EditorLayouts
-            .Include(el => el.UserConfig)
-            .Where(e => e.EditorLayoutId == renameRequest.LayoutId && e.UserConfig.UserId == renameRequest.UserId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.LayoutName, renameRequest.NewName),
+        var rowsChanged = await dbContext.OwnsLayouts
+            .Include(x => x.Layout)
+            .Where(e => e.LayoutId == renameRequest.LayoutId && e.UserId == renameRequest.UserId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.Layout.LayoutName, renameRequest.NewName),
                 cancellationToken: cancellationToken);
+        
         if (rowsChanged == 0)
             return Result<RenameLayoutResultDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Could not attribute layout: {renameRequest.LayoutId} to user: {renameRequest.UserId}"));
         

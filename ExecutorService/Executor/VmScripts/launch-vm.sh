@@ -59,6 +59,6 @@ FIRECRACKER_PID=$!
     fi
 done
 
-rm -rf $FC_STDOUT_FILE
+#rm -rf $FC_STDOUT_FILE
 
 echo $FIRECRACKER_PID

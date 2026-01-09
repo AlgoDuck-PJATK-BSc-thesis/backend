@@ -1,4 +1,5 @@
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,15 +15,13 @@ public class RemovePlantController(
 {
     public async Task<IActionResult> RemovePlantFromHomepageAsync([FromQuery] Guid plantId, CancellationToken cancellationToken)
     {
-        var result = await User
+        return await User
             .GetUserId()
             .BindAsync(async userId => await removePlantService.RemovePlantFromHomepageAsync(new RemovePlantDto
             {
                 UserId = userId,
                 ItemId = plantId
-            }, cancellationToken));
-
-        return result.ToActionResult();
+            }, cancellationToken)).ToActionResultAsync();
     }
 }
 

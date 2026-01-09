@@ -6,9 +6,6 @@ cd /tmp
 rm -rf /tmp/rootfs-alp
 rm -rf executor-fs.ext4
 
-#note that seek 192 didn't work so I feel that 256 may be optimal
-
-# TODO skip creating journal and maybe do that cool no root disk space trick
 dd if=/dev/zero of=executor-fs.ext4 bs=1M count=0 seek=256
 mkfs.ext4 executor-fs.ext4
 
@@ -44,6 +41,8 @@ mount -o bind /dev/pts dev/pts/
 cat > "/tmp/rootfs-alp/sandbox/vsock-handler.sh" << 'EOF'
 #!/bin/sh
 
+CGROUP_PATH="/sys/fs/cgroup/sandbox"
+
 content=""
 while IFS= read -r -n1 char; do
     if [ "$(printf '%d' "'$char")" = "4" ]; then
@@ -63,11 +62,21 @@ while read -r file b64; do
 done
 entrypoint_name=$(jq -r '.Entrypoint' /sandbox/content.json)
 
-java -cp "/sandbox:.:/sandbox/gson-2.13.1.jar" $entrypoint_name 1>/sandbox/out.log 2>/sandbox/err.log
+start_ns=$(date +%s%N)
+
+echo $$ > "$CGROUP_PATH/cgroup.procs"
+/usr/bin/time -v -o /sandbox/time.log java -cp "/sandbox:.:/sandbox/gson-2.13.1.jar" "$entrypoint_name" 1>/sandbox/out.log 2>/sandbox/err.log
+
+exit_code=$?
+end_ns=$(date +%s%N)
+
+max_mem_kb=$(grep "Maximum resident set size" /sandbox/time.log | awk '{print $NF}')
+max_mem_kb=${max_mem_kb:-0}
+
 out=$(jq -Rs . < /sandbox/out.log)
 err=$(jq -Rs . < /sandbox/err.log)
 
-echo "{\"out\":$out, \"err\":$err}"
+echo "{\"out\":$out, \"err\":$err, \"exitCode\":\"$exit_code\", \"startNs\":\"$start_ns\", \"endNs\":\"$end_ns\", \"maxMemoryKb\":\"$max_mem_kb\"}"
 
 printf '\004'
 exit 0
@@ -88,6 +97,38 @@ apk add openjdk17-jre-headless coreutils openrc mdevd socat jq
 
 echo 'ttyS0 root:root 660' > /etc/mdevd.conf
 
+cat > "/etc/init.d/cgroup-setup" << 'INNER_EOF'
+#!/sbin/openrc-run
+description="Setup cgroupv2 for sandbox"
+
+depend() {
+    before executor
+    need localmount
+}
+
+start() {
+    if ! mountpoint -q /sys/fs/cgroup; then
+        mount -t cgroup2 none /sys/fs/cgroup
+    fi
+    
+    echo "+memory +io +pids" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null
+    
+    mkdir -p /sys/fs/cgroup/sandbox
+    
+    echo "0" > /sys/fs/cgroup/sandbox/memory.swap.max 2>/dev/null
+    
+    echo "100" > /sys/fs/cgroup/sandbox/pids.max
+    
+    ROOT_DEV=$(cat /sys/block/vda/dev 2>/dev/null || echo "254:0")
+    echo "$ROOT_DEV wbps=10485760 wiops=50 rbps=20971520 riops=100" > /sys/fs/cgroup/sandbox/io.max 2>/dev/null
+    
+    eend 0
+}
+INNER_EOF
+
+chmod +x /etc/init.d/cgroup-setup
+rc-update add cgroup-setup boot
+
 cat > "/etc/init.d/executor" << 'INNER_EOF'
 #!/sbin/openrc-run
 description="java executor script"
@@ -99,20 +140,20 @@ start_stop_daemon_args="--make-pidfile"
 depend(){
     need localmount
     need mdevd
+    need cgroup-setup
 }
 
 start_post(){
     echo "READY" > /dev/ttyS0
     exit 0
 }
-
 INNER_EOF
 
 chmod +x /etc/init.d/executor
 rc-update add executor default
 EOF
 
-echo "" >  /tmp/rootfs-alp/etc/resolv.conf
+echo "" > /tmp/rootfs-alp/etc/resolv.conf
 
 cd ~ || cd / || exit 1 
 
@@ -123,4 +164,4 @@ umount /tmp/rootfs-alp/sys
 umount /tmp/rootfs-alp
 
 rm -rf /tmp/rootfs-alp
-mv /tmp/executor-fs.ext4 $STARTING_DIR
+mv /tmp/executor-fs.ext4 "$STARTING_DIR"

@@ -7,14 +7,14 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllItemPaged;
 
 public interface IAllItemsPagedRepository
 {
-    public Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest> itemRequest, CancellationToken cancellationToken = default);
+    public Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default);
 }
 
 public class AllItemsPagedRepository(
     ApplicationQueryDbContext dbContext
 ) : IAllItemsPagedRepository
 {
-    public async Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest> itemRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default)
     {
         var totalItemCount = await dbContext.Items.CountAsync(cancellationToken);
         var totalPagesCount = (int) Math.Ceiling(totalItemCount / (double)itemRequest.PageSize);
@@ -23,7 +23,7 @@ public class AllItemsPagedRepository(
             return Result<PageData<ItemDto>, ErrorObject<string>>.Err(ErrorObject<string>.NotFound("No items found"));
         
         var actualPage = Math.Clamp(itemRequest.CurrPage, 1, totalPagesCount);
-
+        
         var itemQueryPaged = dbContext.Items
             .Include(i => i.Purchases)
             .OrderBy(i => i.ItemId) /* TODO: replace this with createdAt */
@@ -45,11 +45,11 @@ public class AllItemsPagedRepository(
         
         var itemQuerySelected = itemsOrdered.Select(i => new ItemDto
         {
-            CreatedOn = itemRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedBy) ? i.CreatedAt : null,
+            CreatedOn = itemRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedOn) ? DateTime.UtcNow : null,
             ItemId = i.ItemId,
-            ItemName = itemRequest.FurtherData.Fields.Contains(FetchableColumn.ItemId) ? i.Name : null,
+            ItemName = itemRequest.FurtherData.Fields.Contains(FetchableColumn.ItemName) ? i.Name : null,
             CreatedBy = itemRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedBy) ? i.CreatedById : null,
-            OwnedCount = itemRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedBy)
+            OwnedCount = itemRequest.FurtherData.Fields.Contains(FetchableColumn.OwnedCount)
                 ? i.Purchases.Count
                 : null,
             Type = itemRequest.FurtherData.Fields.Contains(FetchableColumn.Type)

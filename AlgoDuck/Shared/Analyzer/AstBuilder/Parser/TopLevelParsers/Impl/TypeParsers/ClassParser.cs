@@ -34,7 +34,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         nodeClass.ClassModifiers = ParseModifiers(legalModifiers);
 
         nodeClass.IsAbstract = nodeClass.ClassModifiers.Contains(MemberModifier.Abstract);
-        
+
         ConsumeIfOfType("class", TokenType.Class);
 
         nodeClass.Name = ConsumeIfOfType("class name", TokenType.Ident);

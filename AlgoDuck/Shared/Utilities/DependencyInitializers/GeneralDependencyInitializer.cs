@@ -1,5 +1,6 @@
 using System.Net;
 using AlgoDuck.Shared.Middleware;
+using AlgoDuck.Shared.S3;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;

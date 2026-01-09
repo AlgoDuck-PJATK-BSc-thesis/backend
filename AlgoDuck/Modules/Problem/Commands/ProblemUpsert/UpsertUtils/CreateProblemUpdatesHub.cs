@@ -1,11 +1,13 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
-using System.Text.Json.Serialization;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
+using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertTypes;
+using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using StackExchange.Redis;
 
-namespace AlgoDuck.Modules.Problem.Commands.CreateProblem;
+namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertUtils;
 
 public interface IExecutionStatusClient
 {
@@ -17,7 +19,7 @@ public class CreateProblemUpdatesHub(
     IDatabase redis
     ) : Hub<IExecutionStatusClient>
 {
-    public async Task<JobData?> SubscribeToJob(SubscriptionRequestDto requestDto)
+    public async Task<IApiResponse?> SubscribeToJob(SubscriptionRequestDto requestDto)
     {
         if (Context.User == null)
             return null;
@@ -32,33 +34,21 @@ public class CreateProblemUpdatesHub(
         if (jobDataRaw.IsNullOrEmpty)
             return null;
         
-        var jobData = JsonSerializer.Deserialize<JobData>(jobDataRaw.ToString());
+        var jobData = JsonSerializer.Deserialize<JobData<UpsertProblemDto?>>(jobDataRaw.ToString());
         if (jobData == null || jobData.CommissioningUserId != userIdResult.AsT0)
             return null;
 
         await Groups.AddToGroupAsync(Context.ConnectionId, requestDto.JobId.ToString());
-        
-        return jobData;
+
+        return new StandardApiResponse<ICollection<ValidationResponse>>
+        {
+            Body = jobData.CachedResponses
+        };
     }
 }
 
-public class SubscriptionRequestDto
-{
-    public required Guid JobId { get; set; }
-}
-
-public class ValidationResponse
-{
-    public ValidationResponseStatus Status { get; set; }
-}
 
 
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum ValidationResponseStatus
-{
-    Queued,
-    Pending,
-    Succeeded,
-    Failed
-}
+
+
