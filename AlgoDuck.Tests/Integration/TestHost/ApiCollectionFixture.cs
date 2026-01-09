@@ -14,7 +14,8 @@ public sealed class ApiCollectionFixture : IAsyncLifetime
         Factory = new ApiFactory();
         Client = Factory.CreateClient(new()
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            HandleCookies = false
         });
 
         Scope = Factory.Services.CreateScope();
@@ -22,7 +23,7 @@ public sealed class ApiCollectionFixture : IAsyncLifetime
     }
 
     public Task DisposeAsync()
-    { 
+    {
         Client.DefaultRequestHeaders.Authorization = null;
         Client.Dispose();
 
@@ -35,7 +36,8 @@ public sealed class ApiCollectionFixture : IAsyncLifetime
     {
         var client = Factory.CreateClient(new()
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            HandleCookies = false
         });
         client.DefaultRequestHeaders.Authorization = null;
         return client;
@@ -45,7 +47,8 @@ public sealed class ApiCollectionFixture : IAsyncLifetime
     {
         var client = Factory.CreateClient(new()
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            HandleCookies = false
         });
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
         return client;

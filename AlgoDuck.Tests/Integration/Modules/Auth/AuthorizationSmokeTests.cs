@@ -56,6 +56,22 @@ public sealed class AuthorizationSmokeTests
         return null;
     }
 
+    static string BuildCookieHeader(IEnumerable<string> setCookieHeaders)
+    {
+        var parts = new List<string>();
+
+        foreach (var sc in setCookieHeaders)
+        {
+            var first = sc.Split(';', 2, StringSplitOptions.TrimEntries)[0];
+            if (!string.IsNullOrWhiteSpace(first))
+            {
+                parts.Add(first);
+            }
+        }
+
+        return string.Join("; ", parts);
+    }
+
     static async Task LoginAsAdminAsync(ApiCollectionFixture fx, HttpClient client)
     {
         var seed = new Seed(fx.Scope.ServiceProvider);
@@ -80,6 +96,16 @@ public sealed class AuthorizationSmokeTests
             var body = await resp.Content.ReadAsStringAsync(CancellationToken.None);
             throw new Xunit.Sdk.XunitException($"Login expected 200 OK but got {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
         }
+
+        if (!resp.Headers.TryGetValues("Set-Cookie", out var setCookies))
+        {
+            throw new Xunit.Sdk.XunitException("Login succeeded but no Set-Cookie header was returned.");
+        }
+
+        var cookieHeader = BuildCookieHeader(setCookies);
+
+        client.DefaultRequestHeaders.Remove("Cookie");
+        client.DefaultRequestHeaders.Add("Cookie", cookieHeader);
     }
 
     [Fact]
