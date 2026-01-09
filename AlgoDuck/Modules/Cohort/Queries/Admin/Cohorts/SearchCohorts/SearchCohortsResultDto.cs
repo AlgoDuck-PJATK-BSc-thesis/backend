@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Shared.Dtos;
+using AlgoDuck.Modules.Cohort.Shared.DTOs;
 using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Modules.Cohort.Queries.Admin.Cohorts.SearchCohorts;

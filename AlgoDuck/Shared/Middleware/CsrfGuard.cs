@@ -112,7 +112,6 @@ public sealed class CsrfGuard
             {
                 Status = Status.Error,
                 Message = "CSRF validation failed.",
-                Body = null
             });
             return;
         }
@@ -138,7 +137,6 @@ public sealed class CsrfGuard
             {
                 Status = Status.Error,
                 Message = "CSRF validation failed.",
-                Body = null
             });
             return;
         }

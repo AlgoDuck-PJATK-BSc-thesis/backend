@@ -1,8 +1,10 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Auth.Commands.Login.Register;
 
@@ -12,17 +14,20 @@ public sealed class RegisterHandler : IRegisterHandler
     private readonly IEmailSender _emailSender;
     private readonly IValidator<RegisterDto> _validator;
     private readonly IConfiguration _configuration;
+    private readonly ApplicationCommandDbContext _db;
 
     public RegisterHandler(
         UserManager<ApplicationUser> userManager,
         IEmailSender emailSender,
         IValidator<RegisterDto> validator,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ApplicationCommandDbContext db)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _validator = validator;
         _configuration = configuration;
+        _db = db;
     }
 
     public async Task<AuthUserDto> HandleAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -55,25 +60,79 @@ public sealed class RegisterHandler : IRegisterHandler
             throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"User registration failed: {errors}");
         }
 
-        var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
-        if (!addRoleResult.Succeeded)
+        try
         {
-            var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
-            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
+            await EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
+
+            var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
+            if (!addRoleResult.Succeeded)
+            {
+                var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
+                throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
+            }
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
+
+            await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email, confirmationLink, cancellationToken);
+
+            return new AuthUserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                EmailConfirmed = user.EmailConfirmed
+            };
+        }
+        catch
+        {
+            await _userManager.DeleteAsync(user);
+            throw;
+        }
+    }
+
+    private async Task EnsureAlgoduckOwnedAndSelectedAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var algoduckItemId = await _db.DuckItems
+            .Where(i => i.Name.ToLower() == "algoduck")
+            .Select(i => i.ItemId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (algoduckItemId == Guid.Empty)
+        {
+            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException("Default duck item 'algoduck' was not found.");
         }
 
-        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
+        var owned = await _db.DuckOwnerships
+            .SingleOrDefaultAsync(o => o.UserId == userId && o.ItemId == algoduckItemId, cancellationToken);
 
-        await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email, confirmationLink, cancellationToken);
+        var selected = await _db.DuckOwnerships
+            .Where(o => o.UserId == userId && o.SelectedAsAvatar)
+            .ToListAsync(cancellationToken);
 
-        return new AuthUserDto
+        foreach (var s in selected)
         {
-            Id = user.Id,
-            UserName = user.UserName ?? string.Empty,
-            Email = user.Email ?? string.Empty,
-            EmailConfirmed = user.EmailConfirmed
-        };
+            s.SelectedAsAvatar = false;
+        }
+
+        if (owned is null)
+        {
+            owned = new DuckOwnership
+            {
+                UserId = userId,
+                ItemId = algoduckItemId,
+                SelectedAsAvatar = true,
+                SelectedForPond = true
+            };
+            _db.DuckOwnerships.Add(owned);
+        }
+        else
+        {
+            owned.SelectedAsAvatar = true;
+            owned.SelectedForPond = true;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private string BuildEmailConfirmationLink(Guid userId, string token)

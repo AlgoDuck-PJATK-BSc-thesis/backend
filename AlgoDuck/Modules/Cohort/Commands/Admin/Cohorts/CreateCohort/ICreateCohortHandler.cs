@@ -1,4 +1,4 @@
-using AlgoDuck.Modules.Cohort.Shared.Dtos;
+using AlgoDuck.Modules.Cohort.Shared.DTOs;
 
 namespace AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.CreateCohort;
 

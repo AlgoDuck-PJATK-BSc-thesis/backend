@@ -1,6 +1,6 @@
-using AlgoDuck.Modules.User.Commands.CreateUser;
-using AlgoDuck.Modules.User.Commands.DeleteUser;
-using AlgoDuck.Modules.User.Commands.UpdateUser;
+using AlgoDuck.Modules.User.Commands.Admin.CreateUser;
+using AlgoDuck.Modules.User.Commands.Admin.DeleteUser;
+using AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
 using AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
 using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorLayout;

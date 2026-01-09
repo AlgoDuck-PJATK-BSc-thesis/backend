@@ -1,9 +1,9 @@
-using FluentValidation;
-using Microsoft.AspNetCore.Identity;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Shared.Exceptions;
+using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 
-namespace AlgoDuck.Modules.User.Commands.UpdateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 
 public sealed class UpdateUserHandler : IUpdateUserHandler
 {

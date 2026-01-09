@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+namespace AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 
 public interface ISendMessageHandler
 {

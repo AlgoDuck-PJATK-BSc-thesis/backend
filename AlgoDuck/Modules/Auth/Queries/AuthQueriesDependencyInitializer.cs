@@ -1,7 +1,7 @@
 using AlgoDuck.Modules.Auth.Queries.ApiKeys.GetApiKeys;
-using AlgoDuck.Modules.Auth.Queries.Directory.SearchUsersByEmail;
 using AlgoDuck.Modules.Auth.Queries.Identity.GetCurrentUser;
 using AlgoDuck.Modules.Auth.Queries.Identity.GetUserByToken;
+using AlgoDuck.Modules.Auth.Queries.Identity.SearchUsersByEmail;
 using AlgoDuck.Modules.Auth.Queries.Permissions.CheckUserPermissions;
 using AlgoDuck.Modules.Auth.Queries.Sessions.GetUserSessions;
 using AlgoDuck.Modules.Auth.Queries.Token.ValidateToken;

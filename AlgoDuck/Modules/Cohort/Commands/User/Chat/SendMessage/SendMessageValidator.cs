@@ -1,7 +1,7 @@
 using AlgoDuck.Modules.Cohort.Shared.Utils;
 using FluentValidation;
 
-namespace AlgoDuck.Modules.Cohort.Commands.Chat.SendMessage;
+namespace AlgoDuck.Modules.Cohort.Commands.User.Chat.SendMessage;
 
 public sealed class SendMessageValidator : AbstractValidator<SendMessageDto>
 {

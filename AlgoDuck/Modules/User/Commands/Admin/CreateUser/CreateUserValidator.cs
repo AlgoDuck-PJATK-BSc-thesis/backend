@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace AlgoDuck.Modules.User.Commands.CreateUser;
+namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
 public sealed class CreateUserValidator : AbstractValidator<CreateUserDto>
 {
