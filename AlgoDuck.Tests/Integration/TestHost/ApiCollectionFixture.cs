@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
 
-public sealed class ApiCollectionFixture : IAsyncLifetime
+internal sealed class ApiCollectionFixture : IAsyncLifetime
 {
     public ApiFactory Factory { get; private set; } = null!;
     public HttpClient Client { get; private set; } = null!;

@@ -5,13 +5,16 @@ using AlgoDuck.Modules.Item.Commands.EmplacePlantOnHomePage;
 using AlgoDuck.Modules.Item.Commands.PurchaseItem;
 using AlgoDuck.Modules.Item.Commands.RemovePlantFromHomepage;
 using AlgoDuck.Modules.Item.Commands.SelectItemAsActive;
+using AlgoDuck.Modules.Item.Commands.UpsertItem.CreateItem;
+using AlgoDuck.Modules.Item.Commands.UpsertItem.LoadFormState;
+using AlgoDuck.Modules.Item.Commands.UpsertItem.UpdateItem;
+using AlgoDuck.Modules.Item.Queries.AdminGetAllItemsPagedFilterable;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetAllItemPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
+using AlgoDuck.Modules.Item.Queries.GetAllOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetFullItemDetails;
-using AlgoDuck.Modules.Item.Queries.GetOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
 namespace AlgoDuck.Modules.Item.Utils;
@@ -64,6 +67,13 @@ internal static class ItemDependencyInitializer
 
         builder.Services.AddScoped<IRemovePlantService, RemovePlantService>();
         builder.Services.AddScoped<IRemovePlantRepository, RemovePlantRepository>();
+        
+        builder.Services.AddScoped<ILoadFormStateRepository, LoadFormStateRepository>();
+        builder.Services.AddScoped<ILoadFormStateService, LoadFormStateService>();
+        
+        builder.Services.AddScoped<IUpdateItemRepository, UpdateItemRepository>();
+        builder.Services.AddScoped<IUpdateItemService, UpdateItemService>();
+        
         
         builder.Services.Configure<AwardsConfig>(
             builder.Configuration.GetSection("Awards"));

@@ -93,5 +93,5 @@ public class EditorLayoutDto
 public class EditorLayoutS3Partial
 {
     public required Guid Id { get; set; }
-    
+    public required string ConfigObjectRaw { get; set; }
 }

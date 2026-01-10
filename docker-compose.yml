@@ -10,27 +10,27 @@ volumes:
   firecracker_images:
 
 services:
-#  executor:
-#    build:
-#      context: .
-#      dockerfile: ExecutorService/Dockerfile
-#    devices:
-#      - /dev/kvm:/dev/kvm
-#    env_file:
-#      - .env
-#    networks:
-#      - app_network
-#    group_add:
-#      - ${KVM_GID}
-#    depends_on:
-#      - mq
-#      - redis
-#    volumes:
-#      - firecracker_images:/app/firecracker/images
-#    develop:
-#      watch:
-#        - action: rebuild
-#          path: ExecutorService/
+  executor:
+    build:
+      context: .
+      dockerfile: ExecutorService/Dockerfile
+    devices:
+      - /dev/kvm:/dev/kvm
+    env_file:
+      - .env
+    networks:
+      - app_network
+    group_add:
+      - ${KVM_GID}
+    depends_on:
+      - mq
+      - redis
+    volumes:
+      - firecracker_images:/app/firecracker/images
+    develop:
+      watch:
+        - action: rebuild
+          path: ExecutorService/
   
   algoduck:
     image: algoduck

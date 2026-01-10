@@ -12,7 +12,7 @@ using StackExchange.Redis;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+internal sealed class ApiFactory : WebApplicationFactory<Program>
 {
     readonly string _sqliteFilePath;
 

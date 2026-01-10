@@ -4,7 +4,7 @@ using Microsoft.Net.Http.Headers;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
 
-public static class AuthFlow
+internal static class AuthFlow
 {
     public static async Task LoginAsync(ApiCollectionFixture fx, HttpClient client, string email, string username, string password, string role, CancellationToken ct)
     {

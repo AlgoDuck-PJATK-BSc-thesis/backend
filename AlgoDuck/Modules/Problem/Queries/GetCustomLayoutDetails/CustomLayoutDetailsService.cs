@@ -15,6 +15,6 @@ public class CustomLayoutDetailsService(
     public async Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> GetCustomLayoutDetailsASync(CustomLayoutDetailsRequestDto requestDto,
         CancellationToken cancellationToken = default)
     {
-        return await layoutDetailsRepository.GetCustomLayoutDetailsASync(requestDto, cancellationToken);
+        return await layoutDetailsRepository.GetCustomLayoutDetailsAsync(requestDto, cancellationToken);
     }
 }

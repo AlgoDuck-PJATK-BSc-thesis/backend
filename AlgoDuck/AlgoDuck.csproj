@@ -45,6 +45,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="AlgoDuck.Tests" />
         <Folder Include="Migrations\" />
         <Folder Include="Modules\Auth\Commands\ApiKeys\" />
         <Folder Include="Modules\Auth\Commands\Email\" />
