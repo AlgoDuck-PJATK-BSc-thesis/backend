@@ -4,6 +4,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Item.Commands.CreateItem;
 using AlgoDuck.Modules.Item.Commands.CreateItem.Types;
+using AlgoDuck.Modules.Item.Commands.UpsertItem.CreateItem;
 using AlgoDuck.Shared.Attributes;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;

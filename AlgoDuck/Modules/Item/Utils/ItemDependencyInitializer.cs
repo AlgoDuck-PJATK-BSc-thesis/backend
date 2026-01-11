@@ -9,12 +9,12 @@ using AlgoDuck.Modules.Item.Commands.UpsertItem.CreateItem;
 using AlgoDuck.Modules.Item.Commands.UpsertItem.LoadFormState;
 using AlgoDuck.Modules.Item.Commands.UpsertItem.UpdateItem;
 using AlgoDuck.Modules.Item.Queries.AdminGetAllItemsPagedFilterable;
+using AlgoDuck.Modules.Item.Queries.AdminGetFullItemDetails;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
-using AlgoDuck.Modules.Item.Queries.GetFullItemDetails;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 
 namespace AlgoDuck.Modules.Item.Utils;

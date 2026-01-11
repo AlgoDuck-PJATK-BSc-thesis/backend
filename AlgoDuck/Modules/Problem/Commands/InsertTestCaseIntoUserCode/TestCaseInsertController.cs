@@ -16,17 +16,21 @@ using Microsoft.EntityFrameworkCore;
 namespace AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 
 [ApiController]
-[Route("api/[controller]")]
-public class TestCaseInsertController(
-    IInsertService insertService
-) : ControllerBase
+[Route("api/problem/test-case")]
+public class TestCaseInsertController : ControllerBase
 {
+    private readonly IInsertService _insertService;
+
+    public TestCaseInsertController(IInsertService insertService)
+    {
+        _insertService = insertService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> InsertTestCaseIntoUserCodeAsync([FromBody] InsertRequestDto insertRequest,
         CancellationToken cancellationToken)
     {
-        var testCaseInsertRes = await insertService.InsertTestCaseAsync(insertRequest, cancellationToken);
-        return testCaseInsertRes.ToActionResult();
+        return  await _insertService.InsertTestCaseAsync(insertRequest, cancellationToken).ToActionResultAsync();
     }
 }
 
@@ -59,19 +63,18 @@ public class InsertService(
     {
         var userSolutionData = new UserSolutionData
         {
-            FileContents =
-                new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
+            FileContents = new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
         };
         try
         {
             var analyzer = new AnalyzerSimple(userSolutionData.FileContents);
-            userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Execution));
+            var codeAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
+            userSolutionData.IngestCodeAnalysisResult(codeAnalysisResult);
             var helper = new ExecutorFileOperationHelper
             {
                 UserSolutionData = userSolutionData
             };
-            helper.ArrangeTestCase(testCaseJoined, userSolutionData.MainClassName);
-            helper.ActTestCase(testCaseJoined);
+            helper.InsertTestCaseForExecution(codeAnalysisResult, testCaseJoined);
 
             return Result<InsertResultDto, ErrorObject<string>>.Ok(new InsertResultDto
             {

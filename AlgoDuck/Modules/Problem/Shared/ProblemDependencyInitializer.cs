@@ -14,6 +14,7 @@ using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 using AlgoDuck.Modules.Problem.Commands.UpdateEditorPreferences;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
+using AlgoDuck.Modules.Problem.Queries.GetAllAvailableThemes;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
 using AlgoDuck.Modules.Problem.Queries.GetAllOwnedEditorLayouts;
@@ -22,6 +23,7 @@ using AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
+using AlgoDuck.Modules.Problem.Queries.GetPreviousSolutionDataById;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
@@ -173,7 +175,13 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<IGetUserEditorPreferencesService, GetUserEditorPreferencesService>();
         builder.Services.AddScoped<IGetUserEditorPreferencesRepository, GetUserEditorPreferencesRepository>();
+        
+        builder.Services.AddScoped<IGetPreviousSolutionDataService, GetPreviousSolutionDataService>();
+        builder.Services.AddScoped<IGetPreviousSolutionDataRepository, GetPreviousSolutionDataRepository>();
 
+        builder.Services.AddScoped<IAllThemesRepository, AllThemesRepository>();
+        builder.Services.AddScoped<IAllThemesService, AllThemesService>();
+        
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();

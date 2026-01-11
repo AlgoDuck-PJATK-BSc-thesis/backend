@@ -96,11 +96,9 @@ public class CreateItemRepository : ICreateItemRepository
             if (!_legalFileNames.Value.LegalFileNames.TryGetValue(itemTypeName, out var legalName)) continue;
             var spritePath = $"{objectKeyBase}/{sprite.FileName}";
 
-            Console.WriteLine($"sprite path: '{spritePath}'");
             if (!legalName.Contains(Path.GetFileNameWithoutExtension(sprite.FileName).ToLowerInvariant()))
                 return Result<ItemCreateResponseDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Illegal file name"));
-
-
+            
             var result = await _s3Client.PostRawFileAsync(
                 path: spritePath,
                 fileContents: sprite.OpenReadStream(),
@@ -119,12 +117,6 @@ public class CreateItemRepository : ICreateItemRepository
                     Reason = err.Body,
                 }
             ));
-
-            if (result.IsT1)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(result.AsT1));
-                
-            }
 
         }
         return Result<ItemCreateResponseDto, ErrorObject<string>>.Ok(new ItemCreateResponseDto

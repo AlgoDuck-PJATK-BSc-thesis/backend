@@ -45,7 +45,7 @@ public class DataSeedingService(
 
     private async Task SeedUserConfigsAsync()
     {
-        if (!await context.Users.AnyAsync())
+        if (!await context.UserConfigs.AnyAsync())
         {
             var configs = new List<UserConfig>
             {
@@ -490,7 +490,7 @@ public class DataSeedingService(
                     Name = "algoduck",
                     Description = "description",
                     Price = 0,
-                    Purchasable = true,
+                    Purchasable = false,
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
                     CreatedAt = DateTime.UtcNow,

@@ -98,10 +98,14 @@ public class GetUserEditorPreferencesRepository : IGetUserEditorPreferencesRepos
                 }
             }).FirstOrDefaultAsync(cancellationToken: cancellationToken);
 
-        return Result<UserEditorPreferencesDto, ErrorObject<string>>.Ok(new UserEditorPreferencesDto()
+        return Result<UserEditorPreferencesDto, ErrorObject<string>>.Ok(new UserEditorPreferencesDto
         {
             FontSize = editorPreferences?.FontSize ?? 11,
-            ThemeName = editorPreferences?.EditorTheme.ThemeName ?? "vs-dark",
+            Theme = new ThemeDto
+            {
+                ThemeId = editorPreferences?.EditorTheme.ThemeId ?? Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
+                ThemeName = editorPreferences?.EditorTheme.ThemeName ?? "vs-dark",
+            },
             Layout = new LayoutDto
             {
                 LayoutId = layoutId,
@@ -115,7 +119,7 @@ public class GetUserEditorPreferencesRepository : IGetUserEditorPreferencesRepos
 public class UserEditorPreferencesDto
 {
     public required LayoutDto Layout { get; set; }
-    public required string ThemeName { get; set; }
+    public required ThemeDto Theme { get; set; }
     public required int FontSize { get; set; }
 }
 
@@ -124,6 +128,12 @@ public class LayoutDto
     public required Guid? LayoutId { get; set; }
     public required string LayoutName { get; set; }
     public required object LayoutContent { get; set; }
+}
+
+public class ThemeDto
+{
+    public required Guid ThemeId { get; set; }
+    public required string ThemeName { get; set; }
 }
 
 public class EditorThemeDto

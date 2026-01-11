@@ -10,17 +10,22 @@ public interface IAllDucksRepository
     public Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default);
 }
 
-public class AllDucksRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IAllDucksRepository
+public class AllDucksRepository : IAllDucksRepository
 {
+
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public AllDucksRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)
     {
-        var totalItems = await dbContext.DuckItems.CountAsync(cancellationToken);
+        var purchasableDucksQueryable = _dbContext.DuckItems.Where(d => d.Purchasable);
+        var totalItems = await purchasableDucksQueryable.CountAsync(cancellationToken);
 
         var pageCount = (int) Math.Ceiling((float) totalItems / pagedRequest.PageSize);
-        Console.WriteLine(pagedRequest.CurrPage);
-        Console.WriteLine(pageCount);
         var actualPage = Math.Clamp(pagedRequest.CurrPage, 1,  pageCount);
 
         return Result<PageData<DuckItemDto>, ErrorObject<string>>.Ok(new PageData<DuckItemDto>
@@ -30,7 +35,7 @@ public class AllDucksRepository(
             TotalItems = totalItems,
             NextCursor = actualPage < pageCount ? actualPage + 1 : null,
             PrevCursor = actualPage > 1 ? actualPage - 1 : null,
-            Items = await dbContext.DuckItems
+            Items = await purchasableDucksQueryable
                 .Include(i => i.Purchases).ThenInclude(p => p.User)
                 .Include(i => i.Rarity)
                 .Where(i => i.Purchasable)

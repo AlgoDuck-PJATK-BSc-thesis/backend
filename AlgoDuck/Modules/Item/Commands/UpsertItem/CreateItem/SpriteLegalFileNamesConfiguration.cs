@@ -1,4 +1,4 @@
-namespace AlgoDuck.Modules.Item.Commands.CreateItem;
+namespace AlgoDuck.Modules.Item.Commands.UpsertItem.CreateItem;
 
 public class SpriteLegalFileNamesConfiguration
 {

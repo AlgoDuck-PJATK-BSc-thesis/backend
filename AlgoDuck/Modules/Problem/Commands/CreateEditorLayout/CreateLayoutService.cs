@@ -27,7 +27,11 @@ public class CreateLayoutService: ICreateLayoutService
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Cannot own more than 10 layouts. Consider deleting one"));
             
             if (editorLayout.Select(l => l.Name).Contains(createDto.LayoutName))
-                return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Duplicate layout name"));
+            {
+                Console.WriteLine("duplicate");
+                return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(
+                    ErrorObject<string>.BadRequest("Duplicate layout name"));
+            }
             return await _createLayoutRepository.CreateLayoutAsync(createDto, cancellationToken);
         });
     }
