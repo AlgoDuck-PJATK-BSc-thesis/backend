@@ -7,8 +7,6 @@ public static class ProfileMapper
 {
     public static UserProfileDto ToUserProfileDto(ApplicationUser user)
     {
-        var config = user.UserConfig;
-
         return new UserProfileDto
         {
             UserId = user.Id,
@@ -18,7 +16,6 @@ public static class ProfileMapper
             Experience = user.Experience,
             AmountSolved = user.AmountSolved,
             CohortId = user.CohortId,
-            Language = config?.Language ?? string.Empty,
             S3AvatarUrl = string.Empty
         };
     }

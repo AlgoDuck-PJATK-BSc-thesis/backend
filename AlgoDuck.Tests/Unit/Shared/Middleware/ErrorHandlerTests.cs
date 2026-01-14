@@ -3,10 +3,11 @@ using System.Text.Json;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Middleware;
 using FluentAssertions;
-using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace AlgoDuck.Tests.Unit.Shared.MIddleware;
 
@@ -21,7 +22,8 @@ public sealed class ErrorHandlerTests
             new("PageSize", "'PageSize' must be less than or equal to '100'.") { AttemptedValue = 101 }
         };
 
-        var middleware = new ErrorHandler(_ => throw new ValidationException(failures), NullLogger<ErrorHandler>.Instance);
+        var env = Mock.Of<IWebHostEnvironment>();
+        var middleware = new ErrorHandler(_ => throw new FluentValidation.ValidationException(failures), NullLogger<ErrorHandler>.Instance, env);
 
         var ctx = new DefaultHttpContext();
         ctx.Response.Body = new MemoryStream();
@@ -49,14 +51,15 @@ public sealed class ErrorHandlerTests
     [Fact]
     public async Task Invoke_WhenNextThrowsAppException_ReturnsStatusCodeAndMessage()
     {
-        var middleware = new ErrorHandler(_ => throw new AppException("Nope", StatusCodes.Status403Forbidden), NullLogger<ErrorHandler>.Instance);
+        var env = Mock.Of<IWebHostEnvironment>();
+        var middleware = new ErrorHandler(_ => throw new AppException("Nope"), NullLogger<ErrorHandler>.Instance, env);
 
         var ctx = new DefaultHttpContext();
         ctx.Response.Body = new MemoryStream();
 
         await middleware.Invoke(ctx);
 
-        ctx.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        ctx.Response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
 
         var json = await ReadBodyAsync(ctx.Response);
         using var doc = JsonDocument.Parse(json);
@@ -69,7 +72,8 @@ public sealed class ErrorHandlerTests
     [Fact]
     public async Task Invoke_WhenNextThrowsUnexpectedException_Returns500UnexpectedError()
     {
-        var middleware = new ErrorHandler(_ => throw new InvalidOperationException("boom"), NullLogger<ErrorHandler>.Instance);
+        var env = Mock.Of<IWebHostEnvironment>();
+        var middleware = new ErrorHandler(_ => throw new InvalidOperationException("boom"), NullLogger<ErrorHandler>.Instance, env);
 
         var ctx = new DefaultHttpContext();
         ctx.Response.Body = new MemoryStream();

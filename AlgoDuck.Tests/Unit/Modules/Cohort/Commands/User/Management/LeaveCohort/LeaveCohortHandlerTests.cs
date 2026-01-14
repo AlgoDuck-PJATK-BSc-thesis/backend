@@ -23,7 +23,7 @@ public class LeaveCohortHandlerTests
     public async Task HandleAsync_WhenUserNotFound_ThenThrowsCohortValidationException()
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        await using var dbContext = CreateInMemoryContext();
+        var dbContext = CreateInMemoryContext();
 
         var userId = Guid.NewGuid();
 
@@ -43,7 +43,7 @@ public class LeaveCohortHandlerTests
     public async Task HandleAsync_WhenUserNotInCohort_ThenThrowsCohortValidationException()
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        await using var dbContext = CreateInMemoryContext();
+        var dbContext = CreateInMemoryContext();
 
         var userId = Guid.NewGuid();
 
@@ -69,7 +69,7 @@ public class LeaveCohortHandlerTests
     public async Task HandleAsync_WhenCohortNotFound_ThenThrowsCohortNotFoundException()
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        await using var dbContext = CreateInMemoryContext();
+        var dbContext = CreateInMemoryContext();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -96,7 +96,7 @@ public class LeaveCohortHandlerTests
     public async Task HandleAsync_WhenLastMemberLeaves_ThenDeactivatesCohort()
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        await using var dbContext = CreateInMemoryContext();
+        var dbContext = CreateInMemoryContext();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -126,12 +126,11 @@ public class LeaveCohortHandlerTests
 
         userRepositoryMock
             .Setup(x => x.UpdateAsync(It.IsAny<ApplicationUser>(), It.IsAny<CancellationToken>()))
-            .Callback<ApplicationUser, CancellationToken>((u, _) =>
+            .Returns<ApplicationUser, CancellationToken>(async (u, ct) =>
             {
                 dbContext.ApplicationUsers.Update(u);
-                dbContext.SaveChanges();
-            })
-            .Returns(Task.CompletedTask);
+                await dbContext.SaveChangesAsync(ct);
+            });
 
         var handler = new LeaveCohortHandler(
             userRepositoryMock.Object,
@@ -141,16 +140,20 @@ public class LeaveCohortHandlerTests
 
         Assert.Null(user.CohortId);
 
+        var reloadedUser = await dbContext.ApplicationUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        Assert.NotNull(reloadedUser);
+        Assert.Null(reloadedUser.CohortId);
+
         var reloadedCohort = await dbContext.Cohorts.FindAsync(cohortId);
         Assert.NotNull(reloadedCohort);
-        Assert.False(reloadedCohort!.IsActive);
+        Assert.False(reloadedCohort.IsActive);
     }
 
     [Fact]
     public async Task HandleAsync_WhenOtherMembersRemain_ThenKeepsCohortActive()
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        await using var dbContext = CreateInMemoryContext();
+        var dbContext = CreateInMemoryContext();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -187,12 +190,11 @@ public class LeaveCohortHandlerTests
 
         userRepositoryMock
             .Setup(x => x.UpdateAsync(It.IsAny<ApplicationUser>(), It.IsAny<CancellationToken>()))
-            .Callback<ApplicationUser, CancellationToken>((u, _) =>
+            .Returns<ApplicationUser, CancellationToken>(async (u, ct) =>
             {
                 dbContext.ApplicationUsers.Update(u);
-                dbContext.SaveChanges();
-            })
-            .Returns(Task.CompletedTask);
+                await dbContext.SaveChangesAsync(ct);
+            });
 
         var handler = new LeaveCohortHandler(
             userRepositoryMock.Object,
@@ -202,8 +204,12 @@ public class LeaveCohortHandlerTests
 
         Assert.Null(leavingUser.CohortId);
 
+        var reloadedUser = await dbContext.ApplicationUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        Assert.NotNull(reloadedUser);
+        Assert.Null(reloadedUser.CohortId);
+
         var reloadedCohort = await dbContext.Cohorts.FindAsync(cohortId);
         Assert.NotNull(reloadedCohort);
-        Assert.True(reloadedCohort!.IsActive);
+        Assert.True(reloadedCohort.IsActive);
     }
 }

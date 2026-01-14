@@ -91,4 +91,12 @@
       </Reference>
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="AlgoDuck.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Modules\User\Shared\Reminders\StudyReminderDue.cs" />
+    </ItemGroup>
+
 </Project>

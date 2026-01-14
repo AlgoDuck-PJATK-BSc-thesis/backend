@@ -27,7 +27,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("GetByIdAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
+        method.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);
@@ -40,7 +40,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("GetByNameAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
+        method.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);
@@ -53,7 +53,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("GetByEmailAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
+        method.ReturnType.Should().Be(typeof(Task<ApplicationUser>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);
@@ -66,7 +66,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("UpdateAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task));
+        method.ReturnType.Should().Be(typeof(Task));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);
@@ -79,7 +79,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("GetUserSolutionsAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<UserSolution>>));
+        method.ReturnType.Should().Be(typeof(Task<IReadOnlyList<UserSolution>>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(4);
@@ -94,7 +94,7 @@ public sealed class IUserRepositoryTests
         var method = type.GetMethod("SearchAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<ApplicationUser>>));
+        method.ReturnType.Should().Be(typeof(Task<IReadOnlyList<ApplicationUser>>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(4);

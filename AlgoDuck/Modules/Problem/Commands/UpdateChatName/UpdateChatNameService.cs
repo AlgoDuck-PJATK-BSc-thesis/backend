@@ -1,5 +1,4 @@
 using AlgoDuck.Shared.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 

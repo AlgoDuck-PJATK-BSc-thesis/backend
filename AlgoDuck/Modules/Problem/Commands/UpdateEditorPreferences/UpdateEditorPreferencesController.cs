@@ -80,10 +80,8 @@ public class UpdateEditorPreferencesRepository : IUpdateEditorPreferencesReposit
         {
             EmailNotificationsEnabled = false,
             IsDarkMode = true,
-            PushNotificationsEnabled = false,
             UserId = requestDto.UserId,
             IsHighContrast = false,
-            Language = "en"
         };
 
         if (_dbContext.EditorThemes.Select(et => et.EditorThemeId).Any(et => et == requestDto.ThemeId) &&

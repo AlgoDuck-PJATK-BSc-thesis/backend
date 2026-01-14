@@ -1003,15 +1003,37 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_high_contrast");
 
-                    b.Property<string>("Language")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
-                        .HasColumnName("language");
+                    b.Property<int?>("ReminderFriHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_fri_hour");
 
-                    b.Property<bool>("PushNotificationsEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("push_notifications_enabled");
+                    b.Property<int?>("ReminderMonHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_mon_hour");
+
+                    b.Property<int?>("ReminderSatHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_sat_hour");
+
+                    b.Property<int?>("ReminderSunHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_sun_hour");
+
+                    b.Property<int?>("ReminderThuHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_thu_hour");
+
+                    b.Property<int?>("ReminderTueHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_tue_hour");
+
+                    b.Property<int?>("ReminderWedHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_wed_hour");
+
+                    b.Property<DateTimeOffset?>("StudyReminderNextAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("study_reminder_next_at_utc");
 
                     b.HasKey("UserId")
                         .HasName("user_config_pk");

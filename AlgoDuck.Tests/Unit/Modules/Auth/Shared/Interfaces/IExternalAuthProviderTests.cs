@@ -14,7 +14,7 @@ public sealed class IExternalAuthProviderTests
 
         var get = t.GetMethod("GetUserInfoAsync");
         Assert.NotNull(get);
-        Assert.Equal(typeof(Task<AuthUserDto?>), get!.ReturnType);
+        Assert.Equal(typeof(Task<AuthUserDto?>), get.ReturnType);
         Assert.Equal(
             new[] { typeof(string), typeof(string), typeof(CancellationToken) },
             get.GetParameters().Select(p => p.ParameterType).ToArray()

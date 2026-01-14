@@ -83,7 +83,7 @@ public sealed class CreateCohortHandlerTests
         var saved = await db.Cohorts.FirstOrDefaultAsync(c => c.CohortId == result.CohortId);
         Assert.NotNull(saved);
 
-        Assert.Equal("Cohort A", saved!.Name);
+        Assert.Equal("Cohort A", saved.Name);
         Assert.True(saved.IsActive);
         Assert.Null(saved.EmptiedAt);
         Assert.Equal(adminUserId, saved.CreatedByUserId);

@@ -15,7 +15,7 @@ public sealed class ChangePasswordHandlerTests
     public async Task HandleAsync_WhenUserIdEmpty_ThenThrowsValidationException()
     {
         var userManager = CreateUserManagerMock();
-        var validator = CreateValidatorMock<ChangePasswordDto>(new ChangePasswordDto
+        var validator = CreateValidatorMock(new ChangePasswordDto
         {
             CurrentPassword = "123456",
             NewPassword = "12345678"
@@ -40,7 +40,7 @@ public sealed class ChangePasswordHandlerTests
         userManager.Setup(x => x.FindByIdAsync(userId.ToString()))
             .ReturnsAsync((ApplicationUser?)null);
 
-        var validator = CreateValidatorMock<ChangePasswordDto>(new ChangePasswordDto
+        var validator = CreateValidatorMock(new ChangePasswordDto
         {
             CurrentPassword = "123456",
             NewPassword = "12345678"
@@ -69,7 +69,7 @@ public sealed class ChangePasswordHandlerTests
         userManager.Setup(x => x.ChangePasswordAsync(user, "oldpass", "newpass123"))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "failed" }));
 
-        var validator = CreateValidatorMock<ChangePasswordDto>(new ChangePasswordDto
+        var validator = CreateValidatorMock(new ChangePasswordDto
         {
             CurrentPassword = "oldpass",
             NewPassword = "newpass123"
@@ -100,7 +100,7 @@ public sealed class ChangePasswordHandlerTests
         userManager.Setup(x => x.ChangePasswordAsync(user, "oldpass", "newpass123"))
             .ReturnsAsync(IdentityResult.Success);
 
-        var validator = CreateValidatorMock<ChangePasswordDto>(new ChangePasswordDto
+        var validator = CreateValidatorMock(new ChangePasswordDto
         {
             CurrentPassword = "oldpass",
             NewPassword = "newpass123"

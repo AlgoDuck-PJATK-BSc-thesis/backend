@@ -32,7 +32,6 @@ public sealed class ProfileMapperTests
         result.Experience.Should().Be(456);
         result.AmountSolved.Should().Be(7);
         result.CohortId.Should().Be(cohortId);
-        result.Language.Should().Be(string.Empty);
         result.S3AvatarUrl.Should().Be(string.Empty);
     }
 

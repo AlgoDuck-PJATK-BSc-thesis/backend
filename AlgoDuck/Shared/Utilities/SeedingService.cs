@@ -12,7 +12,8 @@ public class DataSeedingService(
     ApplicationCommandDbContext context,
     IAwsS3Client s3Client,
     RoleManager<IdentityRole<Guid>> roleManager,
-    UserManager<ApplicationUser> userManager)
+    UserManager<ApplicationUser> userManager,
+    IDefaultDuckService defaultDuckService)
 {
     public async Task SeedDataAsync()
     {
@@ -22,6 +23,7 @@ public class DataSeedingService(
         await SeedCategories();
         await SeedDifficulties();
         await SeedItems();
+        await EnsureDefaultsForSeededUsersAsync();
         await SeedProblems();
         await SeedTestCases();
         await SeedEditorThemes();
@@ -69,8 +71,14 @@ public class DataSeedingService(
             userId: Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab"));
     }
 
-    private async Task EnsureUserWithRoleAsync(string username, string email, string password, string role,
-        Guid? userId = null)
+    private async Task EnsureDefaultsForSeededUsersAsync()
+    {
+        await defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(
+            Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab"),
+            CancellationToken.None);
+    }
+
+    private async Task EnsureUserWithRoleAsync(string username, string email, string password, string role, Guid? userId = null)
     {
         var user = await userManager.FindByNameAsync(username);
 
@@ -82,9 +90,9 @@ public class DataSeedingService(
                 UserName = username,
                 Email = email,
                 EmailConfirmed = true,
-                Coins = 0,
-                Experience = 0,
-                AmountSolved = 0
+                Coins = 50000,
+                Experience = 1000,
+                AmountSolved = 10
             };
 
             var createResult = await userManager.CreateAsync(user, password);
@@ -359,7 +367,7 @@ public class DataSeedingService(
                     Name = "algoduck",
                     Description = "description",
                     Price = 0,
-                    Purchasable = true,
+                    Purchasable = false,
                     RarityId = Guid.Parse("072ed5ba-929c-4b67-adb6-c747a3a1404a"),
                     CreatedById = Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
                     CreatedAt = DateTime.UtcNow,

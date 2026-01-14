@@ -9,6 +9,5 @@ public sealed class UserDto
     public int Experience { get; init; }
     public int AmountSolved { get; init; }
     public Guid? CohortId { get; init; }
-    public string Language { get; init; } = string.Empty;
     public string S3AvatarUrl { get; init; } = string.Empty;
 }

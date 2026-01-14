@@ -8,13 +8,11 @@ namespace AlgoDuck.Modules.Auth.Shared.Jwt;
 
 public sealed class TokenParser
 {
-    private readonly JwtSettings _settings;
     private readonly TokenValidationParameters _validationParameters;
 
     public TokenParser(IOptions<JwtSettings> options)
     {
-        _settings = options.Value;
-        _validationParameters = BuildValidationParameters(_settings);
+        _validationParameters = BuildValidationParameters(options.Value);
     }
 
     private static TokenValidationParameters BuildValidationParameters(JwtSettings settings)

@@ -22,7 +22,7 @@ public sealed class GetUserConfigHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUserHasNoConfig_ThenReturnsDefaults()
+    public async Task HandleAsync_WhenUserHasNoConfig_ThenReturnsDefaultsAndWeeklyReminders()
     {
         var userId = Guid.NewGuid();
 
@@ -43,12 +43,24 @@ public sealed class GetUserConfigHandlerTests
 
         Assert.False(result.IsDarkMode);
         Assert.False(result.IsHighContrast);
-        Assert.Equal(string.Empty, result.Language);
+        Assert.False(result.EmailNotificationsEnabled);
+        Assert.Equal("u1", result.Username);
+        Assert.Equal("u1@test.local", result.Email);
         Assert.Equal(string.Empty, result.S3AvatarUrl);
+
+        Assert.NotNull(result.WeeklyReminders);
+        Assert.Equal(7, result.WeeklyReminders.Count);
+
+        foreach (var reminder in result.WeeklyReminders)
+        {
+            Assert.False(reminder.Enabled);
+            Assert.Equal(8, reminder.Hour);
+            Assert.Equal(0, reminder.Minute);
+        }
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUserHasConfig_ThenMapsConfigValues()
+    public async Task HandleAsync_WhenUserHasConfig_ThenMapsConfigValuesAndReminders()
     {
         var userId = Guid.NewGuid();
 
@@ -65,9 +77,9 @@ public sealed class GetUserConfigHandlerTests
                     UserId = userId,
                     IsDarkMode = true,
                     IsHighContrast = true,
-                    Language = "pl",
                     EmailNotificationsEnabled = true,
-                    PushNotificationsEnabled = false,
+                    ReminderMonHour = 9,
+                    ReminderWedHour = 19,
                     User = null!
                 }
             });
@@ -78,7 +90,19 @@ public sealed class GetUserConfigHandlerTests
 
         Assert.True(result.IsDarkMode);
         Assert.True(result.IsHighContrast);
-        Assert.Equal("pl", result.Language);
-        Assert.Equal(string.Empty, result.S3AvatarUrl);
+        Assert.True(result.EmailNotificationsEnabled);
+
+        Assert.Equal(7, result.WeeklyReminders.Count);
+
+        var mon = result.WeeklyReminders.Single(r => r.Day == "Mon");
+        Assert.True(mon.Enabled);
+        Assert.Equal(9, mon.Hour);
+
+        var wed = result.WeeklyReminders.Single(r => r.Day == "Wed");
+        Assert.True(wed.Enabled);
+        Assert.Equal(19, wed.Hour);
+
+        var tue = result.WeeklyReminders.Single(r => r.Day == "Tue");
+        Assert.False(tue.Enabled);
     }
 }

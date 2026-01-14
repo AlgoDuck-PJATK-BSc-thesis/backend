@@ -39,7 +39,7 @@ public sealed class GetUserActivityHandler : IGetUserActivityHandler
             {
                 SolutionId = s.SolutionId,
                 ProblemId = s.ProblemId,
-                ProblemName = s.Problem?.ProblemTitle ?? string.Empty,
+                ProblemName = s.Problem.ProblemTitle,
                 CodeRuntimeSubmitted = s.CodeRuntimeSubmitted,
                 SubmittedAt = s.CreatedAt
             })

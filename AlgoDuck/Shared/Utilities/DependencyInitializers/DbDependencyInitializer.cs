@@ -12,21 +12,37 @@ internal static class DbDependencyInitializer
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
 
-        builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        var useSqlite =
+            builder.Environment.IsEnvironment("Testing") ||
+            connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.EndsWith(".db", StringComparison.OrdinalIgnoreCase);
 
-        builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        if (useSqlite)
+        {
+            builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
+                options.UseSqlite(connectionString));
+
+            builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
+                options.UseSqlite(connectionString));
+        }
+        else
+        {
+            builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
+                options.UseNpgsql(connectionString));
+
+            builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
+                options.UseNpgsql(connectionString));
+        }
 
         builder.Services.AddScoped<DataSeedingService>();
-
-        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
             var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
             return ConnectionMultiplexer.Connect(configuration);
         });
-        
-        builder.Services.AddSingleton<IDatabase>(sp =>
+
+        builder.Services.AddSingleton<StackExchange.Redis.IDatabase>(sp =>
         {
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             return redis.GetDatabase();

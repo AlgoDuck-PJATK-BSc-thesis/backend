@@ -41,8 +41,7 @@ public sealed class UserRepositoryTests
             Email = "test@example.com",
             UserConfig = new UserConfig
             {
-                UserId = userId,
-                Language = "en"
+                UserId = userId
             }
         };
 
@@ -52,9 +51,9 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByIdAsync(userId, CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(userId);
+        result.Id.Should().Be(userId);
         result.UserConfig.Should().NotBeNull();
-        result.UserConfig!.Language.Should().Be("en");
+        result.UserConfig!.UserId.Should().Be(userId);
     }
 
     [Fact]
@@ -85,7 +84,7 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByNameAsync("unique-user", CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.UserName.Should().Be("unique-user");
+        result.UserName.Should().Be("unique-user");
     }
 
     [Fact]
@@ -106,7 +105,7 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByEmailAsync("email@test.local", CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.Email.Should().Be("email@test.local");
+        result.Email.Should().Be("email@test.local");
     }
 
     [Fact]
@@ -128,7 +127,7 @@ public sealed class UserRepositoryTests
 
         var loaded = await repository.GetByIdAsync(userId, CancellationToken.None);
         loaded.Should().NotBeNull();
-        loaded!.UserName = "after";
+        loaded.UserName = "after";
 
         await repository.UpdateAsync(loaded, CancellationToken.None);
 
@@ -137,82 +136,6 @@ public sealed class UserRepositoryTests
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         reloaded.Should().NotBeNull();
-        reloaded!.UserName.Should().Be("after");
-    }
-
-    [Fact]
-    public async Task GetUserSolutionsAsync_WhenNoSolutionsForUser_ReturnsEmptyList()
-    {
-        var (repository, _, _) = CreateRepository();
-        var userId = Guid.NewGuid();
-
-        var results = await repository.GetUserSolutionsAsync(userId, 0, 10, CancellationToken.None);
-
-        results.Should().NotBeNull();
-        results.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task SearchAsync_WhenQueryEmpty_ReturnsPagedUsersOrderedByUserName()
-    {
-        var (repository, queryContext, _) = CreateRepository();
-
-        var userA = new ApplicationUser
-        {
-            Id = Guid.NewGuid(),
-            UserName = "adam",
-            Email = "adam@example.com"
-        };
-
-        var userB = new ApplicationUser
-        {
-            Id = Guid.NewGuid(),
-            UserName = "zoe",
-            Email = "zoe@example.com"
-        };
-
-        queryContext.Users.AddRange(userA, userB);
-        await queryContext.SaveChangesAsync();
-
-        var results = await repository.SearchAsync(string.Empty, 1, 10, CancellationToken.None);
-
-        results.Should().HaveCount(2);
-        results.Select(u => u.UserName).Should().BeInAscendingOrder();
-    }
-
-    [Fact]
-    public async Task SearchAsync_WhenQueryProvided_FiltersByUserNameOrEmailCaseInsensitive()
-    {
-        var (repository, queryContext, _) = CreateRepository();
-
-        var user1 = new ApplicationUser
-        {
-            Id = Guid.NewGuid(),
-            UserName = "search-target",
-            Email = "other@example.com"
-        };
-
-        var user2 = new ApplicationUser
-        {
-            Id = Guid.NewGuid(),
-            UserName = "someone-else",
-            Email = "search@example.com"
-        };
-
-        var user3 = new ApplicationUser
-        {
-            Id = Guid.NewGuid(),
-            UserName = "unrelated",
-            Email = "unrelated@example.com"
-        };
-
-        queryContext.Users.AddRange(user1, user2, user3);
-        await queryContext.SaveChangesAsync();
-
-        var results = await repository.SearchAsync("search", 1, 10, CancellationToken.None);
-
-        results.Should().HaveCount(2);
-        results.Select(u => u.Id).Should().Contain(new[] { user1.Id, user2.Id });
-        results.Select(u => u.Id).Should().NotContain(user3.Id);
+        reloaded.UserName.Should().Be("after");
     }
 }

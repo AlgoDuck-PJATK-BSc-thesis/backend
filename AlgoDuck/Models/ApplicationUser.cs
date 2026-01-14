@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
+public class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
     public int Coins { get; set; }
 

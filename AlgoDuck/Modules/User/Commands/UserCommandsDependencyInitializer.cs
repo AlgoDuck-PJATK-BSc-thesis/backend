@@ -3,8 +3,6 @@ using AlgoDuck.Modules.User.Commands.Admin.DeleteUser;
 using AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
 using AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
-using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorLayout;
-using AlgoDuck.Modules.User.Commands.User.Preferences.SetEditorTheme;
 using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
 using AlgoDuck.Modules.User.Commands.User.Profile.SelectAvatar;
 using AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
@@ -30,12 +28,6 @@ public static class UserCommandsDependencyInitializer
 
         services.AddScoped<IValidator<SelectAvatarDto>, SelectAvatarValidator>();
         services.AddScoped<ISelectAvatarHandler, SelectAvatarHandler>();
-
-        services.AddScoped<IValidator<SetEditorThemeDto>, SetEditorThemeValidator>();
-        services.AddScoped<ISetEditorThemeHandler, SetEditorThemeHandler>();
-
-        services.AddScoped<IValidator<SetEditorLayoutDto>, SetEditorLayoutValidator>();
-        services.AddScoped<ISetEditorLayoutHandler, SetEditorLayoutHandler>();
 
         services.AddScoped<IDeleteUserHandler, DeleteUserHandler>();
 
