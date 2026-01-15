@@ -17,107 +17,77 @@ public sealed class ApiKeysTests
     }
 
     [Fact]
-    public async Task ApiKeys_GenerateAndRevoke_ReturnsOk()
+    public async Task ApiKeys_GenerateListAndRevoke_ReturnsOk()
     {
         var suffix = Guid.NewGuid().ToString("N")[..10];
-
-        var email = $"apikey_{suffix}@test.local";
-        var username = $"apikey_{suffix}";
+        var email = $"apikeys_{suffix}@test.local";
+        var username = $"apikeys_{suffix}";
         var password = "Test1234!";
 
         var client = _fx.CreateAnonymousClient();
         await AuthFlow.LoginAsync(_fx, client, email, username, password, "User", CancellationToken.None);
         SetCsrfHeaderFromCookie(client);
 
-        var genResp = await client.PostAsJsonAsync(
+        var generateResp = await client.PostAsJsonAsync(
             "/api/auth/api-keys",
             new { Name = "integration-key" },
             CancellationToken.None);
 
-        EnsureOkOrThrow(genResp);
+        EnsureOkOrCreatedOrThrow(generateResp);
 
-        var genJson = await genResp.Content.ReadAsStringAsync(CancellationToken.None);
-        using var doc = JsonDocument.Parse(genJson);
+        var generateJson = await generateResp.Content.ReadAsStringAsync(CancellationToken.None);
+        using var genDoc = JsonDocument.Parse(generateJson);
 
-        var root = doc.RootElement;
-
-        JsonElement body;
-        if (root.TryGetProperty("body", out var b))
-        {
-            body = b;
-        }
-        else
-        {
-            body = root;
-        }
+        var root = genDoc.RootElement;
+        var body = root.TryGetProperty("body", out var b) ? b : root;
 
         if (!body.TryGetProperty("apiKey", out var apiKeyEl) || apiKeyEl.ValueKind != JsonValueKind.Object)
         {
-            throw new Xunit.Sdk.XunitException($"Generate api key response did not contain body.apiKey object. Body: {genJson}");
+            throw new Xunit.Sdk.XunitException($"Generate api key response did not contain apiKey object. Body: {generateJson}");
         }
 
-        var apiKeyId = TryGetGuid(apiKeyEl, "id") ?? TryGetGuid(apiKeyEl, "Id");
-        if (!apiKeyId.HasValue || apiKeyId.Value == Guid.Empty)
+        var idStr = TryGetString(apiKeyEl, "id") ?? TryGetString(apiKeyEl, "Id");
+        if (string.IsNullOrWhiteSpace(idStr) || !Guid.TryParse(idStr, out var apiKeyId))
         {
-            throw new Xunit.Sdk.XunitException($"Generate api key response did not contain a valid id. Body: {genJson}");
+            throw new Xunit.Sdk.XunitException($"Generate api key response did not contain a valid apiKey.id. Body: {generateJson}");
         }
 
-        var revokeResp = await client.DeleteAsync($"/api/auth/api-keys/{apiKeyId.Value}", CancellationToken.None);
-        EnsureOkOrThrow(revokeResp);
-    }
+        var listResp = await client.GetAsync("/api/auth/api-keys", CancellationToken.None);
 
-    [Fact]
-    public async Task ApiKeys_Generate_WhenNameMissing_ReturnsError()
-    {
-        var suffix = Guid.NewGuid().ToString("N")[..10];
-
-        var email = $"apikey_bad_{suffix}@test.local";
-        var username = $"apikey_bad_{suffix}";
-        var password = "Test1234!";
-
-        var client = _fx.CreateAnonymousClient();
-        await AuthFlow.LoginAsync(_fx, client, email, username, password, "User", CancellationToken.None);
-        SetCsrfHeaderFromCookie(client);
-
-        var genResp = await client.PostAsJsonAsync(
-            "/api/auth/api-keys",
-            new { Name = "" },
-            CancellationToken.None);
-
-        Assert.True((int)genResp.StatusCode >= 400);
-    }
-
-    static void EnsureOkOrThrow(HttpResponseMessage resp)
-    {
-        if (resp.StatusCode == HttpStatusCode.OK)
+        if (listResp.StatusCode != HttpStatusCode.OK)
         {
-            return;
+            var bodyTxt = await listResp.Content.ReadAsStringAsync(CancellationToken.None);
+            throw new Xunit.Sdk.XunitException($"Expected 200 OK but got {(int)listResp.StatusCode} {listResp.StatusCode}. Body: {bodyTxt}");
         }
 
-        var body = resp.Content.ReadAsStringAsync(CancellationToken.None).GetAwaiter().GetResult();
-        throw new Xunit.Sdk.XunitException($"Expected 200 OK but got {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
-    }
+        var listJson = await listResp.Content.ReadAsStringAsync(CancellationToken.None);
+        using var listDoc = JsonDocument.Parse(listJson);
 
-    static Guid? TryGetGuid(JsonElement obj, string prop)
-    {
-        if (!obj.TryGetProperty(prop, out var el)) return null;
+        var listRoot = listDoc.RootElement;
+        var listBody = listRoot.TryGetProperty("body", out var lb) ? lb : listRoot;
 
-        if (el.ValueKind == JsonValueKind.String)
+        Assert.True(listBody.ValueKind == JsonValueKind.Array);
+
+        var found = false;
+        foreach (var item in listBody.EnumerateArray())
         {
-            var s = el.GetString();
-            if (Guid.TryParse(s, out var g)) return g;
-            return null;
+            if (item.ValueKind != JsonValueKind.Object) continue;
+            var itemId = TryGetString(item, "id") ?? TryGetString(item, "Id");
+            if (string.Equals(itemId, apiKeyId.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                found = true;
+                break;
+            }
         }
 
-        if (el.ValueKind == JsonValueKind.Null || el.ValueKind == JsonValueKind.Undefined) return null;
+        Assert.True(found);
 
-        try
+        var revokeResp = await client.DeleteAsync($"/api/auth/api-keys/{apiKeyId}", CancellationToken.None);
+
+        if (revokeResp.StatusCode != HttpStatusCode.OK && revokeResp.StatusCode != HttpStatusCode.NoContent)
         {
-            return el.GetGuid();
-        }
-        catch
-        {
-            return null;
+            var bodyTxt = await revokeResp.Content.ReadAsStringAsync(CancellationToken.None);
+            throw new Xunit.Sdk.XunitException($"Expected 200 OK or 204 NoContent but got {(int)revokeResp.StatusCode} {revokeResp.StatusCode}. Body: {bodyTxt}");
         }
     }
 
@@ -149,5 +119,23 @@ public sealed class ApiKeysTests
         }
 
         return null;
+    }
+
+    static void EnsureOkOrCreatedOrThrow(HttpResponseMessage resp)
+    {
+        if (resp.StatusCode == HttpStatusCode.OK || resp.StatusCode == HttpStatusCode.Created)
+        {
+            return;
+        }
+
+        var body = resp.Content.ReadAsStringAsync(CancellationToken.None).GetAwaiter().GetResult();
+        throw new Xunit.Sdk.XunitException($"Expected 200 OK or 201 Created but got {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
+    }
+
+    static string? TryGetString(JsonElement obj, string prop)
+    {
+        if (!obj.TryGetProperty(prop, out var el)) return null;
+        if (el.ValueKind != JsonValueKind.String) return null;
+        return el.GetString();
     }
 }

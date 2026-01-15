@@ -7,7 +7,6 @@ public sealed class UserConfigDto
 {
     public bool IsDarkMode { get; init; }
     public bool IsHighContrast { get; init; }
-    public string Language { get; init; } = string.Empty;
     public bool EmailNotificationsEnabled { get; init; }
     public string Username { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;

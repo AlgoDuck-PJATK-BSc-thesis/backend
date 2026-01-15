@@ -1,13 +1,18 @@
+using System.Text.Encodings.Web;
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Modules.Cohort.Shared.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 
@@ -27,6 +32,9 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("EMAIL__PROVIDER", "postmark");
         Environment.SetEnvironmentVariable("EMAIL__POSTMARKAPIKEY", "test_postmark_key");
         Environment.SetEnvironmentVariable("EMAIL__FROM", "noreply@test.local");
+
+        Environment.SetEnvironmentVariable("APP__FRONTENDURL", "http://localhost:5173");
+        Environment.SetEnvironmentVariable("APP__PUBLICAPIURL", "http://localhost:8080");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -41,7 +49,10 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
                 ["ConnectionStrings:Redis"] = "localhost:6379",
                 ["Email:Provider"] = "postmark",
                 ["Email:PostmarkApiKey"] = "test_postmark_key",
-                ["Email:From"] = "noreply@test.local"
+                ["Email:From"] = "noreply@test.local",
+                ["App:FrontendUrl"] = "http://localhost:5173",
+                ["App:PublicApiUrl"] = "http://localhost:8080",
+                ["CORS:DevOrigins:0"] = "http://localhost:5173"
             };
 
             config.AddInMemoryCollection(overrides);
@@ -119,6 +130,10 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<ApplicationCommandDbContext>(o => o.UseSqlite(sqliteConn));
             services.AddDbContext<ApplicationQueryDbContext>(o => o.UseSqlite(sqliteConn));
+
+            services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, TestExternalAuthHandler>("Google", _ => { })
+                .AddScheme<AuthenticationSchemeOptions, TestExternalAuthHandler>("GitHub", _ => { });
         });
     }
 
@@ -131,6 +146,29 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
         if (File.Exists(_sqliteFilePath))
         {
             File.Delete(_sqliteFilePath);
+        }
+    }
+
+    private sealed class TestExternalAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    {
+        public TestExternalAuthHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            Response.StatusCode = StatusCodes.Status302Found;
+            Response.Headers.Location = "http://external.test/";
+            return Task.CompletedTask;
         }
     }
 }

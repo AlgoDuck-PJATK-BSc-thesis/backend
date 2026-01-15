@@ -77,7 +77,7 @@ public sealed class DefaultDuckServiceTests
     }
 
     [Fact]
-    public async Task EnsureAlgoduckOwnedAndSelectedAsync_WhenUserHasOtherSelectedDuck_ClearsIt_AndSelectsAlgoduck_ForAvatarAndPond()
+    public async Task EnsureAlgoduckOwnedAndSelectedAsync_WhenUserHasOtherSelectedDuck_DoesNotOverrideSelection_ButEnsuresAlgoduckOwnedAndInPond()
     {
         using var db = CreateDbContext();
 
@@ -130,18 +130,60 @@ public sealed class DefaultDuckServiceTests
         await svc.EnsureAlgoduckOwnedAndSelectedAsync(userId, CancellationToken.None);
 
         var algoduckOwnership = await db.DuckOwnerships.SingleAsync(o => o.UserId == userId && o.ItemId == algoduckItemId);
-        Assert.True(algoduckOwnership.SelectedAsAvatar);
+        Assert.False(algoduckOwnership.SelectedAsAvatar);
         Assert.True(algoduckOwnership.SelectedForPond);
 
         var other = await db.DuckOwnerships.SingleAsync(o => o.UserId == userId && o.ItemId == otherDuckItemId);
-        Assert.False(other.SelectedAsAvatar);
+        Assert.True(other.SelectedAsAvatar);
 
         var selectedCount = await db.DuckOwnerships.CountAsync(o => o.UserId == userId && o.SelectedAsAvatar);
         Assert.Equal(1, selectedCount);
     }
 
     [Fact]
-    public async Task EnsureAlgoduckOwnedAndSelectedAsync_WhenUserAlreadyOwnsAlgoduck_SetsAvatarAndPondTrue()
+    public async Task EnsureAlgoduckOwnedAndSelectedAsync_WhenNoSelectedAvatar_CreatesAlgoduckAndSelectsIt_ForAvatarAndPond()
+    {
+        using var db = CreateDbContext();
+
+        var rarityId = Guid.NewGuid();
+        db.Rarities.Add(new Rarity { RarityId = rarityId, RarityName = "COMMON" });
+
+        var algoduckItemId = Guid.NewGuid();
+
+        db.DuckItems.Add(new DuckItem
+        {
+            ItemId = algoduckItemId,
+            Name = "algoduck",
+            Description = "",
+            Price = 0,
+            Purchasable = true,
+            RarityId = rarityId
+        });
+
+        var userId = Guid.NewGuid();
+
+        await db.SaveChangesAsync();
+
+        var user = new ApplicationUser { Id = userId, UserName = "u", Email = "u@u.com", EmailConfirmed = true };
+
+        var userManager = CreateUserManagerMock();
+        userManager.Setup(x => x.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
+        userManager.Setup(x => x.IsInRoleAsync(user, "admin")).ReturnsAsync(false);
+
+        var svc = new DefaultDuckService(db, userManager.Object);
+
+        await svc.EnsureAlgoduckOwnedAndSelectedAsync(userId, CancellationToken.None);
+
+        var algoduckOwnership = await db.DuckOwnerships.SingleAsync(o => o.UserId == userId && o.ItemId == algoduckItemId);
+        Assert.True(algoduckOwnership.SelectedAsAvatar);
+        Assert.True(algoduckOwnership.SelectedForPond);
+
+        var selectedCount = await db.DuckOwnerships.CountAsync(o => o.UserId == userId && o.SelectedAsAvatar);
+        Assert.Equal(1, selectedCount);
+    }
+
+    [Fact]
+    public async Task EnsureAlgoduckOwnedAndSelectedAsync_WhenUserAlreadyOwnsAlgoduck_AndNoOtherSelected_SelectsAlgoduck_AndSetsPondTrue()
     {
         using var db = CreateDbContext();
 

@@ -1,54 +1,43 @@
-using System.Collections.Concurrent;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
 
-public sealed record CapturedEmail(
-    string To,
-    string Subject,
-    string TextBody,
-    string? HtmlBody,
-    DateTimeOffset SentAtUtc);
-
 public sealed class FakeEmailTransport : IEmailTransport
 {
-    private readonly ConcurrentQueue<CapturedEmail> _outbox = new();
+    private readonly object _gate = new();
+    private readonly List<CapturedEmail> _messages = new();
 
     public Task SendAsync(string to, string subject, string textBody, string? htmlBody = null, CancellationToken cancellationToken = default)
     {
-        _outbox.Enqueue(new CapturedEmail(
-            to,
-            subject,
-            textBody,
-            htmlBody,
-            DateTimeOffset.UtcNow));
+        lock (_gate)
+        {
+            _messages.Add(new CapturedEmail(to, subject, textBody, htmlBody, DateTimeOffset.UtcNow));
+        }
 
         return Task.CompletedTask;
     }
 
-    public IReadOnlyList<CapturedEmail> GetAll()
-    {
-        return _outbox.ToArray();
-    }
-
     public void Clear()
     {
-        while (_outbox.TryDequeue(out _))
+        lock (_gate)
         {
+            _messages.Clear();
         }
     }
 
     public CapturedEmail? FindLastTo(string to)
     {
-        var all = _outbox.ToArray();
-        for (var i = all.Length - 1; i >= 0; i--)
+        lock (_gate)
         {
-            if (string.Equals(all[i].To, to, StringComparison.OrdinalIgnoreCase))
+            for (var i = _messages.Count - 1; i >= 0; i--)
             {
-                return all[i];
+                if (string.Equals(_messages[i].To, to, StringComparison.OrdinalIgnoreCase))
+                {
+                    return _messages[i];
+                }
             }
-        }
 
-        return null;
+            return null;
+        }
     }
 }
