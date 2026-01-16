@@ -21,15 +21,23 @@ public interface IUpdateProblemService
     public Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default);
 }
 
-public class UpdateProblemService(
-    IRabbitMqChannelFactory channelFactory,
-    ITestCaseProcessor testCaseProcessor,
-    IValidationJobPublisher validationJobPublisher,
-    IOptions<MessageQueuesConfig> channelData,
-    IDatabase redis
-    ) : IUpdateProblemService
+public class UpdateProblemService : IUpdateProblemService
 {
+    private readonly IRabbitMqChannelFactory _channelFactory;
+    private readonly     ITestCaseProcessor _testCaseProcessor;
+    private readonly IValidationJobPublisher _validationJobPublisher;
+    private readonly IOptions<MessageQueuesConfig> _channelData;
+    private readonly IDatabase _redis;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions().WithInternalFields();
+
+    public UpdateProblemService(IOptions<MessageQueuesConfig> channelData, IValidationJobPublisher validationJobPublisher, ITestCaseProcessor testCaseProcessor, IRabbitMqChannelFactory channelFactory, IDatabase redis)
+    {
+        _channelData = channelData;
+        _validationJobPublisher = validationJobPublisher;
+        _testCaseProcessor = testCaseProcessor;
+        _channelFactory = channelFactory;
+        _redis = redis;
+    }
 
     public async Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default)
     {
@@ -39,7 +47,7 @@ public class UpdateProblemService(
 
         var (solutionData, analyzer, codeAnalysis) = analysisResult.AsT0;
         
-        var testCaseResult = testCaseProcessor.ProcessTestCases(
+        var testCaseResult = _testCaseProcessor.ProcessTestCases(
             updateProblemDto.TestCases,
             analyzer,
             codeAnalysis);
@@ -54,19 +62,19 @@ public class UpdateProblemService(
         var res = await CacheUpdateJob(updateProblemDto, solutionData, problemId, cancellationToken);
         
         helper.InsertTestCases(updateProblemDto.TestCaseJoins, codeAnalysis);
-
-        var channel = await channelFactory.GetChannelAsync(new ChannelDeclareDto
+        
+        var channel = await _channelFactory.GetChannelAsync(new ChannelDeclareDto
         {
-            ChannelName = channelData.Value.Validation.Read,
+            ChannelName = _channelData.Value.Validation.Read,
             QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
         },
         new ChannelDeclareDto
         {
-            ChannelName = channelData.Value.Validation.Write,
+            ChannelName = _channelData.Value.Validation.Write,
             QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
         });
         
-        await validationJobPublisher.PublishAsync(channel, solutionData, cancellationToken);
+        await _validationJobPublisher.PublishAsync(channel, solutionData, cancellationToken);
         return res;
     }
 
@@ -109,7 +117,7 @@ public class UpdateProblemService(
             JobBody = problemDto
         };
 
-        await redis.StringSetAsync(
+        await _redis.StringSetAsync(
             new RedisKey(solutionData.ExecutionId.ToString()),
             new RedisValue(JsonSerializer.Serialize(jobData, _jsonSerializerOptions)),
             TimeSpan.FromMinutes(5));

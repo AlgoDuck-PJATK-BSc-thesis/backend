@@ -131,8 +131,11 @@ public sealed class ProblemValidationResultChannelReadWorker(
     {
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ICreateProblemRepository>();
-
-        return await dbContext.DeleteProblemUponValidationFailureAsync(upsertProblemDto.ProblemId, cancellationToken);
+        if (upsertProblemDto.UpsertJobType == UpsertJobType.Insert)
+        {
+            return await dbContext.DeleteProblemUponValidationFailureAsync(upsertProblemDto.ProblemId, cancellationToken);
+        }
+        return Result<Guid, ErrorObject<string>>.Ok(upsertProblemDto.ProblemId);
     }
     
     private static Result<T, string> GetResponseObject<T>(BasicDeliverEventArgs eventArgs)

@@ -23,6 +23,7 @@ public class ValidationJobPublisher : IValidationJobPublisher
         var message = new SubmitExecuteRequestRabbit
         {
             JobId = solutionData.ExecutionId,
+            Entrypoint = solutionData.MainClassName,
             JavaFiles = solutionData.GetFileContents()
         };
 

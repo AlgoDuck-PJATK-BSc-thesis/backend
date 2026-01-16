@@ -10,7 +10,6 @@ public class ExecutorConfiguration
     public VmResources Resources { get; set; } = new();
     public PoolConfiguration Pool { get; set; } = new();
     public ClusterLimits Cluster { get; set; } = new();
-    public ExecutionLimits Limits { get; set; } = new();
 }
 
 public class VmTimeouts
@@ -57,15 +56,6 @@ public class ClusterLimits
     public double MaxVcpuOversubscription { get; set; } = 1.5;
 }
 
-public class ExecutionLimits
-{
-    
-    public int MaxFileCount { get; set; } = 10;
-    
-    public TimeSpan MaxExecutionTime { get; set; } = TimeSpan.FromSeconds(30);
-    
-    public int MaxUserMemoryMb { get; set; } = 128;
-}
 
 public static class ExecutorConfigurationExtensions
 {

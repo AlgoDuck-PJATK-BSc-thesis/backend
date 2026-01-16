@@ -40,26 +40,27 @@ public interface IInsertService
         CancellationToken cancellationToken = default);
 }
 
-public class InsertService(
-    ISharedProblemRepository problemRepository
-) : IInsertService
+public class InsertService : IInsertService
 {
+    private readonly ISharedProblemRepository _problemRepository;
+
+    public InsertService(ISharedProblemRepository problemRepository)
+    {
+        _problemRepository = problemRepository;
+    }
+
     public async Task<Result<InsertResultDto, ErrorObject<string>>> InsertTestCaseAsync(InsertRequestDto insertRequest,
         CancellationToken cancellationToken = default)
     {
-        var testCasesResult = await problemRepository.GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
-        if (testCasesResult.IsErr)
-            return Result<InsertResultDto, ErrorObject<string>>.Err(testCasesResult.AsT1);
-
-        var specificTestCaseResult = FindTestCase(testCasesResult.AsT0, insertRequest.ExerciseId);
-        return specificTestCaseResult.IsErr
-            ? Result<InsertResultDto, ErrorObject<string>>.Err(specificTestCaseResult.AsT1)
-            : InsertActualTestCase(insertRequest, specificTestCaseResult.AsT0);
+        return await _problemRepository
+            .GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken)
+            .BindResult<ICollection<TestCaseJoined>, InsertResultDto, ErrorObject<string>>(testCases =>
+                FindTestCase(testCases, insertRequest.TestCaseId)
+                    .Bind<TestCaseJoined, InsertResultDto, ErrorObject<string>>(testCase => InsertActualTestCase(insertRequest, testCase)));
     }
 
 
-    private static Result<InsertResultDto, ErrorObject<string>> InsertActualTestCase(InsertRequestDto insertRequest,
-        TestCaseJoined testCaseJoined)
+    private static Result<InsertResultDto, ErrorObject<string>> InsertActualTestCase(InsertRequestDto insertRequest, TestCaseJoined testCaseJoined)
     {
         var userSolutionData = new UserSolutionData
         {

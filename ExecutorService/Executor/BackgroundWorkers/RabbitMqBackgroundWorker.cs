@@ -1,4 +1,5 @@
 using AlgoDuckShared;
+using ExecutorService.Executor.Types.Config;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -17,7 +18,7 @@ public abstract class RabbitMqBackgroundWorker(
         
         try
         {
-            var connection = await rabbitMqConnectionService.GetConnection();
+            var connection = await rabbitMqConnectionService.GetConnection(stoppingToken);
             Channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
             await SetupQueues(stoppingToken);
@@ -121,16 +122,4 @@ public abstract class RabbitMqBackgroundWorker(
     }
 }
 
-public class ServiceData
-{
-    public required string ServiceName { get; set; }
-    public required string RequestQueueName { get; set; }
-    public required string ResponseQueueName { get; set; }
-}
 
-public class BasicQosOptions
-{
-    public uint PrefetchSize { get; set; } = 0;
-    public ushort PrefetchCount { get; set; } = 10;
-    public bool Global { get; set; } = false;
-}

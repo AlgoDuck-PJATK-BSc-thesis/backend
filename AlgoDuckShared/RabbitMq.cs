@@ -9,6 +9,7 @@ namespace AlgoDuckShared;
 public class SubmitExecuteRequestRabbit
 {
     public Guid JobId { get; set; }
+    public required string Entrypoint { get; set; }
     public required Dictionary<string, string> JavaFiles { get; set; }
 }
 [JsonConverter(typeof(JsonStringEnumConverter))]

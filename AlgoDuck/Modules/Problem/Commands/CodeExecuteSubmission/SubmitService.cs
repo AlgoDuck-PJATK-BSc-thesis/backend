@@ -118,6 +118,7 @@ internal sealed class SubmitService(
         var innerBody = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {
             JobId = userSolutionData.ExecutionId,
+            Entrypoint = userSolutionData.MainClassName,
             JavaFiles = userSolutionData.GetFileContents(),
         }));
 

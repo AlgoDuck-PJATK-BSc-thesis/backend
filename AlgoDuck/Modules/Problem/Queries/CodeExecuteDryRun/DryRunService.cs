@@ -81,11 +81,12 @@ internal sealed class DryRunService(
     
     private async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> SendExecutionRequestToQueueAsync(UserSolutionData userSolutionData, Guid userId, CancellationToken cancellationToken = default)
     {
-        var channel = await GetChannelAsync();
+        var channel = await GetChannelAsync(cancellationToken);
         
         var innerBody = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {
             JobId = userSolutionData.ExecutionId,
+            Entrypoint = userSolutionData.MainClassName,
             JavaFiles = userSolutionData.GetFileContents(),
         }));
 

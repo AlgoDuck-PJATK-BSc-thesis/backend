@@ -21,5 +21,4 @@ for file in "${FILES[@]}"; do
     fi
 done
 
-
 exec dotnet ExecutorService.dll

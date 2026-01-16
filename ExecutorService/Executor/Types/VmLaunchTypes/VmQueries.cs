@@ -2,47 +2,58 @@ using System.Text.Json.Serialization;
 
 namespace ExecutorService.Executor.Types.VmLaunchTypes;
 
-public abstract class VmInputQuery;
+public class VmJobRequestInterface<T> where T : VmPayload
+{
+    public required Guid JobId { get; set; }
+    public required T Payload { get; set; }
+}
+
+public class VmJobRequest<T> where T : VmPayload
+{
+    public required Guid JobId { get; set; }
+    public required T Payload { get; set; }
+    public required Guid VmId { get; set; }
+}
+
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(VmCompilationPayload), "comp")]
+[JsonDerivedType(typeof(VmExecutionPayload), "exec")]
+[JsonDerivedType(typeof(VmHealthCheckPayload), "health")]
+
+public abstract class VmPayload;
+public class VmCompilationPayload : VmPayload
+{
+    public required Guid JobId { get; set; }
+    public required Dictionary<string, string> SrcFiles { get; set; }
+}
+
+public class VmExecutionPayload : VmPayload
+{
+    public required string Entrypoint { get; set; }
+    public Dictionary<string, string> ClientSrc { get; set; } = [];
+}
+
+public class VmHealthCheckPayload : VmPayload
+{
+    public ICollection<string> FilesToCheck { get; set; } = [];
+}
 
 public abstract class VmInputResponse;
 
-public class VmCompilationQueryContent
-{
-    public string SrcCodeB64 { get; set; } = string.Empty;
-    public string ClassName { get; set; } = string.Empty;
-    public Guid ExecutionId { get; set; }
-}
-
-public class VmHealthCheckContent;
-
-public class VmCompilationQuery<T> : VmInputQuery
-{
-    public string Endpoint { get; set; } = "health_check";
-    public HttpMethod Method { get; set; } = HttpMethod.Get;
-    public T? Content { get; set; }
-    public string Ctype { get; set; } = "application/json";
-}
-
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(VmCompilationSuccess), "success")]
-[JsonDerivedType(typeof(VmCompilationFailure), "error")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(VmCompilationSuccess), "ok")]
+[JsonDerivedType(typeof(VmCompilationFailure), "err")]
 public abstract class VmCompilationResponse : VmInputResponse;
 
 public class VmCompilationSuccess : VmCompilationResponse
 {
-    public string Entrypoint { get; set; } = string.Empty;
-    public Dictionary<string, string> GeneratedClassFiles { get; set; } = [];
+    public required Dictionary<string, string> Body { get; set; }
 }
 
 public class VmCompilationFailure : VmCompilationResponse
 {
-    public string ErrorMsg { get; set; } = string.Empty;
-}
-
-public class VmExecutionQuery(VmCompilationSuccess compilationResponse) : VmInputQuery
-{
-    public string Entrypoint { get; set; } = compilationResponse.Entrypoint;
-    public Dictionary<string, string> GeneratedClassFiles { get; set; } = compilationResponse.GeneratedClassFiles;
+    public required string Body { get; set; } = string.Empty;
 }
 
 public class VmExecutionResponse : VmInputResponse

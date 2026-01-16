@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
 
 namespace ExecutorService.Executor.Types.VmLaunchTypes;
 
@@ -15,6 +16,6 @@ public class VmConfig
     internal string? VsockPath { get; set; }
     internal int Pid { get; set; }
     internal Process? VmProcess { get; set; }
-    internal int ServicedRequests { get; set; }
+    internal List<Guid> ServicedJobs { get; set; } = [];
     internal Dictionary<string, string> FileHashes { get; set; } = [];
 }

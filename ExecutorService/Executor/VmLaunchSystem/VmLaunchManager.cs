@@ -1,16 +1,19 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.Helpers;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.Config;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
+using ExecutorService.Executor.Types.OversubManagerTypes;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Extensions;
 using Polly;
-using Polly.Timeout;
 
 namespace ExecutorService.Executor.VmLaunchSystem;
 
@@ -19,8 +22,8 @@ public sealed class VmLaunchManager : IAsyncDisposable
     private readonly FilesystemPooler _pooler;
     private readonly ILogger<VmLaunchManager> _logger;
     private readonly ExecutorConfiguration _config;
-    
-    private readonly JsonSerializerOptions _defaultSerializerOptions = new() 
+
+    private readonly JsonSerializerOptions _defaultSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
     };
@@ -35,25 +38,28 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
     private readonly ConcurrentDictionary<FilesystemType, Channel<VmConfig>> _orphanPool;
     private readonly CancellationTokenSource _shutdownCts = new();
+    private readonly IOptions<HealthCheckConfig> _healthCheckConfig;
 
     public VmLaunchManager(
         FilesystemPooler pooler,
         ILogger<VmLaunchManager> logger,
-        IOptions<ExecutorConfiguration> config)
+        IOptions<ExecutorConfiguration> config,
+        IOptions<HealthCheckConfig> healthCheckConfig)
     {
         _pooler = pooler;
         _logger = logger;
         _config = config.Value;
+        _healthCheckConfig = healthCheckConfig;
         _activeVms = new ConcurrentDictionary<Guid, VmConfig>();
-        
+
         _defaultResourceAllocations = new ConcurrentDictionary<FilesystemType, VmResourceAllocation>
         {
-            [FilesystemType.Executor] = new VmResourceAllocation
+            [FilesystemType.Executor] = new()
             {
                 VcpuCount = _config.Resources.ExecutorVcpuCount,
                 MemMB = _config.Resources.ExecutorMemoryMb
             },
-            [FilesystemType.Compiler] = new VmResourceAllocation
+            [FilesystemType.Compiler] = new()
             {
                 VcpuCount = _config.Resources.CompilerVcpuCount,
                 MemMB = _config.Resources.CompilerMemoryMb,
@@ -65,28 +71,29 @@ public sealed class VmLaunchManager : IAsyncDisposable
             [FilesystemType.Executor] = Channel.CreateBounded<VmConfig>(
                 new BoundedChannelOptions(_config.Pool.OrphanPoolSize)
                 {
-                    FullMode = BoundedChannelFullMode.Wait, 
+                    FullMode = BoundedChannelFullMode.Wait,
                 })
         };
-        
-        _watchdog = new VmWatchdog(_activeVms);
+
+        _watchdog = new VmWatchdog(_activeVms, healthCheckConfig);
         _oversubManager = new VmOversubManager(_activeVms, _defaultResourceAllocations);
     }
 
-    private async Task<Guid> DispatchVmAsync(FilesystemType filesystemType, string? vmName = null, CancellationToken ct = default)
+    private async Task<Guid> DispatchVmAsync(FilesystemType filesystemType, string? vmName = null,
+        CancellationToken ct = default)
     {
         using var activity = new Activity("DispatchVm").Start();
-        activity?.SetTag("filesystem_type", filesystemType.ToString());
-        
+        activity.SetTag("filesystem_type", filesystemType.ToString());
+
         _logger.LogDebug("Dispatching {FilesystemType} VM", filesystemType);
 
-        if (_orphanPool.TryGetValue(filesystemType, out var orphanChannel) && 
+        if (_orphanPool.TryGetValue(filesystemType, out var orphanChannel) &&
             orphanChannel.Reader.TryRead(out var orphanConfig))
         {
             _logger.LogDebug("Reusing orphan VM {VmId}", orphanConfig.VmId);
-            return orphanConfig.VmId;                
+            return orphanConfig.VmId;
         }
-        
+
         var vmId = Guid.NewGuid();
         var guestCid = GetNextGuestCid();
 
@@ -102,11 +109,11 @@ public sealed class VmLaunchManager : IAsyncDisposable
         };
 
         const string launchScriptPath = "/app/firecracker/launch-vm.sh";
-        
+
         var launchProcess = ExecutorScriptHelper.CreateBashExecutionProcess(
             launchScriptPath,
             createdVmConfig.VmId.ToString(),
-            createdVmConfig.GuestCid.ToString(), 
+            createdVmConfig.GuestCid.ToString(),
             createdVmConfig.FilesystemId.ToString(),
             createdVmConfig.AllocatedResources.VcpuCount.ToString(),
             createdVmConfig.AllocatedResources.MemMB.ToString(),
@@ -121,10 +128,10 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
         var sw = Stopwatch.StartNew();
         launchProcess.Start();
-        
+
         using var processCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         processCts.CancelAfter(_config.Timeouts.VmLaunchTimeout);
-        
+
         try
         {
             await launchProcess.WaitForExitAsync(processCts.Token);
@@ -134,17 +141,18 @@ public sealed class VmLaunchManager : IAsyncDisposable
             launchProcess.Kill(entireProcessTree: true);
             throw new TimeoutException($"VM launch timed out after {_config.Timeouts.VmLaunchTimeout}");
         }
-        
+
         sw.Stop();
         _logger.LogInformation("VM {VmId} launched in {ElapsedMs}ms", vmId, sw.ElapsedMilliseconds);
 
         var output = await launchProcess.StandardOutput.ReadToEndAsync(ct);
         var stderr = await launchProcess.StandardError.ReadToEndAsync(ct);
-        
+
         if (launchProcess.ExitCode != 0)
         {
             _logger.LogError("VM launch failed: {StdErr}", stderr);
-            throw new InvalidOperationException($"VM launch script failed with exit code {launchProcess.ExitCode}: {stderr}");
+            throw new InvalidOperationException(
+                $"VM launch script failed with exit code {launchProcess.ExitCode}: {stderr}");
         }
 
         if (!int.TryParse(output.Trim(), out var pid))
@@ -152,9 +160,9 @@ public sealed class VmLaunchManager : IAsyncDisposable
             _logger.LogError("Failed to parse PID from launch script output: {Output}", output);
             throw new InvalidOperationException($"Invalid PID from launch script: {output}");
         }
-        
+
         createdVmConfig.Pid = pid;
-        
+
         try
         {
             createdVmConfig.VmProcess = Process.GetProcessById(createdVmConfig.Pid);
@@ -164,83 +172,107 @@ public sealed class VmLaunchManager : IAsyncDisposable
             _logger.LogError("VM process {Pid} not found after launch", pid);
             throw new InvalidOperationException($"VM process {pid} exited immediately after launch");
         }
-        
+
         _activeVms[vmId] = createdVmConfig;
 
-        if (filesystemType == FilesystemType.Compiler)
-        {
-            _logger.LogDebug("Extracting file hashes for compiler VM {VmId}", vmId);
-            var res = await QueryVmAsync<VmCompilationQuery<VmHealthCheckContent>, VmCompilerHealthCheckResponse>(
-                vmId,
-                new VmCompilationQuery<VmHealthCheckContent>
-                {
-                    Content = new VmHealthCheckContent()
-                },
-                ct);
-            _activeVms[vmId].FileHashes = res.FileHashes;
-            _logger.LogDebug("Compiler VM {VmId} ready with {HashCount} file hashes", vmId, res.FileHashes.Count);
-        }
+        if (filesystemType != FilesystemType.Compiler) return vmId;
         
+        _logger.LogDebug("Extracting file hashes for compiler VM {VmId}", vmId);
+        var res = await QueryVmAsync<VmHealthCheckPayload, VmCompilerHealthCheckResponse>(
+            new VmJobRequest<VmHealthCheckPayload>
+            {
+                JobId = vmId,
+                VmId = createdVmConfig.VmId,
+                Payload = new VmHealthCheckPayload
+                {
+                    FilesToCheck = _healthCheckConfig.Value.FileHashes
+                }
+            }, ct);
+        _activeVms[vmId].FileHashes = res.FileHashes;
+        Console.WriteLine(JsonSerializer.Serialize(res.FileHashes));
+        _logger.LogDebug("Compiler VM {VmId} ready with {HashCount} file hashes", vmId, res.FileHashes.Count);
+
         return vmId;
     }
 
-    public async Task<TResult> QueryVmAsync<T, TResult>(Guid vmId, T queryContents, CancellationToken ct = default) 
-        where T : VmInputQuery 
+    public async Task<TResult> QueryVmAsync<T, TResult>(VmJobRequest<T> jobRequest, CancellationToken ct = default)
+        where T : VmPayload
         where TResult : VmInputResponse
     {
-        if (!_activeVms.TryGetValue(vmId, out var vmConfig))
+        if (!_activeVms.TryGetValue(jobRequest.VmId, out var vmConfig))
         {
-            throw new InvalidOperationException($"VM {vmId} not found in active VMs");
+            throw new InvalidOperationException($"VM {jobRequest.VmId} not found in active VMs");
         }
-        
+
         if (!await _oversubManager.EnqueueResourceRequest(ResourceRequestType.Query, vmConfig.VmType, ct))
         {
             throw new VmClusterOverloadedException("Insufficient resources to execute query");
         }
-        
-        vmConfig.ServicedRequests++;
-        
-        var queryString = JsonSerializer.Serialize(queryContents);
-        var queryStringEncoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(queryString));
-        var queryProcess = ExecutorScriptHelper.CreateBashExecutionProcess(
-            "/app/firecracker/query-vm.sh", 
-            vmId.ToString(), 
-            queryStringEncoded);
-        
-        queryProcess.Start();
 
-        var timeoutPolicy = Policy.TimeoutAsync(_config.Timeouts.QueryTimeout);
-        try
+        vmConfig.ServicedJobs.Add(jobRequest.JobId);
+
+        var retryPolicy = Policy
+            .Handle<SocketException>()
+            .Or<IOException>()
+            .Or<TimeoutException>()
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100),
+                onRetry: (exception, delay, attempt, _) =>
+                {
+                    Console.WriteLine(
+                        $"Retry {attempt} for VM {jobRequest.VmId} after {delay.TotalMilliseconds}ms due to: {exception.Message}");
+                });
+
+        return await retryPolicy.ExecuteAsync(async (cancellationToken) =>
         {
-            await timeoutPolicy.ExecuteAsync(async () => await queryProcess.WaitForExitAsync(ct));
-        }
-        catch (TimeoutRejectedException)
-        {
-            queryProcess.Kill(entireProcessTree: true);
-            _logger.LogWarning("Query to VM {VmId} timed out after {Timeout}", vmId, _config.Timeouts.QueryTimeout);
-            throw new VmQueryTimedOutException();
-        }
-        
-        var path = $"/tmp/{vmId}-out.json";
-        if (!File.Exists(path))
-        {
-            _logger.LogError("Query output file not found for VM {VmId}", vmId);
-            throw new ExecutionOutputNotFoundException($"Output file not found: {path}");
-        }
-        
-        var vmOutRaw = await File.ReadAllTextAsync(path, ct);
-        _logger.LogDebug("VM {VmId} query response: {ResponseLength} chars", vmId, vmOutRaw.Length);
-        
-        File.Delete(path);
-        
-        return JsonSerializer.Deserialize<TResult>(vmOutRaw, _defaultSerializerOptions) 
-               ?? throw new InvalidOperationException("Failed to deserialize VM response");
+            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            await socket.ConnectAsync(new UnixDomainSocketEndPoint(vmConfig.VsockPath!), cancellationToken);
+
+            await using var stream = new NetworkStream(socket, ownsSocket: false);
+            await using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+            writer.AutoFlush = true;
+            using var reader = new StreamReader(stream, new UTF8Encoding(false));
+
+            await writer.WriteLineAsync("CONNECT 5050");
+
+            var connectResponse = await reader.ReadLineAsync(cancellationToken);
+            if (connectResponse == null || !connectResponse.StartsWith("OK "))
+            {
+                throw new IOException($"Vsock connect failed: {connectResponse}");
+            }
+
+            var payload = JsonSerializer.Serialize<VmPayload>(jobRequest.Payload);
+            await writer.WriteAsync(payload);
+            await stream.WriteAsync(new byte[] { 0x04 }, cancellationToken);
+
+            var buffer = new StringBuilder();
+            var charBuffer = new char[4096];
+            while (true)
+            {
+                var bytesRead = await reader.ReadAsync(charBuffer, cancellationToken);
+                if (bytesRead == 0) break;
+
+                var chunk = new string(charBuffer, 0, bytesRead);
+                var eotIndex = chunk.IndexOf('\x04');
+                if (eotIndex >= 0)
+                {
+                    buffer.Append(chunk.AsSpan(0, eotIndex));
+                    break;
+                }
+
+                buffer.Append(chunk);
+            }
+
+            return JsonSerializer.Deserialize<TResult>(buffer.ToString(), _defaultSerializerOptions)
+                   ?? throw new InvalidOperationException("Failed to deserialize response");
+        }, ct);
     }
-    
+
     public bool TerminateVm(Guid vmId, bool preserveFilesystem)
     {
         _logger.LogDebug("Terminating VM {VmId}, preserveFilesystem={PreserveFilesystem}", vmId, preserveFilesystem);
-        
+
         if (TryAddToOrphanPool(vmId))
         {
             _logger.LogDebug("VM {VmId} added to orphan pool", vmId);
@@ -252,14 +284,14 @@ public sealed class VmLaunchManager : IAsyncDisposable
             _logger.LogWarning("VM {VmId} not found in active VMs during termination", vmId);
             return false;
         }
-        
+
         return TerminateVmInternal(vmData, preserveFilesystem);
     }
 
     private bool TerminateVmInternal(VmConfig vmData, bool preserveFilesystem)
     {
         var success = true;
-        
+
         try
         {
             if (vmData.VmProcess is { HasExited: false })
@@ -293,10 +325,10 @@ public sealed class VmLaunchManager : IAsyncDisposable
         {
             throw new InvalidOperationException($"VM {lease.VmId} not found");
         }
-        
+
         var decision = await _watchdog.InspectVmAsync(lease);
         _logger.LogDebug("Watchdog decision for VM {VmId}: {Decision}", lease.VmId, decision);
-        
+
         return decision switch
         {
             InspectionDecision.Healthy => lease,
@@ -310,17 +342,18 @@ public sealed class VmLaunchManager : IAsyncDisposable
     {
         if (!_activeVms.TryGetValue(vmId, out var vmConfig))
             return false;
-            
-        if (vmConfig.ServicedRequests != 0)
+
+        if (vmConfig.ServicedJobs.Count != 0)
             return false;
-            
+
         if (!_orphanPool.TryGetValue(vmConfig.VmType, out var channel))
             return false;
 
         return channel.Writer.TryWrite(vmConfig);
     }
 
-    public async Task<VmLease> AcquireVmAsync(FilesystemType filesystemType, string? vmName = null, CancellationToken ct = default)
+    public async Task<VmLease> AcquireVmAsync(FilesystemType filesystemType, string? vmName = null,
+        CancellationToken ct = default)
     {
         var vmId = await DispatchVmAsync(filesystemType, vmName, ct);
         return new VmLease(this, vmId);
@@ -335,13 +368,13 @@ public sealed class VmLaunchManager : IAsyncDisposable
     {
         _logger.LogInformation("Shutting down VmLaunchManager");
         await _shutdownCts.CancelAsync();
-        
+
         foreach (var vmId in _activeVms.Keys.ToList())
         {
             TerminateVm(vmId, preserveFilesystem: false);
         }
-        
-        foreach (var (type, channel) in _orphanPool)
+
+        foreach (var (_, channel) in _orphanPool)
         {
             channel.Writer.Complete();
             await foreach (var vm in channel.Reader.ReadAllAsync())
@@ -349,7 +382,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
                 TerminateVmInternal(vm, preserveFilesystem: false);
             }
         }
-        
+
         _shutdownCts.Dispose();
     }
 }

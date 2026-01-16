@@ -88,8 +88,6 @@ public class ExecutorFileOperationHelper
                 javaStdOut.Append(line);
             }
         }
-        Console.WriteLine("finished parse");
-
 
         return new SubmitExecuteResponse
         {
