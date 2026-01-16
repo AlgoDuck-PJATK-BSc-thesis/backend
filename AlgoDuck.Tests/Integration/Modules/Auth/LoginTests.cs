@@ -9,7 +9,7 @@ public sealed class LoginTests
 {
     readonly ApiCollectionFixture _fx;
 
-    internal LoginTests(ApiCollectionFixture fx)
+    public LoginTests(ApiCollectionFixture fx)
     {
         _fx = fx;
     }

@@ -12,7 +12,7 @@ public sealed class AuthorizationSmokeTests
 {
     readonly ApiCollectionFixture _fx;
 
-    internal AuthorizationSmokeTests(ApiCollectionFixture fx)
+    public AuthorizationSmokeTests(ApiCollectionFixture fx)
     {
         _fx = fx;
     }

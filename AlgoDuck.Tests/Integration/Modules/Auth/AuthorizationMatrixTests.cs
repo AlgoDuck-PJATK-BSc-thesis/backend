@@ -8,7 +8,7 @@ public sealed class AuthorizationMatrixTests
 {
     readonly ApiCollectionFixture _fx;
 
-    internal AuthorizationMatrixTests(ApiCollectionFixture fx)
+    public AuthorizationMatrixTests(ApiCollectionFixture fx)
     {
         _fx = fx;
     }

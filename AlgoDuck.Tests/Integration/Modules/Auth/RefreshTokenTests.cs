@@ -10,7 +10,7 @@ public sealed class RefreshTokenTests
 {
     readonly ApiCollectionFixture _fx;
 
-    internal RefreshTokenTests(ApiCollectionFixture fx)
+    public RefreshTokenTests(ApiCollectionFixture fx)
     {
         _fx = fx;
     }
