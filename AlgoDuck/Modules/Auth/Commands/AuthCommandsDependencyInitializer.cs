@@ -11,6 +11,8 @@ using AlgoDuck.Modules.Auth.Commands.Login.Register;
 using AlgoDuck.Modules.Auth.Commands.Password.RequestPasswordReset;
 using AlgoDuck.Modules.Auth.Commands.Password.ResetPassword;
 using AlgoDuck.Modules.Auth.Commands.Session.RefreshToken;
+using AlgoDuck.Modules.Auth.Commands.Session.RevokeOtherSessions;
+using AlgoDuck.Modules.Auth.Commands.Session.RevokeSession;
 using AlgoDuck.Modules.Auth.Commands.TwoFactor.DisableTwoFactor;
 using AlgoDuck.Modules.Auth.Commands.TwoFactor.EnableTwoFactor;
 using AlgoDuck.Modules.Auth.Commands.TwoFactor.VerifyTwoFactorLogin;
@@ -32,7 +34,7 @@ public static class AuthCommandsDependencyInitializer
 
         services.AddScoped<IValidator<RefreshTokenDto>, RefreshTokenValidator>();
         services.AddScoped<IRefreshTokenHandler, RefreshTokenHandler>();
-        
+
         services.AddScoped<IValidator<LogoutDto>, LogoutValidator>();
         services.AddScoped<ILogoutHandler, LogoutHandler>();
 
@@ -50,25 +52,31 @@ public static class AuthCommandsDependencyInitializer
 
         services.AddScoped<IValidator<VerifyTwoFactorLoginDto>, VerifyTwoFactorLoginValidator>();
         services.AddScoped<IVerifyTwoFactorLoginHandler, VerifyTwoFactorLoginHandler>();
-        
+
         services.AddScoped<IEnableTwoFactorHandler, EnableTwoFactorHandler>();
-        
+
         services.AddScoped<IDisableTwoFactorHandler, DisableTwoFactorHandler>();
 
         services.AddScoped<IValidator<GenerateApiKeyDto>, GenerateApiKeyValidator>();
         services.AddScoped<IGenerateApiKeyHandler, GenerateApiKeyHandler>();
-        
+
         services.AddScoped<IRevokeApiKeyHandler, RevokeApiKeyHandler>();
 
         services.AddScoped<IValidator<ExternalLoginDto>, ExternalLoginValidator>();
         services.AddScoped<IExternalLoginHandler, ExternalLoginHandler>();
-        
+
         services.AddScoped<IValidator<ChangeEmailRequestDto>, ChangeEmailRequestValidator>();
         services.AddScoped<IChangeEmailRequestHandler, ChangeEmailRequestHandler>();
 
         services.AddScoped<IValidator<ChangeEmailConfirmDto>, ChangeEmailConfirmValidator>();
         services.AddScoped<IChangeEmailConfirmHandler, ChangeEmailConfirmHandler>();
 
-        return services; 
+        services.AddScoped<IValidator<RevokeSessionDto>, RevokeSessionValidator>();
+        services.AddScoped<IRevokeSessionHandler, RevokeSessionHandler>();
+
+        services.AddScoped<IValidator<RevokeOtherSessionsDto>, RevokeOtherSessionsValidator>();
+        services.AddScoped<IRevokeOtherSessionsHandler, RevokeOtherSessionsHandler>();
+
+        return services;
     }
 }

@@ -7,7 +7,7 @@ namespace AlgoDuck.Modules.Item.Queries.GetFullItemDetails;
 
 [ApiController]
 [Authorize(Roles = "admin")]
-[Route("api/[controller]")]
+[Route("api/admin/item/detail")]
 public class FullItemDetailsController(
     IFullItemDetailsService fullItemDetailsService
     ) : ControllerBase

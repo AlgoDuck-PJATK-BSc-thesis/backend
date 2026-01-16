@@ -6,13 +6,14 @@ using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
 using AlgoDuck.Shared.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using OpenAI.Chat;
 
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
 public interface IAssistantRepository
 {
-    public Task<Result<AssistantChat, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
+    public Task<Result<AssistantChat?, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
         CancellationToken cancellationToken = default);
 
     public Task<Result<int, ErrorObject<string>>> CreateNewChatMessagesAsync(
@@ -24,7 +25,7 @@ public class AssistantRepository(
     ApplicationCommandDbContext dbContext
 ) : IAssistantRepository
 {
-    public async Task<Result<AssistantChat, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
+    public async Task<Result<AssistantChat?, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
         CancellationToken cancellationToken = default)
     {
         var result = await dbContext.AssistantChats
@@ -33,8 +34,8 @@ public class AssistantRepository(
             .FirstOrDefaultAsync(e => e.Id == request.ChatId, cancellationToken);
 
         return result == null
-            ? Result<AssistantChat, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"{request.ChatId}"))
-            : Result<AssistantChat, ErrorObject<string>>.Ok(result);
+            ? Result<AssistantChat?, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"{request.ChatId}"))
+            : Result<AssistantChat?, ErrorObject<string>>.Ok(result);
     }
 
     public async Task<Result<int, ErrorObject<string>>> CreateNewChatMessagesAsync(
@@ -44,11 +45,9 @@ public class AssistantRepository(
         var messageCounter = 0;
         foreach (var chatMessageInsertDto in chatMessagesGrouped)
         {
-            Console.WriteLine(chatMessageInsertDto.Key);
             var assistantChat = await dbContext.AssistantChats.FirstOrDefaultAsync(
                 ch => ch.Id == chatMessageInsertDto.Key,
                 cancellationToken: cancellationToken);
-            Console.WriteLine(assistantChat == null);
 
             if (assistantChat == null)
             {
@@ -62,7 +61,11 @@ public class AssistantRepository(
                 };
                 dbContext.AssistantChats.Add(assistantChat);
             }
-            
+
+            if (assistantChat.Name.IsNullOrEmpty() && chatMessageInsertDto.Any())
+            {
+                assistantChat.Name = chatMessageInsertDto.ToList()[0].ChatName;
+            }
             foreach (var chatMessage in chatMessageInsertDto.ToList())
             {
                 messageCounter++;

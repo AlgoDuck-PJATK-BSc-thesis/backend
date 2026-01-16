@@ -19,9 +19,7 @@ public sealed class GetUserByIdHandler : IGetUserByIdHandler
         {
             throw new UserNotFoundException("User not found.");
         }
-
-        var config = user.UserConfig;
-
+        
         return new UserDto
         {
             UserId = user.Id,
@@ -31,7 +29,6 @@ public sealed class GetUserByIdHandler : IGetUserByIdHandler
             Experience = user.Experience,
             AmountSolved = user.AmountSolved,
             CohortId = user.CohortId,
-            Language = config?.Language ?? string.Empty,
             S3AvatarUrl = string.Empty
         };
     }

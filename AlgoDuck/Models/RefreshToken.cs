@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class RefreshToken : IEntityTypeConfiguration<RefreshToken>
+public class RefreshToken : IEntityTypeConfiguration<RefreshToken>
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }

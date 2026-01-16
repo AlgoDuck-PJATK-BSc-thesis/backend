@@ -23,7 +23,7 @@ public sealed class IStatisticsServiceTests
         var method = type.GetMethod("GetStatisticsAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<StatisticsSummary>));
+        method.ReturnType.Should().Be(typeof(Task<StatisticsSummary>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);
@@ -36,7 +36,7 @@ public sealed class IStatisticsServiceTests
         var method = type.GetMethod("GetSolvedProblemsAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<SolvedProblemSummary>>));
+        method.ReturnType.Should().Be(typeof(Task<IReadOnlyList<SolvedProblemSummary>>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(4);

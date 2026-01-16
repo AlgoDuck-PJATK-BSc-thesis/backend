@@ -1,6 +1,5 @@
 using AlgoDuck.Modules.Auth.Shared.Exceptions;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
-using AlgoDuck.Modules.Auth.Shared.Validators;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 
 namespace AlgoDuck.Modules.Auth.Shared.Validators;

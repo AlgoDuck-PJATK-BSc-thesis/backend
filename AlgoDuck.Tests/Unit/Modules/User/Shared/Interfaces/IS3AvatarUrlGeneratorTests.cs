@@ -16,7 +16,7 @@ public sealed class Is3AvatarUrlGeneratorTests
         var method = type.GetMethod("GetAvatarUrl", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(string));
+        method.ReturnType.Should().Be(typeof(string));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(1);

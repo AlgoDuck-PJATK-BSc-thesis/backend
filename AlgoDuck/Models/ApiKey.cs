@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApiKey : IEntityTypeConfiguration<ApiKey>
+public class ApiKey : IEntityTypeConfiguration<ApiKey>
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }

@@ -17,7 +17,7 @@ public sealed class IAchievementServiceTests
         var method = type.GetMethod("GetAchievementsAsync", BindingFlags.Public | BindingFlags.Instance);
         method.Should().NotBeNull();
 
-        method!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<AchievementProgress>>));
+        method.ReturnType.Should().Be(typeof(Task<IReadOnlyList<AchievementProgress>>));
 
         var parameters = method.GetParameters();
         parameters.Should().HaveCount(2);

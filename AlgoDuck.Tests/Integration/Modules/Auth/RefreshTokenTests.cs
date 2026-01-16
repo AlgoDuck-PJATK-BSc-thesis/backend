@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using AlgoDuck.Tests.Integration.TestHost;
 using Microsoft.Net.Http.Headers;
-using Xunit;
 
 namespace AlgoDuck.Tests.Integration.Modules.Auth;
 
@@ -47,7 +46,7 @@ public sealed class RefreshTokenTests
         Assert.False(string.IsNullOrWhiteSpace(csrf));
 
         client.DefaultRequestHeaders.Remove("X-CSRF-Token");
-        client.DefaultRequestHeaders.Add("X-CSRF-Token", csrf!);
+        client.DefaultRequestHeaders.Add("X-CSRF-Token", csrf);
 
         var resp = await client.PostAsync("/api/auth/refresh", content: null, CancellationToken.None);
 

@@ -14,17 +14,17 @@ public sealed class IAuthRepositoryTests
 
         var byEmail = t.GetMethod("FindByEmailAsync");
         Assert.NotNull(byEmail);
-        Assert.Equal(typeof(Task<ApplicationUser?>), byEmail!.ReturnType);
+        Assert.Equal(typeof(Task<ApplicationUser?>), byEmail.ReturnType);
         Assert.Equal(new[] { typeof(string), typeof(CancellationToken) }, byEmail.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var byId = t.GetMethod("FindByIdAsync");
         Assert.NotNull(byId);
-        Assert.Equal(typeof(Task<ApplicationUser?>), byId!.ReturnType);
+        Assert.Equal(typeof(Task<ApplicationUser?>), byId.ReturnType);
         Assert.Equal(new[] { typeof(Guid), typeof(CancellationToken) }, byId.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var byUserName = t.GetMethod("FindByUserNameAsync");
         Assert.NotNull(byUserName);
-        Assert.Equal(typeof(Task<ApplicationUser?>), byUserName!.ReturnType);
+        Assert.Equal(typeof(Task<ApplicationUser?>), byUserName.ReturnType);
         Assert.Equal(new[] { typeof(string), typeof(CancellationToken) }, byUserName.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var all = t.GetMethods().Select(m => m.Name).OrderBy(x => x).ToArray();

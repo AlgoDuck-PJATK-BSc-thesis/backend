@@ -49,6 +49,11 @@ public class VmExecutionResponse : VmInputResponse
 {
     public string Out { get; set; } = string.Empty;
     public string Err { get; set; } = string.Empty;
+    public string ExitCode { get; set; } = string.Empty;
+    public string StartNs { get; set; }  = string.Empty;
+    public string EndNs { get; set; }  = string.Empty;
+    public string MaxMemoryKb { get; set; }  = string.Empty;
+    
 }
 
 public class VmCompilerHealthCheckResponse : VmInputResponse

@@ -3,12 +3,6 @@ using System.Text;
 
 namespace ExecutorService.Executor.Helpers;
 
-public class VmOutput
-{
-    public string? Out { get; init; }
-    public string? Err { get; init; }
-}
-
 internal static class ExecutorScriptHelper
 {
     internal static Process CreateBashExecutionProcess(string scriptPath, params string[] arguments)

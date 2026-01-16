@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AlgoDuck.Tests.Integration.TestHost;
-using Xunit;
 
 namespace AlgoDuck.Tests.Integration.Modules.Auth;
 

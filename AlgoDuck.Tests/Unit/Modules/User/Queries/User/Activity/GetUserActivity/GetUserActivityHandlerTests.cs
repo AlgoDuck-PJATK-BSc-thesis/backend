@@ -54,7 +54,6 @@ public sealed class GetUserActivityHandlerTests
 
         var solutionId = Guid.NewGuid();
         var problemId = Guid.NewGuid();
-        var statusId = Guid.NewGuid();
         var createdAt = DateTime.UtcNow;
 
         var problem = new Models.Problem

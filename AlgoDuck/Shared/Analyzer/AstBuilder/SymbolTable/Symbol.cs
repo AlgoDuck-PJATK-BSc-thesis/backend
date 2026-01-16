@@ -61,15 +61,7 @@ public class Scope
     {
         return Symbols.Values.OfType<MethodSymbol<T>>().ToList();
     }
-    
 
-    public void PrintAllSymbols()
-    {
-        foreach (var keyValuePair in Symbols)
-        {
-            Console.WriteLine(keyValuePair.Key);
-        }
-    }
 
     public Symbol? GetSymbol(string name)
     {

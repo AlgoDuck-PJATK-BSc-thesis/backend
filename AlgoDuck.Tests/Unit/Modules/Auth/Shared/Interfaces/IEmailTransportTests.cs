@@ -13,7 +13,7 @@ public sealed class IEmailTransportTests
 
         var send = t.GetMethod("SendAsync");
         Assert.NotNull(send);
-        Assert.Equal(typeof(Task), send!.ReturnType);
+        Assert.Equal(typeof(Task), send.ReturnType);
 
         var ps = send.GetParameters().Select(p => p.ParameterType).ToArray();
         Assert.Equal(new[] { typeof(string), typeof(string), typeof(string), typeof(string), typeof(CancellationToken) }, ps);

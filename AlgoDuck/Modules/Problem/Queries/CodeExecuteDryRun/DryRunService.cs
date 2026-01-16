@@ -71,13 +71,6 @@ internal sealed class DryRunService(
             return await SendExecutionRequestToQueueAsync(userSolutionData, request.UserId, cancellationToken);
         }
 
-        var helper = new ExecutorFileOperationHelper
-        {
-            UserSolutionData = userSolutionData
-        };
-
-        helper.InsertTiming();
-        
         await redis.StringSetAsync(
             new RedisKey(userSolutionData.ExecutionId.ToString()),
             new RedisValue(JsonSerializer.Serialize(jobData)),

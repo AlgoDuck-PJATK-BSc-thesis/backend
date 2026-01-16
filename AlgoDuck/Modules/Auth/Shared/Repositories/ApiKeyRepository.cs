@@ -27,9 +27,19 @@ public sealed class ApiKeyRepository : IApiKeyRepository
 
     public async Task<IReadOnlyList<ApiKey>> GetUserApiKeysAsync(Guid userId, CancellationToken cancellationToken)
     {
-        return await _commandDbContext.Set<ApiKey>()
+        var query = _commandDbContext.Set<ApiKey>()
             .AsNoTracking()
-            .Where(k => k.UserId == userId)
+            .Where(k => k.UserId == userId);
+
+        var provider = _commandDbContext.Database.ProviderName ?? string.Empty;
+
+        if (provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            var list = await query.ToListAsync(cancellationToken);
+            return list.OrderByDescending(k => k.CreatedAt).ToList();
+        }
+
+        return await query
             .OrderByDescending(k => k.CreatedAt)
             .ToListAsync(cancellationToken);
     }

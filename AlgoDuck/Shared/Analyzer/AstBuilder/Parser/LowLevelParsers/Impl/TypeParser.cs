@@ -29,8 +29,12 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition, SymbolTab
             return SpecialMemberType.Void;
         }
 
-
-        if (PeekToken() != null && (PeekToken(1)!.Type == TokenType.Dot || PeekToken(1)!.Type == TokenType.OpenBrace))
+        var isArrayBracket = PeekToken(1)?.Type == TokenType.OpenBrace;
+        var isVarArgs = PeekToken(1)?.Type == TokenType.Dot 
+                        && PeekToken(2)?.Type == TokenType.Dot 
+                        && PeekToken(3)?.Type == TokenType.Dot;
+    
+        if (PeekToken() != null && (isArrayBracket || isVarArgs))
         {
             return ParseArrayType();
         }
@@ -41,8 +45,8 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition, SymbolTab
         }
 
         if (PeekToken() != null && PeekToken()!.Type == TokenType.Ident) return ParseComplexTypDeclaration();
-        
-        throw new JavaSyntaxException("huhhhhhhh");
+
+        throw new JavaSyntaxException($"Unexpected token: {PeekToken()?.Type} {PeekToken()?.FilePos}");
     }
 
     public OneOf<MemberType, ArrayType, ComplexTypeDeclaration> ParseStandardType()
@@ -122,6 +126,15 @@ public class TypeParser(List<Token> tokens, FilePosition filePosition, SymbolTab
         {
             Identifier = ConsumeIfOfType("Type name", TokenType.Ident).Value!
         };
+        
+        while (CheckTokenType(TokenType.Dot))
+        {
+            ConsumeToken();
+            var nextPart = ConsumeIfOfType("Type name", TokenType.Ident).Value!;
+            complexTypeDeclaration.Identifier = $"{complexTypeDeclaration.Identifier}.{nextPart}";
+        }
+        
+        
         if (!CheckTokenType(TokenType.OpenChevron)) return complexTypeDeclaration;
 
         ConsumeToken(); //consume <

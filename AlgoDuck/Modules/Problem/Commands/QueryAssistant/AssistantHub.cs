@@ -1,4 +1,6 @@
+using System.Text.Json;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -28,7 +30,6 @@ public sealed class AssistantHub(
             yield break;
         }
 
-        Console.WriteLine(assistantRequest.Query);
         assistantRequest.UserId = userId.AsOk;
 
         await foreach (var chatCompletionPartial in  assistantService.GetAssistanceAsync(assistantRequest))
@@ -47,7 +48,6 @@ public sealed class AssistantHub(
                 Body = chatCompletionPartial.AsOk
             };
         }
-        
         await Clients.Caller.StreamCompleted();
     }
 }

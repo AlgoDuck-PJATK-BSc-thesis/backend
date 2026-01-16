@@ -30,6 +30,8 @@ public class LoadAutoSaveRepository(
         var autoSaveGetResult = await s3Client.GetXmlObjectByPathAsync<AutoSaveDto>(objectPath, cancellationToken);
         if (autoSaveGetResult.IsErr)
             return Result<AutoSaveResponseDto?, ErrorObject<string>>.Err(autoSaveGetResult.AsT1);
+
+        Console.WriteLine(autoSaveGetResult.AsOk!.UserCodeB64);
         
         return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(new AutoSaveResponseDto
         {

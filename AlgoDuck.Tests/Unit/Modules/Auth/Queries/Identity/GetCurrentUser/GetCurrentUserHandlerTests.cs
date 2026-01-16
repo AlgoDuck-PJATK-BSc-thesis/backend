@@ -81,7 +81,7 @@ public sealed class GetCurrentUserHandlerTests
         var result = await handler.HandleAsync(userId, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(userId, result!.Id);
+        Assert.Equal(userId, result.Id);
         Assert.Equal(string.Empty, result.UserName);
         Assert.Equal(string.Empty, result.Email);
         Assert.True(result.EmailConfirmed);

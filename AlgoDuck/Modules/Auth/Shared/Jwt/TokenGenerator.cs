@@ -13,7 +13,7 @@ public sealed class TokenGenerator
 
     public string GenerateRefreshToken()
     {
-        return GenerateSecureToken(32);
+        return GenerateSecureToken();
     }
 
     public string GenerateCsrfToken()

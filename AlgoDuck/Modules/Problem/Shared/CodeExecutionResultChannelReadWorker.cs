@@ -4,6 +4,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
@@ -12,7 +13,6 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using StackExchange.Redis;
-using TestingResult = AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode.TestingResult;
 
 // ReSharper disable ConvertIfStatementToReturnStatement
 // ReSharper disable InvertIf
@@ -75,9 +75,11 @@ public sealed class CodeExecutionResultChannelReadWorker(
     {
         if (_channel == null) return;
         var readResult = ParseChannelOutput(deliverEventArgs);
+            Console.WriteLine("channel data");
 
         if (readResult.IsErr)
         {
+            Console.WriteLine("channel error");
             switch (readResult.AsT1.Type)
             {
                 case ErrorType.NotFound or ErrorType.BadRequest:
@@ -92,12 +94,12 @@ public sealed class CodeExecutionResultChannelReadWorker(
         var channelResponse = readResult.AsT0;
             
         var jobDataResult =  await GetJobDataFromCacheAsync(channelResponse.JobId, cancellationToken);
-            
         if (jobDataResult.IsErr)
             return;
-
-        var jobData = jobDataResult.AsT0;
         
+        var jobData = jobDataResult.AsT0;
+
+        Console.WriteLine(JsonSerializer.Serialize(jobData));
         var fileHelper = new ExecutorFileOperationHelper
         {
             UserSolutionData = new UserSolutionData
@@ -106,7 +108,6 @@ public sealed class CodeExecutionResultChannelReadWorker(
             }
         };
         var result = fileHelper.ParseVmOutput(channelResponse);
-
         jobData.CachedResponses.Add(result);
         
         await redis.StringSetAsync(
@@ -117,7 +118,10 @@ public sealed class CodeExecutionResultChannelReadWorker(
         await hubContext.Clients.Group(channelResponse.JobId.ToString())
             .SendAsync(
                 method: "ExecutionStatusUpdated",
-                arg1: result, 
+                arg1: new StandardApiResponse<SubmitExecuteResponse>
+                {
+                    Body = result
+                }, 
                 cancellationToken: cancellationToken
             );
 
@@ -137,70 +141,79 @@ public sealed class CodeExecutionResultChannelReadWorker(
     {
         using var scope = scopeFactory.CreateScope();
         var statisticsRepository = scope.ServiceProvider.GetRequiredService<IExecutionStatisticsRepository>();
+        var testCaseValidationRepository = scope.ServiceProvider.GetRequiredService<ISharedTestCaseRepository>();
 
-        var allTestsPassed = submitResponse.TestResults.All(t => t.IsTestPassed);
+        var allTestsPassedResult = jobData.ProblemId is not null
+            ? await testCaseValidationRepository.ValidateAllTestCasesPassedAsync(new ValidationRequestDto
+            {
+                ProblemId = (Guid)jobData.ProblemId!,
+                TestingResults = submitResponse.TestResults.ToDictionary(t => t.TestId, t => t.IsTestPassed)
+            }, cancellationToken)
+            : Result<bool, ErrorObject<string>>.Ok(false);
+        
+        if (allTestsPassedResult.IsErr)
+            return Result<bool, ErrorObject<string>>.Err(allTestsPassedResult.AsT1!);
 
+        var allTestsPassed = allTestsPassedResult.AsOk;
+        
         await statisticsRepository.RecordExecutionDataAsync(new ExecutionDataDto
         {
             ProblemId = jobData.ProblemId,
             UserId = jobData.UserId,
             Result = allTestsPassed
                 ? jobData.JobType == JobType.Testing ? TestCaseResult.Accepted : TestCaseResult.Rejected : TestCaseResult.NotApplicable,
-            Status = submitResponse.Status
+            Status = submitResponse.Status,
+            ExitCode = submitResponse.ExecutionExitCode,
+            ExecutionEndNs = submitResponse.ExecutionEndTimeNs,
+            ExecutionStartNs = submitResponse.ExecutionStartTimeNs,
+            JvmMemPeakKb = submitResponse.JvmMemoryPeakKb,
+            ExecutionType = jobData.JobType,
+            TestingResults = submitResponse.TestResults
         }, cancellationToken);
 
         if (jobData.JobType == JobType.DryRun) 
             return Result<bool, ErrorObject<string>>.Ok(false);
         
         if (jobData.ProblemId == null)
-        {
             return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("problem ID missing"));
-        }
         
         var problemId = jobData.ProblemId.Value;
-        
         var autoSaveRepository = scope.ServiceProvider.GetRequiredService<IAutoSaveRepository>();
-        
-        if (allTestsPassed)
-        {
-            var submitRepository = scope.ServiceProvider.GetRequiredService<IExecutorSubmitRepository>();
-            
-            var coinAddResult = await submitRepository.AddCoinsAndExperienceAsync(new SolutionRewardDto
-            {
-                ProblemId = problemId,
-                UserId = jobData.UserId
-            }, cancellationToken);    
-            
-            if (coinAddResult.IsErr)
-                return Result<bool, ErrorObject<string>>.Err(coinAddResult.AsT1);
 
-            var result = await submitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
+        if (!allTestsPassed)
+            return await autoSaveRepository.UpsertSolutionSnapshotTestingAsync(new TestingResultSnapshotUpdate
             {
-                CodeB64 = jobData.UserCodeB64,
-                CodeRuntimeSubmitted = submitResponse.ExecutionTime,
                 ProblemId = problemId,
-                UserId = jobData.UserId
+                UserId = jobData.UserId,
+                TestingResults = submitResponse.TestResults
             }, cancellationToken);
 
-
-            if (result.IsErr)
-                return result;
-            return await autoSaveRepository.DeleteSolutionSnapshotCodeAsync(new DeleteAutoSaveDto
-            {
-                ProblemId = problemId,
-                UserId = jobData.UserId
-            }, cancellationToken);
-        }
+        var submitRepository = scope.ServiceProvider.GetRequiredService<IExecutorSubmitRepository>();
         
-        return await autoSaveRepository.UpdateSolutionSnapshotTestingAsync(new TestingResultSnapshotUpdate
+        var coinAddResult = await submitRepository.AddCoinsAndExperienceAsync(new SolutionRewardDto
         {
             ProblemId = problemId,
-            UserId = jobData.UserId,
-            TestingResults = submitResponse.TestResults.Select(tr => new TestingResult
-            {
-                Passed = tr.IsTestPassed,
-                TestCaseId = Guid.Parse(tr.TestId)
-            }).ToList()
+            UserId = jobData.UserId
+        }, cancellationToken);    
+        
+        if (coinAddResult.IsErr)
+            return Result<bool, ErrorObject<string>>.Err(coinAddResult.AsT1);
+
+        var result = await submitRepository.InsertSubmissionResultAsync(new SubmissionInsertDto
+        {
+            CodeB64 = jobData.UserCodeB64,
+            CodeRuntimeSubmitted = submitResponse.ExecutionTimeNs,
+            ProblemId = problemId,
+            UserId = jobData.UserId
+        }, cancellationToken);
+
+
+        if (result.IsErr)
+            return result;
+        return await autoSaveRepository.DeleteSolutionSnapshotCodeAsync(new DeleteAutoSaveDto
+        {
+            ProblemId = problemId,
+            UserId = jobData.UserId
         }, cancellationToken);
     }
 
@@ -210,7 +223,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
         try
         {
             var message = Encoding.UTF8.GetString(body.ToArray());
-            
+            Console.WriteLine($"message raw: {message}");
             var response = JsonSerializer.Deserialize<ExecutionResponseRabbit>(message, _jsonSerializerOptions);
             if (response == null)
             {

@@ -63,7 +63,7 @@ public class AnalysisResultService : IAnalysisResultService
             Dictionary<AstNodeMemberFunc<AstNodeClass>, string> methods = [];
 
             analyzerFull.GetAllVariablesAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, variables);
-            analyzerFull.PrintAllFunctionsAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, methods);
+            analyzerFull.GetAllFunctionsAccessibleFromScope(fullResult.Main.FuncScope!.OwnScope, methods);
 
             return Result<AnalysisResultDto, ErrorObject<string>>.Ok(new AnalysisResultDto
             {

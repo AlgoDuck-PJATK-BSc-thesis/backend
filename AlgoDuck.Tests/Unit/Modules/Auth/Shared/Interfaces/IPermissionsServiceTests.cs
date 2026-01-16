@@ -13,7 +13,7 @@ public sealed class IPermissionsServiceTests
 
         var ensure = t.GetMethod("EnsureUserHasPermissionAsync");
         Assert.NotNull(ensure);
-        Assert.Equal(typeof(Task), ensure!.ReturnType);
+        Assert.Equal(typeof(Task), ensure.ReturnType);
         Assert.Equal(new[] { typeof(Guid), typeof(string), typeof(CancellationToken) }, ensure.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var all = t.GetMethods().Select(m => m.Name).ToArray();

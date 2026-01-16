@@ -155,7 +155,7 @@ public sealed class GetUserByTokenHandlerTests
         var result = await handler.HandleAsync(new UserByTokenDto { AccessToken = token }, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(userId, result!.Id);
+        Assert.Equal(userId, result.Id);
         Assert.Equal("alice", result.UserName);
         Assert.Equal("alice@example.com", result.Email);
         Assert.True(result.EmailConfirmed);

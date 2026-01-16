@@ -4,7 +4,6 @@ using AlgoDuck.Tests.Integration.TestHost;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace AlgoDuck.Tests.Integration.Modules.Auth;
 
@@ -115,7 +114,7 @@ public sealed class AuthorizationSmokeTests
         Assert.False(string.IsNullOrWhiteSpace(path));
 
         var client = _fx.CreateAnonymousClient();
-        var resp = await client.GetAsync(path!, CancellationToken.None);
+        var resp = await client.GetAsync(path, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
     }
@@ -130,7 +129,7 @@ public sealed class AuthorizationSmokeTests
 
         await LoginAsAdminAsync(_fx, client);
 
-        var resp = await client.GetAsync(path!, CancellationToken.None);
+        var resp = await client.GetAsync(path, CancellationToken.None);
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, resp.StatusCode);
     }

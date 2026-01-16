@@ -3,6 +3,7 @@ using AlgoDuck.Modules.Item.Commands.DeleteItem;
 using AlgoDuck.Modules.Item.Commands.DropItemAsActive;
 using AlgoDuck.Modules.Item.Commands.EmplacePlantOnHomePage;
 using AlgoDuck.Modules.Item.Commands.PurchaseItem;
+using AlgoDuck.Modules.Item.Commands.RemovePlantFromHomepage;
 using AlgoDuck.Modules.Item.Commands.SelectItemAsActive;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllItemPaged;
@@ -60,6 +61,9 @@ internal static class ItemDependencyInitializer
         
         builder.Services.AddScoped<IAllItemRaritiesRepository, AllItemRaritiesRepository>();
         builder.Services.AddScoped<IAllItemRaritiesService, AllItemRaritiesService>();
+
+        builder.Services.AddScoped<IRemovePlantService, RemovePlantService>();
+        builder.Services.AddScoped<IRemovePlantRepository, RemovePlantRepository>();
         
         builder.Services.Configure<AwardsConfig>(
             builder.Configuration.GetSection("Awards"));

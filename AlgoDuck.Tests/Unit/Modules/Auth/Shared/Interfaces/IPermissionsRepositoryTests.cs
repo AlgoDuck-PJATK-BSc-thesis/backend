@@ -14,12 +14,12 @@ public sealed class IPermissionsRepositoryTests
 
         var perms = t.GetMethod("GetUserPermissionsAsync");
         Assert.NotNull(perms);
-        Assert.Equal(typeof(Task<IReadOnlyList<string>>), perms!.ReturnType);
+        Assert.Equal(typeof(Task<IReadOnlyList<string>>), perms.ReturnType);
         Assert.Equal(new[] { typeof(Guid), typeof(CancellationToken) }, perms.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var claims = t.GetMethod("GetUserClaimsAsync");
         Assert.NotNull(claims);
-        Assert.Equal(typeof(Task<IReadOnlyList<Claim>>), claims!.ReturnType);
+        Assert.Equal(typeof(Task<IReadOnlyList<Claim>>), claims.ReturnType);
         Assert.Equal(new[] { typeof(Guid), typeof(CancellationToken) }, claims.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var all = t.GetMethods().Select(m => m.Name).OrderBy(x => x).ToArray();

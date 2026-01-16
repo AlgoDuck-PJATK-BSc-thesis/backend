@@ -13,7 +13,7 @@ public sealed class IAuthValidatorTests
 
         var reg = t.GetMethod("ValidateRegistrationAsync");
         Assert.NotNull(reg);
-        Assert.Equal(typeof(Task), reg!.ReturnType);
+        Assert.Equal(typeof(Task), reg.ReturnType);
         Assert.Equal(
             new[] { typeof(string), typeof(string), typeof(string), typeof(CancellationToken) },
             reg.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -21,7 +21,7 @@ public sealed class IAuthValidatorTests
 
         var login = t.GetMethod("ValidateLoginAsync");
         Assert.NotNull(login);
-        Assert.Equal(typeof(Task), login!.ReturnType);
+        Assert.Equal(typeof(Task), login.ReturnType);
         Assert.Equal(
             new[] { typeof(string), typeof(string), typeof(CancellationToken) },
             login.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -29,7 +29,7 @@ public sealed class IAuthValidatorTests
 
         var confirm = t.GetMethod("ValidateEmailConfirmationAsync");
         Assert.NotNull(confirm);
-        Assert.Equal(typeof(Task), confirm!.ReturnType);
+        Assert.Equal(typeof(Task), confirm.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(CancellationToken) },
             confirm.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -37,7 +37,7 @@ public sealed class IAuthValidatorTests
 
         var change = t.GetMethod("ValidatePasswordChangeAsync");
         Assert.NotNull(change);
-        Assert.Equal(typeof(Task), change!.ReturnType);
+        Assert.Equal(typeof(Task), change.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(string), typeof(CancellationToken) },
             change.GetParameters().Select(p => p.ParameterType).ToArray()

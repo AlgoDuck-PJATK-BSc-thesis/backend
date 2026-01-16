@@ -15,17 +15,17 @@ public sealed class ITokenServiceTests
 
         var gen = t.GetMethod("GenerateAuthTokensAsync");
         Assert.NotNull(gen);
-        Assert.Equal(typeof(Task<AuthResponse>), gen!.ReturnType);
+        Assert.Equal(typeof(Task<AuthResponse>), gen.ReturnType);
         Assert.Equal(new[] { typeof(ApplicationUser), typeof(CancellationToken) }, gen.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var refresh = t.GetMethod("RefreshTokensAsync");
         Assert.NotNull(refresh);
-        Assert.Equal(typeof(Task<RefreshResult>), refresh!.ReturnType);
+        Assert.Equal(typeof(Task<RefreshResult>), refresh.ReturnType);
         Assert.Equal(new[] { typeof(Session), typeof(CancellationToken) }, refresh.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var info = t.GetMethod("GetTokenInfoAsync");
         Assert.NotNull(info);
-        Assert.Equal(typeof(Task<TokenInfoDto>), info!.ReturnType);
+        Assert.Equal(typeof(Task<TokenInfoDto>), info.ReturnType);
         Assert.Equal(new[] { typeof(Guid), typeof(CancellationToken) }, info.GetParameters().Select(p => p.ParameterType).ToArray());
 
         var all = t.GetMethods().Select(m => m.Name).OrderBy(x => x).ToArray();

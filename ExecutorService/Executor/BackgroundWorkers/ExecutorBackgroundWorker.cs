@@ -44,6 +44,7 @@ public sealed class ExecutorBackgroundWorker(
             logger.LogInformation("{ServiceName} Processing job {JobId}", _serviceData.ServiceName, request.JobId);
         
             var result = await ProcessExecutionRequestAsync(request);
+            Console.WriteLine(JsonSerializer.Serialize(result));
             var status = result.Err.Equals(string.Empty) ? SubmitExecuteRequestRabbitStatus.Completed : SubmitExecuteRequestRabbitStatus.RuntimeError;
 
             await PublishResultAsync(request.JobId, result, status);
@@ -104,13 +105,13 @@ public sealed class ExecutorBackgroundWorker(
     
     private async Task<VmExecutionResponse> ProcessExecutionRequestAsync(SubmitExecuteRequestRabbit request)
     {
-        await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Compiling);
 
         var vmLeaseTask = launchManager.AcquireVmAsync(FilesystemType.Executor);
         
         VmLease? vmLease = null;
         try
         {
+            await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Compiling);
             var compilationResult = await compilationHandler.CompileAsync(request);
             
             if (compilationResult is VmCompilationFailure failure)
@@ -122,7 +123,7 @@ public sealed class ExecutorBackgroundWorker(
             
             await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Executing);
 
-            var successResult = (VmCompilationSuccess)compilationResult;
+            var successResult = (VmCompilationSuccess) compilationResult;
             return await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery(successResult));
         }
         finally
@@ -167,6 +168,10 @@ public sealed class ExecutorBackgroundWorker(
         {
             Out = result.Out,
             Err = result.Err,
+            ExitCode = CoalescedIntParse(result.ExitCode),
+            StartNs = CoalescedLongParse(result.StartNs),
+            EndNs = CoalescedLongParse(result.EndNs),
+            MaxMemoryKb = CoalescedLongParse(result.MaxMemoryKb),
             JobId = jobId,
             Status = status
         };
@@ -180,7 +185,6 @@ public sealed class ExecutorBackgroundWorker(
         
         var json = JsonSerializer.Serialize(message, JsonOptions);
         var body = Encoding.UTF8.GetBytes(json);
-        Console.WriteLine(json);
 
         await Channel.BasicPublishAsync(
             exchange: "",
@@ -188,6 +192,30 @@ public sealed class ExecutorBackgroundWorker(
             mandatory: false,
             basicProperties: new BasicProperties { Persistent = true },
             body: body);
+    }
+
+    private static long CoalescedLongParse(string value)
+    {
+        try
+        {
+            return long.Parse(value);
+        }
+        catch (Exception e)
+        {
+            return 0L;
+        }
+    }
+    
+    private static int CoalescedIntParse(string value)
+    {
+        try
+        {
+            return int.Parse(value);
+        }
+        catch (Exception e)
+        {
+            return 0;
+        }
     }
     
     private static string GetUserFriendlyError(Exception ex)

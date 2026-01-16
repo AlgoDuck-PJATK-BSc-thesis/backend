@@ -13,7 +13,7 @@ public sealed class IEmailSenderTests
 
         var confirm = t.GetMethod("SendEmailConfirmationAsync");
         Assert.NotNull(confirm);
-        Assert.Equal(typeof(Task), confirm!.ReturnType);
+        Assert.Equal(typeof(Task), confirm.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(string), typeof(CancellationToken) },
             confirm.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -21,7 +21,7 @@ public sealed class IEmailSenderTests
 
         var reset = t.GetMethod("SendPasswordResetAsync");
         Assert.NotNull(reset);
-        Assert.Equal(typeof(Task), reset!.ReturnType);
+        Assert.Equal(typeof(Task), reset.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(string), typeof(CancellationToken) },
             reset.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -29,7 +29,7 @@ public sealed class IEmailSenderTests
 
         var code = t.GetMethod("SendTwoFactorCodeAsync");
         Assert.NotNull(code);
-        Assert.Equal(typeof(Task), code!.ReturnType);
+        Assert.Equal(typeof(Task), code.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(string), typeof(CancellationToken) },
             code.GetParameters().Select(p => p.ParameterType).ToArray()
@@ -37,7 +37,7 @@ public sealed class IEmailSenderTests
 
         var change = t.GetMethod("SendEmailChangeConfirmationAsync");
         Assert.NotNull(change);
-        Assert.Equal(typeof(Task), change!.ReturnType);
+        Assert.Equal(typeof(Task), change.ReturnType);
         Assert.Equal(
             new[] { typeof(Guid), typeof(string), typeof(string), typeof(CancellationToken) },
             change.GetParameters().Select(p => p.ParameterType).ToArray()

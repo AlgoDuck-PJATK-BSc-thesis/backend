@@ -1,4 +1,5 @@
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
 using Microsoft.AspNetCore.Mvc;
@@ -17,17 +18,17 @@ public class AutoSaveController(
     public async Task<IActionResult> AutoSaveCodeAsync([FromBody] AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken)
     {
-        var userId = User.GetUserId();
-
-        if (userId.IsErr)
-            return userId.ToActionResult();
-
-        autoSaveDto.UserId = userId.AsT0;
-
-        await autoSaveService.AutoSaveCodeAsync(autoSaveDto, cancellationToken);
-        return Ok(new StandardApiResponse
-        {
-            Message = "Autosave completed successfully"
-        });
+        return await User
+            .GetUserId()
+            .BindAsync(async idResult =>
+            {
+                autoSaveDto.UserId = idResult;
+                return await autoSaveService.AutoSaveCodeAsync(autoSaveDto, cancellationToken);
+            }).ToActionResultAsync("autosave completed successfully");
     }
+}
+
+public class AutoSaveResultDto
+{
+    public required Guid ProblemId { get; set; } 
 }

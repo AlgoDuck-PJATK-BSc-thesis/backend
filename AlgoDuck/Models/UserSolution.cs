@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class UserSolution : IEntityTypeConfiguration<UserSolution>
+public class UserSolution : IEntityTypeConfiguration<UserSolution>
 {
     public Guid SolutionId { get; set; } = Guid.NewGuid();
 

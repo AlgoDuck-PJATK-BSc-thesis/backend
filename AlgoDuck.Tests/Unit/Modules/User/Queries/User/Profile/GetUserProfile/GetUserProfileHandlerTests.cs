@@ -17,7 +17,6 @@ public sealed class GetUserProfileHandlerTests
             UserId = userId,
             S3AvatarUrl = "s3://avatar.png",
             Username = "u1",
-            Language = "en",
             Coins = 5,
             Experience = 10,
             AmountSolved = 2,

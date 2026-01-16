@@ -1,8 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
-using OpenAI.Chat;
-
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
 public class SignalParser

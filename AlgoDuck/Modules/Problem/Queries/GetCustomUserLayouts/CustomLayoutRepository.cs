@@ -16,15 +16,15 @@ public class CustomLayoutRepository(
     public async Task<Result<ICollection<LayoutDto>, ErrorObject<string>>> GetCustomLayoutsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
 
-        var result = await dbContext.UserConfigs.Include(u => u.EditorLayouts)
-            .Where(u => u.UserId == userId)
-            .SelectMany(u => u.EditorLayouts.Select(l => new LayoutDto
-            {
-                LayoutId = l.EditorLayoutId,
-                LayoutName = l.LayoutName
-            })).ToListAsync(cancellationToken: cancellationToken);
+        // var result = await dbContext.UserConfigs.Include(u => u.EditorLayouts)
+        //     .Where(u => u.UserId == userId)
+        //     .SelectMany(u => u.EditorLayouts.Select(l => new LayoutDto
+        //     {
+        //         LayoutId = l.EditorLayoutId,
+        //         LayoutName = l.LayoutName
+        //     })).ToListAsync(cancellationToken: cancellationToken);
         
-        
-        return Result<ICollection<LayoutDto>, ErrorObject<string>>.Ok(result);
+        throw new NotImplementedException();
+        // return Result<ICollection<LayoutDto>, ErrorObject<string>>.Ok(result);
     }
 }

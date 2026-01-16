@@ -6,7 +6,7 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/item/rarity")]
 public class AllItemRaritiesController(
     IAllItemRaritiesService allItemRaritiesService
     ) : ControllerBase

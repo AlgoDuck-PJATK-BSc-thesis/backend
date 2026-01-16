@@ -1,8 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
-using OneOf;
-using OneOf.Types;
 
 namespace AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 

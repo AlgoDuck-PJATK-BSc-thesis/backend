@@ -45,33 +45,40 @@ public sealed class DefaultDuckService : IDefaultDuckService
             throw new InvalidOperationException("Default duck item 'algoduck' was not found.");
         }
 
-        var selected = await _db.Set<DuckOwnership>()
-            .Where(o => o.UserId == userId && o.SelectedAsAvatar)
-            .ToListAsync(cancellationToken);
+        var hasAnySelectedAvatar = await _db.Set<DuckOwnership>()
+            .AnyAsync(o => o.UserId == userId && o.SelectedAsAvatar, cancellationToken);
 
-        foreach (var s in selected)
-        {
-            s.SelectedAsAvatar = false;
-        }
-
-        var owned = await _db.Set<DuckOwnership>()
+        var ownedAlgoduck = await _db.Set<DuckOwnership>()
             .SingleOrDefaultAsync(o => o.UserId == userId && o.ItemId == algoduckItemId, cancellationToken);
 
-        if (owned is null)
+        if (ownedAlgoduck is null)
         {
-            owned = new DuckOwnership
+            ownedAlgoduck = new DuckOwnership
             {
                 UserId = userId,
                 ItemId = algoduckItemId,
-                SelectedAsAvatar = true,
+                SelectedAsAvatar = false,
                 SelectedForPond = true
             };
-            _db.Set<DuckOwnership>().Add(owned);
+            _db.Set<DuckOwnership>().Add(ownedAlgoduck);
         }
         else
         {
-            owned.SelectedAsAvatar = true;
-            owned.SelectedForPond = true;
+            ownedAlgoduck.SelectedForPond = true;
+        }
+
+        if (!hasAnySelectedAvatar)
+        {
+            var selected = await _db.Set<DuckOwnership>()
+                .Where(o => o.UserId == userId && o.SelectedAsAvatar)
+                .ToListAsync(cancellationToken);
+
+            foreach (var s in selected)
+            {
+                s.SelectedAsAvatar = false;
+            }
+
+            ownedAlgoduck.SelectedAsAvatar = true;
         }
 
         await _db.SaveChangesAsync(cancellationToken);

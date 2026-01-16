@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
+public class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
     public int Coins { get; set; }
 
@@ -40,6 +40,7 @@ public partial class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurat
     public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
     public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
     public virtual ICollection<Item> CreatedItems { get; set; } = new List<Item>();
+    public virtual ICollection<OwnsLayout> EditorLayouts { get; set; } = new List<OwnsLayout>();
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

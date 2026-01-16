@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Text;
+using System.Text.Json;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
@@ -177,7 +178,7 @@ public class AnalyzerSimple
                constructors.Count == 0; /*Check if available default constructor*/
     }
 
-    public void PrintAllFunctionsAccessibleFromScope(Scope scope,
+    public void GetAllFunctionsAccessibleFromScope(Scope scope,
         Dictionary<AstNodeMemberFunc<AstNodeClass>, string> functions)
     {
         var workingScope = scope;

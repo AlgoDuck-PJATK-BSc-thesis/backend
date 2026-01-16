@@ -22,7 +22,7 @@ public sealed class GetUserByIdHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUserHasNoConfig_ThenReturnsDtoWithEmptyLanguage()
+    public async Task HandleAsync_WhenUserHasNoConfig_ThenReturnsDtoWithDefaults()
     {
         var userId = Guid.NewGuid();
 
@@ -52,12 +52,11 @@ public sealed class GetUserByIdHandlerTests
         Assert.Equal(10, result.Experience);
         Assert.Equal(2, result.AmountSolved);
         Assert.Null(result.CohortId);
-        Assert.Equal(string.Empty, result.Language);
         Assert.Equal(string.Empty, result.S3AvatarUrl);
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUserHasConfig_ThenMapsLanguage()
+    public async Task HandleAsync_WhenUserHasConfig_ThenMapsCohortId()
     {
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -77,7 +76,6 @@ public sealed class GetUserByIdHandlerTests
                 UserConfig = new UserConfig
                 {
                     UserId = userId,
-                    Language = "pl",
                     User = null!
                 }
             });
@@ -86,7 +84,6 @@ public sealed class GetUserByIdHandlerTests
 
         var result = await handler.HandleAsync(new GetUserByIdRequestDto { UserId = userId }, CancellationToken.None);
 
-        Assert.Equal("pl", result.Language);
         Assert.Equal(cohortId, result.CohortId);
     }
 }

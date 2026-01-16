@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class Session : IEntityTypeConfiguration<Session>
+public class Session : IEntityTypeConfiguration<Session>
 {
     public Guid SessionId { get; set; } = Guid.NewGuid();
 

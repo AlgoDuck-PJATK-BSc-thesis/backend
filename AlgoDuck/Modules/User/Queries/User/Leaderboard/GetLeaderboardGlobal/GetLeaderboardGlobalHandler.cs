@@ -1,5 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.DTOs;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Queries.User.Leaderboard.GetLeaderboardGlobal;
@@ -7,6 +8,7 @@ namespace AlgoDuck.Modules.User.Queries.User.Leaderboard.GetLeaderboardGlobal;
 public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
 {
     private const string AvatarFolderPrefix = "Ducks/Outfits/";
+    private const string AdminRoleName = "admin";
 
     private readonly ApplicationQueryDbContext _queryDbContext;
 
@@ -24,7 +26,17 @@ public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
             pageSize = 100;
         }
 
+        var adminRoleId = await _queryDbContext.Set<IdentityRole<Guid>>()
+            .Where(r => r.Name == AdminRoleName)
+            .Select(r => r.Id)
+            .SingleAsync(cancellationToken);
+
+        var adminUserIds = _queryDbContext.Set<IdentityUserRole<Guid>>()
+            .Where(ur => ur.RoleId == adminRoleId)
+            .Select(ur => ur.UserId);
+
         var orderedUsers = _queryDbContext.ApplicationUsers
+            .Where(u => !adminUserIds.Contains(u.Id))
             .OrderByDescending(u => u.Experience)
             .ThenByDescending(u => u.AmountSolved)
             .ThenBy(u => u.UserName);
@@ -44,7 +56,7 @@ public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
                 u.AmountSolved,
                 u.CohortId,
                 SelectedItemId = _queryDbContext.DuckOwnerships
-                    .Where(p => p.UserId == u.Id && p.SelectedForPond)
+                    .Where(p => p.UserId == u.Id && p.SelectedAsAvatar)
                     .Select(p => (Guid?)p.ItemId)
                     .FirstOrDefault()
             })
@@ -59,6 +71,7 @@ public sealed class GetLeaderboardGlobalHandler : IGetLeaderboardGlobalHandler
                 {
                     avatarPath = AvatarFolderPrefix + "duck-" + u.SelectedItemId.Value.ToString("D") + ".png";
                 }
+                
 
                 return new UserLeaderboardEntryDto
                 {

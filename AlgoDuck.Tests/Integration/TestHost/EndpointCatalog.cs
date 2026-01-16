@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
@@ -50,7 +49,7 @@ public static class EndpointCatalog
                 }
 
                 var http = ep.Metadata.OfType<HttpMethodMetadata>().FirstOrDefault();
-                var methods = http?.HttpMethods?.Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? new List<string>();
+                var methods = http?.HttpMethods.Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? new List<string>();
 
                 if (methods.Count == 0)
                 {

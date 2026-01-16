@@ -1,12 +1,13 @@
 using System.Security.Claims;
+using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+namespace AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/user/item/pond")]
 [Authorize]
 public class OwnedUsedItemsController(
     IOwnedItemsService ownedItemsService

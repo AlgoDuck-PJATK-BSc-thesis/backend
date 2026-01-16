@@ -1,10 +1,9 @@
-using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
+using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Auth.Commands.Login.Register;
 
@@ -14,20 +13,20 @@ public sealed class RegisterHandler : IRegisterHandler
     private readonly IEmailSender _emailSender;
     private readonly IValidator<RegisterDto> _validator;
     private readonly IConfiguration _configuration;
-    private readonly ApplicationCommandDbContext _db;
+    private readonly IDefaultDuckService _defaultDuckService;
 
     public RegisterHandler(
         UserManager<ApplicationUser> userManager,
         IEmailSender emailSender,
         IValidator<RegisterDto> validator,
         IConfiguration configuration,
-        ApplicationCommandDbContext db)
+        IDefaultDuckService defaultDuckService)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _validator = validator;
         _configuration = configuration;
-        _db = db;
+        _defaultDuckService = defaultDuckService;
     }
 
     public async Task<AuthUserDto> HandleAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -62,7 +61,7 @@ public sealed class RegisterHandler : IRegisterHandler
 
         try
         {
-            await EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
+            await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
 
             var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
             if (!addRoleResult.Succeeded)
@@ -89,50 +88,6 @@ public sealed class RegisterHandler : IRegisterHandler
             await _userManager.DeleteAsync(user);
             throw;
         }
-    }
-
-    private async Task EnsureAlgoduckOwnedAndSelectedAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        var algoduckItemId = await _db.DuckItems
-            .Where(i => i.Name.ToLower() == "algoduck")
-            .Select(i => i.ItemId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (algoduckItemId == Guid.Empty)
-        {
-            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException("Default duck item 'algoduck' was not found.");
-        }
-
-        var owned = await _db.DuckOwnerships
-            .SingleOrDefaultAsync(o => o.UserId == userId && o.ItemId == algoduckItemId, cancellationToken);
-
-        var selected = await _db.DuckOwnerships
-            .Where(o => o.UserId == userId && o.SelectedAsAvatar)
-            .ToListAsync(cancellationToken);
-
-        foreach (var s in selected)
-        {
-            s.SelectedAsAvatar = false;
-        }
-
-        if (owned is null)
-        {
-            owned = new DuckOwnership
-            {
-                UserId = userId,
-                ItemId = algoduckItemId,
-                SelectedAsAvatar = true,
-                SelectedForPond = true
-            };
-            _db.DuckOwnerships.Add(owned);
-        }
-        else
-        {
-            owned.SelectedAsAvatar = true;
-            owned.SelectedForPond = true;
-        }
-
-        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private string BuildEmailConfirmationLink(Guid userId, string token)

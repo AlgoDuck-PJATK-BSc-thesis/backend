@@ -55,7 +55,6 @@ public sealed class ProfileService : IProfileService
             Experience = dto.Experience,
             AmountSolved = dto.AmountSolved,
             CohortId = dto.CohortId,
-            Language = dto.Language,
             S3AvatarUrl = s3AvatarUrl,
             TwoFactorEnabled = user.TwoFactorEnabled,
             EmailConfirmed = user.EmailConfirmed
@@ -109,38 +108,6 @@ public sealed class ProfileService : IProfileService
         {
             Success = true,
             Message = "Username updated."
-        };
-    }
-
-    public async Task<ProfileUpdateResult> UpdateLanguageAsync(Guid userId, string language, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(language))
-        {
-            throw new ValidationException("Language cannot be empty.");
-        }
-
-        language = language.Trim().ToLowerInvariant();
-
-        if (language != "en" && language != "pl")
-        {
-            throw new ValidationException("Language must be 'en' or 'pl'.");
-        }
-
-        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
-        if (user is null)
-        {
-            throw new UserNotFoundException(userId);
-        }
-
-        user.UserConfig ??= new Models.UserConfig { UserId = user.Id };
-        user.UserConfig.Language = language;
-
-        await _userRepository.UpdateAsync(user, cancellationToken);
-
-        return new ProfileUpdateResult
-        {
-            Success = true,
-            Message = "Language updated successfully."
         };
     }
 

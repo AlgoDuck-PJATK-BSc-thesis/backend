@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public partial class Message : IEntityTypeConfiguration<Message>
+public class Message : IEntityTypeConfiguration<Message>
 {
     public Guid MessageId { get; set; }
 

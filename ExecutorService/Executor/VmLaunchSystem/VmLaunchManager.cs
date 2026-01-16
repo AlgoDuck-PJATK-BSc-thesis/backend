@@ -14,7 +14,7 @@ using Polly.Timeout;
 
 namespace ExecutorService.Executor.VmLaunchSystem;
 
-public class VmLaunchManager : IAsyncDisposable
+public sealed class VmLaunchManager : IAsyncDisposable
 {
     private readonly FilesystemPooler _pooler;
     private readonly ILogger<VmLaunchManager> _logger;
@@ -334,7 +334,7 @@ public class VmLaunchManager : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _logger.LogInformation("Shutting down VmLaunchManager");
-        _shutdownCts.Cancel();
+        await _shutdownCts.CancelAsync();
         
         foreach (var vmId in _activeVms.Keys.ToList())
         {
