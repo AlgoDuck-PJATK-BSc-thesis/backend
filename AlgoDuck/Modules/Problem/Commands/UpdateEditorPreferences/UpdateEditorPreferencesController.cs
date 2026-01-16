@@ -18,7 +18,7 @@ public class UpdateEditorPreferencesController : ControllerBase
     }
 
     [HttpPatch]
-    [Route("api/problem/preferences")]
+    [Route("api/problem/editor/theme")]
     [Authorize]
     public async Task<IActionResult> UpdateUserEditorPreferencesAsync([FromBody] PreferencesUpdateRequestDto request,
         CancellationToken cancellationToken = default)

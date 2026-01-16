@@ -42,7 +42,7 @@ public class UserSolutionRepository(
                 {
                     CodeRuntimeSubmitted = u.CodeRuntimeSubmitted,
                     CreatedAt = u.CreatedAt,
-                    UserSolutionId = u.ProblemId,
+                    UserSolutionId = u.SolutionId,
                 }).ToListAsync(cancellationToken: cancellationToken)
         });
     }

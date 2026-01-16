@@ -1,8 +1,11 @@
+using System.Text.Json;
 using AlgoDuckShared;
 using ExecutorService.Errors;
 using ExecutorService.Executor;
 using ExecutorService.Executor.BackgroundWorkers;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.Config;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using ExecutorService.Executor.VmLaunchSystem;
 using Microsoft.Extensions.Options;
@@ -21,6 +24,14 @@ builder.Logging.AddDebug();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<HealthCheckConfig>(
+    builder.Configuration.GetSection("HealthCheck"));
+builder.Services.Configure<CompilationHandlerConfig>(
+    builder.Configuration.GetSection("CompilerManager"));
+builder.Services.Configure<FileSystemPoolerConfig>(
+    builder.Configuration.GetSection("PoolerConfig"));
+
 
 builder.Services.AddCors(options =>
 {
@@ -50,23 +61,30 @@ builder.Services.AddSingleton<IConnectionFactory>(sp =>
 
 builder.Services.AddSingleton<IRabbitMqConnectionService, RabbitMqConnectionService>();
 
-builder.Services.AddSingleton<FilesystemPooler>(sp => FilesystemPooler.CreateFileSystemPoolerAsync().GetAwaiter().GetResult());
+builder.Services.AddSingleton<FilesystemPooler>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<FilesystemPooler>>();
+    var config = sp.GetRequiredService<IOptions<FileSystemPoolerConfig>>();
+    return FilesystemPooler.CreateFileSystemPoolerAsync(logger, config).GetAwaiter().GetResult();
+});
 
 builder.Services.AddSingleton<VmLaunchManager>(sp =>
 {
     var pooler = sp.GetRequiredService<FilesystemPooler>();
     var logger = sp.GetRequiredService<ILogger<VmLaunchManager>>();
     var config = sp.GetRequiredService<IOptions<ExecutorConfiguration>>();
-    return new VmLaunchManager(pooler, logger, config);
+    var healthCheckConfig = sp.GetRequiredService<IOptions<HealthCheckConfig>>();
+
+    return new VmLaunchManager(pooler, logger, config, healthCheckConfig);
 });
 
 builder.Services.AddSingleton<ICompilationHandler>(sp =>
 {
     var launchManager = sp.GetRequiredService<VmLaunchManager>();
-    return CompilationHandler.CreateAsync(launchManager).GetAwaiter().GetResult();
+    var options = sp.GetRequiredService<IOptions<CompilationHandlerConfig>>();
+    var logger = sp.GetRequiredService<ILogger<CompilationHandler>>();
+    return CompilationHandler.CreateAsync(launchManager, options, logger).GetAwaiter().GetResult();
 });
-
-builder.Services.AddSingleton<IFilesystemPooler>(sp => sp.GetRequiredService<FilesystemPooler>());
 
 builder.Services.AddHostedService<ExecutorBackgroundWorker>(sp =>
 {
@@ -79,7 +97,6 @@ builder.Services.AddHostedService<ExecutorBackgroundWorker>(sp =>
         ServiceName = "Executor",
         RequestQueueName = "code_execution_requests",
         ResponseQueueName = "code_execution_results"
-        
     });
 });
 

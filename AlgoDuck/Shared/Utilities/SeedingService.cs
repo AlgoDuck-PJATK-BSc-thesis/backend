@@ -1,6 +1,8 @@
+using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
+using AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
@@ -27,6 +29,9 @@ public class DataSeedingService(
         await SeedProblems();
         await SeedTestCases();
         await SeedEditorThemes();
+        await SeedEditorLayouts();
+        await SeedEditorLayoutOwnerships();
+        await SeedUserConfigsAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -41,6 +46,28 @@ public class DataSeedingService(
         }
     }
 
+    private async Task SeedUserConfigsAsync()
+    {
+        if (!await context.UserConfigs.AnyAsync())
+        {
+            var configs = new List<UserConfig>
+            {
+                new()
+                {
+                    EditorFontSize = 11,
+                    EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
+                    EmailNotificationsEnabled = false,
+                    IsDarkMode = true,
+                    IsHighContrast = false,
+                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
+                }
+            };
+            
+            await context.UserConfigs.AddRangeAsync(configs);
+            await context.SaveChangesAsync();
+        }
+    }
+    
     private async Task SeedSeededUsersAsync()
     {
         var adminPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
@@ -165,6 +192,100 @@ public class DataSeedingService(
             await context.Rarities.AddRangeAsync(rarities);
             await context.SaveChangesAsync();
         }
+    }
+
+
+    private async Task SeedEditorLayoutOwnerships()
+    {
+        if (!await context.OwnsLayouts.AnyAsync())
+        {
+            var ownerships = new List<OwnsLayout>()
+            {
+                new()
+                {
+                    IsSelected = true,
+                    LayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
+                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
+                },
+                
+                new()
+                {
+                    IsSelected = false,
+                    LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273"),
+                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
+                },
+                
+                new()
+                {
+                   IsSelected = false,
+                   LayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972"),
+                   UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
+                }   
+            };
+            
+            await  context.OwnsLayouts.AddRangeAsync(ownerships);
+            await context.SaveChangesAsync();
+        }
+    }
+    private async Task SeedEditorLayouts()
+    {
+
+        if (!await context.EditorLayouts.AnyAsync())
+        {
+            var layouts = new List<EditorLayout>
+            {
+                new()
+                {
+                    EditorLayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
+                    LayoutName = "default",
+                },
+                new()
+                {
+                    EditorLayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972"),
+                    LayoutName = "I use wayland btw",
+                },
+                new()
+                {
+                    EditorLayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273"),
+                    LayoutName = "Tab enjoyer",
+                }
+            };
+            
+            await context.EditorLayouts.AddRangeAsync(layouts);
+            await context.SaveChangesAsync();
+
+            var layoutContentsRaw = new List<EditorLayoutS3Partial>
+            {
+                new()
+                {
+                    Id = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
+                    ConfigObjectRaw = "{\n  \"compId\": \"root-wrapper\",\n  \"component\": \"TopLevelComponent\",\n  \"options\": {\n    \"component\": {\n      \"compId\": \"root\",\n      \"component\": \"SplitPanel\",\n      \"options\": {\n        \"axis\": 0,\n        \"initialComp1Proportions\": 0.25,\n        \"comp1\": {\n          \"compId\": \"problem-info-wrapper\",\n          \"component\": \"TopLevelComponent\",\n          \"options\": {\n            \"component\": {\n              \"compId\": \"problem-info\",\n              \"component\": \"InfoPanel\",\n              \"options\": {},\n              \"meta\": {\n                \"clampVal\": 0.025,\n                \"clamp\": {\n                  \"component\": \"ProblemInfoClamp\",\n                  \"options\": {}\n                }\n              }\n            }\n          }\n        },\n        \"comp2\": {\n          \"compId\": \"coding-area-wrapper\",\n          \"component\": \"TopLevelComponent\",\n          \"options\": {\n            \"component\": {\n                \"meta\": {\n            \"clampVal\": 0.025,\n            \"clamp\": {\n              \"component\": \"CodingAreaClamp\",\n              \"options\": {}\n            }\n          },\n              \"compId\": \"coding-area\",\n              \"component\": \"SplitPanel\",\n              \"options\": {\n                \"axis\": 1,\n                \"initialComp1Proportions\": 0.75,\n                \"comp1\": {\n                  \"compId\": \"code-editor-wrapper\",\n                  \"component\": \"TopLevelComponent\",\n                  \"options\": {\n                    \"component\": {\n                      \"compId\": \"code-editor\",\n                      \"component\": \"Editor\",\n                      \"options\": {},\n                      \"meta\": {\n                        \"clampVal\": 0.025,\n                        \"clamp\": {\n                          \"component\": \"Editor\",\n                          \"options\": {}\n                        }\n                      }\n                    }\n                  }\n                },\n                \"comp2\": {\n                  \"compId\": \"solution-data-area-wrapper\",\n                  \"component\": \"TopLevelComponent\",\n                  \"options\": {\n                    \"component\": {\n                      \"compId\": \"solution-data-area\",\n                      \"component\": \"WizardPanel\",\n                      \"options\": {\n                        \"side\": 1,\n                        \"control\": {\n                          \"compId\": \"control-panel\",\n                          \"component\": \"SolutionAreaControlPanel\",\n                          \"options\": {}\n                        },\n                        \"groups\": [],\n                        \"components\": [\n                          {\n                            \"compId\": \"terminal-comp-wrapper\",\n                            \"component\": \"TopLevelComponent\",\n                            \"options\": {\n                              \"component\": {\n                                \"compId\": \"terminal-comp\",\n                                \"component\": \"Terminal\",\n                                \"options\": {},\n                                \"meta\": {\n                                  \"label\": {\n                                    \"commonName\": \"Terminal\",\n                                    \"labelFor\": \"terminal-comp\",\n                                    \"icon\": {\n                                      \"component\": \"TerminalIconSvg\",\n                                      \"options\": {}\n                                    }\n                                  }\n                                }\n                              }\n                            }\n                          },\n                          {\n                            \"compId\": \"test-cases-comp-wrapper\",\n                            \"component\": \"TopLevelComponent\",\n                            \"options\": {\n                              \"component\": {\n                                \"compId\": \"test-cases-comp\",\n                                \"component\": \"TestCases\",\n                                \"options\": {},\n                                \"meta\": {\n                                  \"label\": {\n                                    \"commonName\": \"Test Cases\",\n                                    \"labelFor\": \"test-cases-comp\",\n                                    \"icon\": {\n                                      \"component\": \"TestCasesIconSvg\",\n                                      \"options\": {}\n                                    }\n                                  }\n                                }\n                              }\n                            }\n                          },\n                          {\n  \"compId\": \"assistant-wizard-wrapper\",\n  \"component\": \"TopLevelComponent\",\n  \"options\": {\n    \"component\": {\n      \"compId\": \"assistant-wizard\",\n      \"component\": \"WizardPanel\",\n      \"options\": {\n        \"side\": 3,\n        \"control\": {\n          \"compId\": \"wizard-control-panel\",\n          \"component\": \"AssistantWizardControlPanel\",\n          \"options\": {}\n        },\n        \"groups\": [],\n        \"components\": []\n      },\n      \"meta\": {\n        \"clampVal\": 0.025,\n        \"clamp\": {\n          \"component\": \"AssistantWizardClamp\",\n          \"options\": {}\n        },\n        \"label\": {\n          \"commonName\": \"Assistant\",\n          \"labelFor\": \"assistant-wizard\",\n          \"icon\": {\n            \"component\": \"AssistantIconSvg\",\n            \"options\": {}\n          }\n        }\n      }\n    }\n  }\n}\n                        ],\n                  \"meta\": {\n                    \"clampVal\": 0.025,\n                    \"clamp\": {\n                      \"component\": \"SolutionDataAreaClamp\",\n                      \"options\": {}\n                    }\n                  }\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n          \n        }\n      }\n    }\n  }\n}"
+                },
+                new()
+                {
+                    Id = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972"),
+                    ConfigObjectRaw = "{\n  \"compId\": \"root-1767541429676-0\",\n  \"component\": \"TopLevelComponent\",\n  \"options\": {\n    \"component\": {\n      \"compId\": \"placeholder-1767541429676-1\",\n      \"component\": \"SplitPanel\",\n      \"options\": {\n        \"axis\": 0,\n        \"comp1\": {\n          \"compId\": \"wrapper-1767541431591-3\",\n          \"component\": \"TopLevelComponent\",\n          \"options\": {\n            \"component\": {\n              \"compId\": \"assistant-wizard\",\n              \"component\": \"TerminalWizardPanel\",\n              \"options\": {\n                \"components\": [],\n                \"side\": 3,\n                \"control\": {\n                  \"compId\": \"wizard-control-panel\",\n                  \"component\": \"AssistantWizardControlPanel\",\n                  \"options\": {}\n                }\n              },\n              \"meta\": {\n                \"label\": {\n                  \"commonName\": \"Assistant\",\n                  \"labelFor\": \"assistant-wizard\",\n                  \"icon\": {\n                    \"compId\": \"assistant-icon\",\n                    \"component\": \"AssistantIconSvg\",\n                    \"options\": {}\n                  }\n                }\n              }\n            }\n          }\n        },\n        \"comp2\": {\n          \"compId\": \"wrapper-1767541431591-5\",\n          \"component\": \"TopLevelComponent\",\n          \"options\": {\n            \"component\": {\n              \"compId\": \"inner-1767541431591-6\",\n              \"component\": \"SplitPanel\",\n              \"options\": {\n                \"axis\": 1,\n                \"comp1\": {\n                  \"compId\": \"wrapper-1767541434961-9\",\n                  \"component\": \"TopLevelComponent\",\n                  \"options\": {\n                    \"component\": {\n                      \"compId\": \"inner-1767541434961-10\",\n                      \"component\": \"SplitPanel\",\n                      \"options\": {\n                        \"axis\": 0,\n                        \"comp1\": {\n                          \"compId\": \"wrapper-1767541438744-17\",\n                          \"component\": \"TopLevelComponent\",\n                          \"options\": {\n                            \"component\": {\n                              \"compId\": \"terminal-comp\",\n                              \"component\": \"Terminal\",\n                              \"options\": {},\n                              \"meta\": {\n                                \"label\": {\n                                  \"commonName\": \"Terminal\",\n                                  \"labelFor\": \"terminal-comp\",\n                                  \"icon\": {\n                                    \"compId\": \"someComp\",\n                                    \"component\": \"EditorIconSvg\",\n                                    \"options\": {}\n                                  }\n                                }\n                              }\n                            }\n                          }\n                        },\n                        \"comp2\": {\n                          \"compId\": \"wrapper-1767541438744-19\",\n                          \"component\": \"TopLevelComponent\",\n                          \"options\": {\n                            \"component\": {\n                              \"compId\": \"inner-1767541438744-20\",\n                              \"component\": \"SplitPanel\",\n                              \"options\": {\n                                \"axis\": 1,\n                                \"comp1\": {\n                                  \"compId\": \"wrapper-1767541441490-23\",\n                                  \"component\": \"TopLevelComponent\",\n                                  \"options\": {\n                                    \"component\": {\n                                      \"compId\": \"test-cases-comp\",\n                                      \"component\": \"TestCases\",\n                                      \"options\": {},\n                                      \"meta\": {\n                                        \"label\": {\n                                          \"commonName\": \"Test Cases\",\n                                          \"labelFor\": \"test-cases-comp\",\n                                          \"icon\": {\n                                            \"compId\": \"someComp\",\n                                            \"component\": \"TestCasesIconSvg\",\n                                            \"options\": {}\n                                          }\n                                        }\n                                      }\n                                    }\n                                  }\n                                },\n                                \"comp2\": {\n                                  \"compId\": \"wrapper-1767541441490-25\",\n                                  \"component\": \"TopLevelComponent\",\n                                  \"options\": {\n                                    \"component\": {\n                                      \"compId\": \"code-editor\",\n                                      \"component\": \"Editor\",\n                                      \"options\": {},\n                                      \"meta\": {\n                                        \"label\": {\n                                          \"commonName\": \"Code Editor\",\n                                          \"labelFor\": \"code-editor\",\n                                          \"icon\": {\n                                            \"compId\": \"someComp\",\n                                            \"component\": \"TerminalIconSvg\",\n                                            \"options\": {}\n                                          }\n                                        }\n                                      }\n                                    }\n                                  }\n                                },\n                                \"initialComp1Proportions\": 0.5\n                              }\n                            }\n                          }\n                        },\n                        \"initialComp1Proportions\": 0.2899061032863847\n                      }\n                    }\n                  }\n                },\n                \"comp2\": {\n                  \"compId\": \"wrapper-1767541434961-11\",\n                  \"component\": \"TopLevelComponent\",\n                  \"options\": {\n                    \"component\": {\n                      \"compId\": \"problem-info\",\n                      \"component\": \"InfoPanel\",\n                      \"options\": {},\n                      \"meta\": {\n                        \"label\": {\n                          \"commonName\": \"Problem Info\",\n                          \"labelFor\": \"problem-info\",\n                          \"icon\": {\n                            \"compId\": \"someComp\",\n                            \"component\": \"InfoPanelIconSvg\",\n                            \"options\": {}\n                          }\n                        }\n                      }\n                    }\n                  }\n                },\n                \"initialComp1Proportions\": 0.6623188405797109\n              }\n            }\n          }\n        },\n        \"initialComp1Proportions\": 0.33896620278330153\n      }\n    }\n  }\n}" 
+                },
+                new()
+                {
+                    Id = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273"),
+                    ConfigObjectRaw = "{\n  \"compId\": \"root-1767198734054-0\",\n  \"component\": \"TopLevelComponent\",\n  \"options\": {\n    \"component\": {\n      \"compId\": \"wizard-1767198739318-7\",\n      \"component\": \"WizardPanel\",\n      \"options\": {\n        \"components\": [\n          {\n            \"compId\": \"wrapper-1767198741431-9\",\n            \"component\": \"TopLevelComponent\",\n            \"options\": {\n              \"component\": {\n                \"compId\": \"terminal-comp\",\n                \"component\": \"Terminal\",\n                \"options\": {},\n                \"meta\": {\n                  \"label\": {\n                    \"commonName\": \"Terminal\",\n                    \"labelFor\": \"terminal-comp\",\n                    \"icon\": {\n                      \"compId\": \"someComp\",\n                      \"component\": \"EditorIconSvg\",\n                      \"options\": {}\n                    }\n                  }\n                }\n              }\n            }\n          },\n          {\n            \"compId\": \"wrapper-1767198742451-12\",\n            \"component\": \"TopLevelComponent\",\n            \"options\": {\n              \"component\": {\n                \"compId\": \"problem-info\",\n                \"component\": \"InfoPanel\",\n                \"options\": {},\n                \"meta\": {\n                  \"label\": {\n                    \"commonName\": \"Problem Info\",\n                    \"labelFor\": \"problem-info\",\n                    \"icon\": {\n                      \"compId\": \"someComp\",\n                      \"component\": \"InfoPanelIconSvg\",\n                      \"options\": {}\n                    }\n                  }\n                }\n              }\n            }\n          },\n          {\n            \"compId\": \"wrapper-1767198743532-15\",\n            \"component\": \"TopLevelComponent\",\n            \"options\": {\n              \"component\": {\n                \"compId\": \"test-cases-comp\",\n                \"component\": \"TestCases\",\n                \"options\": {},\n                \"meta\": {\n                  \"label\": {\n                    \"commonName\": \"Test Cases\",\n                    \"labelFor\": \"test-cases-comp\",\n                    \"icon\": {\n                      \"compId\": \"someComp\",\n                      \"component\": \"TestCasesIconSvg\",\n                      \"options\": {}\n                    }\n                  }\n                }\n              }\n            }\n          },\n          {\n            \"compId\": \"wrapper-1767198744548-18\",\n            \"component\": \"TopLevelComponent\",\n            \"options\": {\n              \"component\": {\n                \"compId\": \"code-editor\",\n                \"component\": \"Editor\",\n                \"options\": {},\n                \"meta\": {\n                  \"label\": {\n                    \"commonName\": \"Code Editor\",\n                    \"labelFor\": \"code-editor\",\n                    \"icon\": {\n                      \"compId\": \"someComp\",\n                      \"component\": \"TerminalIconSvg\",\n                      \"options\": {}\n                    }\n                  }\n                }\n              }\n            }\n          },\n          {\n            \"compId\": \"wrapper-1767198745298-21\",\n            \"component\": \"TopLevelComponent\",\n            \"options\": {\n              \"component\": {\n                \"compId\": \"assistant-wizard\",\n                \"component\": \"TerminalWizardPanel\",\n                \"options\": {\n                  \"components\": [],\n                  \"side\": 3,\n                  \"control\": {\n                    \"compId\": \"wizard-control-panel\",\n                    \"component\": \"AssistantWizardControlPanel\",\n                    \"options\": {}\n                  }\n                },\n                \"meta\": {\n                  \"label\": {\n                    \"commonName\": \"Assistant\",\n                    \"labelFor\": \"assistant-wizard\",\n                    \"icon\": {\n                      \"compId\": \"assistant-icon\",\n                      \"component\": \"AssistantIconSvg\",\n                      \"options\": {}\n                    }\n                  }\n                }\n              }\n            }\n          }\n        ],\n        \"side\": 0,\n        \"control\": {\n          \"compId\": \"control-1767198739318-8\",\n          \"component\": \"SolutionAreaControlPanelHorizontal\",\n          \"options\": {}\n        }\n      }\n    }\n  }\n}"
+                    
+                }
+            };
+            
+            foreach (var info in layoutContentsRaw)
+            {
+                var objectPath =
+                    $"users/layouts/{info.Id}.json";
+                var objectExistsResult = await s3Client.ObjectExistsAsync(objectPath);
+                if (objectExistsResult is { IsOk: true, AsOk: false })
+                {
+                    await s3Client.PostJsonObjectAsync(objectPath, JsonSerializer.Deserialize<object>(info.ConfigObjectRaw)!);
+                }
+            }
+        }
+        
     }
 
     private async Task SeedCategories()
@@ -506,7 +627,7 @@ public class DataSeedingService(
             await context.EditorThemes.AddRangeAsync(new EditorTheme
             {
                 ThemeName = "vs-dark",
-                EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796")
+                EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
             }, new EditorTheme
             {
                 ThemeName = "vs",

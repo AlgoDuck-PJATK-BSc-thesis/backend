@@ -10,21 +10,23 @@ namespace AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class CreateLayoutController(
-    ICreateLayoutService createLayoutService
-    ) : ControllerBase
+public class CreateLayoutController : ControllerBase
 {
+    private readonly ICreateLayoutService _createLayoutService;
+
+    public CreateLayoutController(ICreateLayoutService createLayoutService)
+    {
+        _createLayoutService = createLayoutService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateLayoutAsync([FromBody] LayoutCreateDto createDto, CancellationToken cancellationToken)
     {
-        var userIdResult = User.GetUserId();
-        if (userIdResult.IsErr)
-            return userIdResult.ToActionResult();
-        
-        createDto.UserId = userIdResult.AsT0;
-        
-        var createResult = await createLayoutService.CreateLayoutAsync(createDto, cancellationToken);
-        return createResult.ToActionResult();
+        return await User.GetUserId().BindAsync(async userId =>
+        {
+            createDto.UserId = userId;
+            return await _createLayoutService.CreateLayoutAsync(createDto, cancellationToken);
+        }).ToActionResultAsync();
     }
 }
 

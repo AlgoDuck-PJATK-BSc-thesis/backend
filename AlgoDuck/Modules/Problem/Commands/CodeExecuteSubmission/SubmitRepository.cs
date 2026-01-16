@@ -48,7 +48,7 @@ public class SubmitRepository(
             return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.InternalError(e.Message));
         }
 
-        var objectPath = $"users/{solution.UserId}/problems/autosave/{solution.ProblemId}.xml";
+        var objectPath = $"users/{solution.UserId}/problems/autosave/{solution.SolutionId}.xml";
 
         await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
         
@@ -57,7 +57,7 @@ public class SubmitRepository(
             CodeB64 = insertDto.CodeB64,
             UserId = insertDto.UserId,
             UserSolutionId = solution.SolutionId
-        });
+        }, cancellationToken);
     }
 
     public async Task<Result<RewardsDto, ErrorObject<string>>> AddCoinsAndExperienceAsync(SolutionRewardDto rewardDto, CancellationToken cancellationToken = default)
@@ -101,7 +101,7 @@ public class SubmitRepository(
         });
     }
 
-    private async Task<Result<bool, ErrorObject<string>>> PostUserSolutionCodeToS3Async(UserSolutionPartialS3 insertDto)
+    private async Task<Result<bool, ErrorObject<string>>> PostUserSolutionCodeToS3Async(UserSolutionPartialS3 insertDto, CancellationToken cancellationToken = default)
     {
         if (insertDto.UserId == Guid.Empty || insertDto.UserId == Guid.Empty)
         {
@@ -110,7 +110,7 @@ public class SubmitRepository(
 
         try
         {
-            await awsS3Client.PostXmlObjectAsync($"users/{insertDto.UserSolutionId}/solutions/${insertDto.UserSolutionId}.xml", insertDto);
+            await awsS3Client.PostXmlObjectAsync($"users/{insertDto.UserId}/solutions/{insertDto.UserSolutionId}.xml", insertDto, cancellationToken);
             return Result<bool, ErrorObject<string>>.Ok(true);   
         }
         catch (Exception e)

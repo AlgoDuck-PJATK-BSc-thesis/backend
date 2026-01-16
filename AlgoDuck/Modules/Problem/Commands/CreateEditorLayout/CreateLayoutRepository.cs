@@ -50,7 +50,7 @@ public class CreateLayoutRepository(
             if (res == null)
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("Could not create layout"));
             
-            var postResult = await awsS3Client.PostJsonObjectAsync($"users/{createDto.UserId}/layouts/{newLayout.EditorLayoutId}.json", res, cancellationToken: cancellationToken);
+            var postResult = await awsS3Client.PostJsonObjectAsync($"users/layouts/{newLayout.EditorLayoutId}.json", res, cancellationToken: cancellationToken);
             
             if (postResult.IsErr)
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(postResult.AsT1);
@@ -93,5 +93,5 @@ public class EditorLayoutDto
 public class EditorLayoutS3Partial
 {
     public required Guid Id { get; set; }
-    
+    public required string ConfigObjectRaw { get; set; }
 }

@@ -16,17 +16,21 @@ using Microsoft.EntityFrameworkCore;
 namespace AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 
 [ApiController]
-[Route("api/[controller]")]
-public class TestCaseInsertController(
-    IInsertService insertService
-) : ControllerBase
+[Route("api/problem/test-case")]
+public class TestCaseInsertController : ControllerBase
 {
+    private readonly IInsertService _insertService;
+
+    public TestCaseInsertController(IInsertService insertService)
+    {
+        _insertService = insertService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> InsertTestCaseIntoUserCodeAsync([FromBody] InsertRequestDto insertRequest,
         CancellationToken cancellationToken)
     {
-        var testCaseInsertRes = await insertService.InsertTestCaseAsync(insertRequest, cancellationToken);
-        return testCaseInsertRes.ToActionResult();
+        return  await _insertService.InsertTestCaseAsync(insertRequest, cancellationToken).ToActionResultAsync();
     }
 }
 
@@ -36,42 +40,42 @@ public interface IInsertService
         CancellationToken cancellationToken = default);
 }
 
-public class InsertService(
-    ISharedProblemRepository problemRepository
-) : IInsertService
+public class InsertService : IInsertService
 {
+    private readonly ISharedProblemRepository _problemRepository;
+
+    public InsertService(ISharedProblemRepository problemRepository)
+    {
+        _problemRepository = problemRepository;
+    }
+
     public async Task<Result<InsertResultDto, ErrorObject<string>>> InsertTestCaseAsync(InsertRequestDto insertRequest,
         CancellationToken cancellationToken = default)
     {
-        var testCasesResult = await problemRepository.GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken);
-        if (testCasesResult.IsErr)
-            return Result<InsertResultDto, ErrorObject<string>>.Err(testCasesResult.AsT1);
-
-        var specificTestCaseResult = FindTestCase(testCasesResult.AsT0, insertRequest.ExerciseId);
-        return specificTestCaseResult.IsErr
-            ? Result<InsertResultDto, ErrorObject<string>>.Err(specificTestCaseResult.AsT1)
-            : InsertActualTestCase(insertRequest, specificTestCaseResult.AsT0);
+        return await _problemRepository
+            .GetTestCasesAsync(insertRequest.ExerciseId, cancellationToken)
+            .BindResult<ICollection<TestCaseJoined>, InsertResultDto, ErrorObject<string>>(testCases =>
+                FindTestCase(testCases, insertRequest.TestCaseId)
+                    .Bind<TestCaseJoined, InsertResultDto, ErrorObject<string>>(testCase => InsertActualTestCase(insertRequest, testCase)));
     }
 
 
-    private static Result<InsertResultDto, ErrorObject<string>> InsertActualTestCase(InsertRequestDto insertRequest,
-        TestCaseJoined testCaseJoined)
+    private static Result<InsertResultDto, ErrorObject<string>> InsertActualTestCase(InsertRequestDto insertRequest, TestCaseJoined testCaseJoined)
     {
         var userSolutionData = new UserSolutionData
         {
-            FileContents =
-                new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
+            FileContents = new StringBuilder(Encoding.UTF8.GetString(Convert.FromBase64String(insertRequest.UserCodeB64)))
         };
         try
         {
             var analyzer = new AnalyzerSimple(userSolutionData.FileContents);
-            userSolutionData.IngestCodeAnalysisResult(analyzer.AnalyzeUserCode(ExecutionStyle.Execution));
+            var codeAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
+            userSolutionData.IngestCodeAnalysisResult(codeAnalysisResult);
             var helper = new ExecutorFileOperationHelper
             {
                 UserSolutionData = userSolutionData
             };
-            helper.ArrangeTestCase(testCaseJoined, userSolutionData.MainClassName);
-            helper.ActTestCase(testCaseJoined);
+            helper.InsertTestCaseForExecution(codeAnalysisResult, testCaseJoined);
 
             return Result<InsertResultDto, ErrorObject<string>>.Ok(new InsertResultDto
             {

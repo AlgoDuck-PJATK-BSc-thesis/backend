@@ -1,6 +1,6 @@
 using OneOf;
 
-namespace AlgoDuckShared;
+namespace ExecutorService.Executor.Types;
 
 public class Result<T, TE> : OneOfBase<T, TE>
 {

@@ -293,7 +293,7 @@ public class AnalyzerSimple
         {
             OwnScope = astNodeClass.TypeScope.OwnScope,
             ScopeBeginOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 2, // -2 for '{}'
-            ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length,
+            ScopeEndOffset = endOfEntrypointClassOffset + BaselineMainCode.Length - 1,
         };
 
         astNodeClass.TypeScope.TypeMembers.Add(new AstNodeTypeMember<AstNodeClass>());

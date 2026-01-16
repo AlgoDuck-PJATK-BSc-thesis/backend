@@ -1,16 +1,24 @@
 using AlgoDuck.Shared.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProblemController(IProblemService problemService) : ControllerBase
+[Authorize]
+public class ProblemController : ControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> GetProblemDetailsByIdAsync([FromQuery] Guid problemId)
+    private readonly IProblemService _problemService;
+
+    public ProblemController(IProblemService problemService)
     {
-        var problemDetailsResult = await problemService.GetProblemDetailsAsync(problemId);
-        return problemDetailsResult.ToActionResult();
+        _problemService = problemService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetProblemDetailsByIdAsync([FromQuery] Guid problemId, CancellationToken cancellationToken)
+    {
+        return await _problemService.GetProblemDetailsAsync(problemId).ToActionResultAsync();
     }
 }

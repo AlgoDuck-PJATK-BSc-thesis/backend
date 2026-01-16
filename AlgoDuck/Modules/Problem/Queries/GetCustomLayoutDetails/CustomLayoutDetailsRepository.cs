@@ -1,31 +1,52 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
 
 public interface ICustomLayoutDetailsRepository
 {
-    public Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> GetCustomLayoutDetailsASync(CustomLayoutDetailsRequestDto requestDto, CancellationToken cancellationToken = default);
+    public Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> GetCustomLayoutDetailsAsync(
+        CustomLayoutDetailsRequestDto requestDto, CancellationToken cancellationToken = default);
 }
 
-public class CustomLayoutDetailsRepository(
-    IAwsS3Client s3Client
-    ) : ICustomLayoutDetailsRepository
+public class CustomLayoutDetailsRepository : ICustomLayoutDetailsRepository
 {
-    public async Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> GetCustomLayoutDetailsASync(CustomLayoutDetailsRequestDto requestDto,
+    private readonly IAwsS3Client _s3Client;
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public CustomLayoutDetailsRepository(IAwsS3Client s3Client, ApplicationQueryDbContext dbContext)
+    {
+        _s3Client = s3Client;
+        _dbContext = dbContext;
+    }
+
+    public async Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> GetCustomLayoutDetailsAsync(
+        CustomLayoutDetailsRequestDto requestDto,
         CancellationToken cancellationToken = default)
     {
-        var layoutPath = $"users/{requestDto.UserId}/layouts/{requestDto.LayoutId}.json";
-        var documentStringResult = await s3Client.GetJsonObjectByPathAsync<object>(path: layoutPath, cancellationToken: cancellationToken);
+        var layoutDbFetchTask = _dbContext.OwnsLayouts.Include(ol => ol.Layout)
+            .Where(ol => ol.UserId == requestDto.UserId && ol.LayoutId == requestDto.LayoutId)
+            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
+        var layoutPath = $"users/layouts/{requestDto.LayoutId}.json";
+
+        var layoutS3FetchTask = _s3Client
+            .GetJsonObjectByPathAsync<object>(path: layoutPath, cancellationToken: cancellationToken);
+
+        await Task.WhenAll(layoutS3FetchTask, layoutDbFetchTask);
         
-        if (documentStringResult.IsErr)
-            return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Err(documentStringResult.AsErr!);
+        if (layoutDbFetchTask.Result == null)
+            return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest($"Could not attribute layout with id: {requestDto.LayoutId} to user: {requestDto.UserId}"));
         
-        return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Ok(new CustomLayoutDetailsResponseDto
+        if (layoutS3FetchTask.Result.IsErr)
+            return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Err(layoutS3FetchTask.Result.AsErr!);
+        
+        return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Ok(new CustomLayoutDetailsResponseDto()
         {
             LayoutId = requestDto.LayoutId,
-            LayoutContents = documentStringResult.AsOk!,
+            LayoutContent = layoutS3FetchTask.Result.AsOk!,
+            LayoutName = layoutDbFetchTask.Result.Layout.LayoutName
         });
     }
 }

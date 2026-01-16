@@ -88,8 +88,6 @@ public class ExecutorFileOperationHelper
                 javaStdOut.Append(line);
             }
         }
-        Console.WriteLine("finished parse");
-
 
         return new SubmitExecuteResponse
         {
@@ -158,6 +156,18 @@ public class ExecutorFileOperationHelper
             AssertTestCase(testCase);
         }
     }
+    
+    public void InsertTestCaseForExecution(CodeAnalysisResult analysisResult, params TestCaseJoined[] testCases)
+    {
+        NormalizeTestCaseVariables(testCases);
+        NormalizeTestCaseMethodCalls(testCases, analysisResult);
+    
+        foreach (var testCaseJoined in testCases)
+        {
+            ArrangeTestCase(testCaseJoined, analysisResult.MainClassName);
+            ActTestCase(testCaseJoined);
+        }
+    }
 
     private static void NormalizeTestCaseMethodCalls(IEnumerable<TestCaseJoined> testCases, CodeAnalysisResult analysisResult)
     {
@@ -193,13 +203,13 @@ public class ExecutorFileOperationHelper
         }
     }
 
-    public void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
+    private void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
     {
         var setup = testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName);
         InsertAtEndOfMainMethod(setup);
     }
 
-    internal void ActTestCase(TestCaseJoined testCase)
+    private void ActTestCase(TestCaseJoined testCase)
     {
         var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
         var variableName = GuidToJavaVariableName(testCase.TestCaseId);
@@ -244,7 +254,7 @@ public class ExecutorFileOperationHelper
     private void InsertAtEndOfMainMethod(string code)
     {
         UserSolutionData.FileContents.Insert(
-            UserSolutionData.MainMethod!.MethodFileEndIndex - 1, 
+            UserSolutionData.MainMethod!.MethodFileEndIndex /*TODO: here 1 - 1*/, 
             code);
         UserSolutionData.MainMethod.MethodFileEndIndex += code.Length;
     }

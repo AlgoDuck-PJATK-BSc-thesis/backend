@@ -26,8 +26,9 @@ public class SharedTestCaseRepository : ISharedTestCaseRepository
         if (testCases.Count == 0)
             return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"test cases not found for problem id: {validationRequest.ProblemId}"));
             
-        return Result<bool, ErrorObject<string>>.Ok(testCases.All(tc => validationRequest.TestingResults.TryGetValue(tc.ProblemProblemId, out var result) && result));
+        return Result<bool, ErrorObject<string>>.Ok(testCases.All(tc => validationRequest.TestingResults.TryGetValue(tc.TestCaseId, out var result) && result));
     }
+    
 }
 
 public class ValidationRequestDto

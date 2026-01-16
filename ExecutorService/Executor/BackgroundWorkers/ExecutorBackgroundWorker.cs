@@ -3,6 +3,9 @@ using System.Text.Json;
 using AlgoDuckShared;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types;
+using ExecutorService.Executor.Types.Config;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using ExecutorService.Executor.VmLaunchSystem;
 using RabbitMQ.Client;
@@ -44,7 +47,6 @@ public sealed class ExecutorBackgroundWorker(
             logger.LogInformation("{ServiceName} Processing job {JobId}", _serviceData.ServiceName, request.JobId);
         
             var result = await ProcessExecutionRequestAsync(request);
-            Console.WriteLine(JsonSerializer.Serialize(result));
             var status = result.Err.Equals(string.Empty) ? SubmitExecuteRequestRabbitStatus.Completed : SubmitExecuteRequestRabbitStatus.RuntimeError;
 
             await PublishResultAsync(request.JobId, result, status);
@@ -112,11 +114,18 @@ public sealed class ExecutorBackgroundWorker(
         try
         {
             await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Compiling);
-            var compilationResult = await compilationHandler.CompileAsync(request);
-            
+            var compilationResult = await compilationHandler.CompileAsync(new VmJobRequestInterface<VmCompilationPayload>
+            {
+                JobId = request.JobId,
+                Payload = new VmCompilationPayload
+                {
+                    JobId = request.JobId,
+                    SrcFiles = request.JavaFiles
+                }
+            });
             if (compilationResult is VmCompilationFailure failure)
             {
-                throw new CompilationException(failure.ErrorMsg);
+                throw new CompilationException(failure.Body);
             }
 
             vmLease = await vmLeaseTask;
@@ -124,7 +133,15 @@ public sealed class ExecutorBackgroundWorker(
             await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Executing);
 
             var successResult = (VmCompilationSuccess) compilationResult;
-            return await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(new VmExecutionQuery(successResult));
+            return await vmLease.QueryAsync<VmExecutionPayload, VmExecutionResponse>(new VmJobRequestInterface<VmExecutionPayload>()
+            {
+                JobId = request.JobId,
+                Payload = new VmExecutionPayload
+                {
+                    ClientSrc = successResult.Body,
+                    Entrypoint = request.Entrypoint
+                }
+            });
         }
         finally
         {

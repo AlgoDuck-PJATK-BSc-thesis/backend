@@ -11,6 +11,7 @@ public abstract class ItemOwnership : IEntityTypeConfiguration<ItemOwnership>
 
     public virtual Item Item { get; set; } = null!;
     public virtual ApplicationUser User { get; set; } = null!;
+    public DateTime PurchasedAt { get; set; } = DateTime.UtcNow;
 
     public void Configure(EntityTypeBuilder<ItemOwnership> builder)
     {
@@ -21,6 +22,9 @@ public abstract class ItemOwnership : IEntityTypeConfiguration<ItemOwnership>
             .HasValue<DuckOwnership>("Duck")
             .HasValue<PlantOwnership>("Plant");
 
+        builder.Property(e => e.PurchasedAt)
+            .HasColumnName("purchased_at");
+        
         builder.Property(e => e.ItemId).HasColumnName("item_id");
         builder.Property(e => e.UserId).HasColumnName("user_id");
 

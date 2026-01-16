@@ -542,6 +542,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purchased_at");
+
                     b.Property<string>("ownership_type")
                         .IsRequired()
                         .HasMaxLength(13)

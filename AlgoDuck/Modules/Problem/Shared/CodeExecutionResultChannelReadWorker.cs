@@ -75,11 +75,9 @@ public sealed class CodeExecutionResultChannelReadWorker(
     {
         if (_channel == null) return;
         var readResult = ParseChannelOutput(deliverEventArgs);
-            Console.WriteLine("channel data");
 
         if (readResult.IsErr)
         {
-            Console.WriteLine("channel error");
             switch (readResult.AsT1.Type)
             {
                 case ErrorType.NotFound or ErrorType.BadRequest:
@@ -99,7 +97,6 @@ public sealed class CodeExecutionResultChannelReadWorker(
         
         var jobData = jobDataResult.AsT0;
 
-        Console.WriteLine(JsonSerializer.Serialize(jobData));
         var fileHelper = new ExecutorFileOperationHelper
         {
             UserSolutionData = new UserSolutionData
@@ -155,21 +152,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
             return Result<bool, ErrorObject<string>>.Err(allTestsPassedResult.AsT1!);
 
         var allTestsPassed = allTestsPassedResult.AsOk;
-        
-        await statisticsRepository.RecordExecutionDataAsync(new ExecutionDataDto
-        {
-            ProblemId = jobData.ProblemId,
-            UserId = jobData.UserId,
-            Result = allTestsPassed
-                ? jobData.JobType == JobType.Testing ? TestCaseResult.Accepted : TestCaseResult.Rejected : TestCaseResult.NotApplicable,
-            Status = submitResponse.Status,
-            ExitCode = submitResponse.ExecutionExitCode,
-            ExecutionEndNs = submitResponse.ExecutionEndTimeNs,
-            ExecutionStartNs = submitResponse.ExecutionStartTimeNs,
-            JvmMemPeakKb = submitResponse.JvmMemoryPeakKb,
-            ExecutionType = jobData.JobType,
-            TestingResults = submitResponse.TestResults
-        }, cancellationToken);
+        await statisticsRepository.RecordExecutionDataAsync(BuildExecutionData(jobData, submitResponse, allTestsPassed), cancellationToken);
 
         if (jobData.JobType == JobType.DryRun) 
             return Result<bool, ErrorObject<string>>.Ok(false);
@@ -210,6 +193,7 @@ public sealed class CodeExecutionResultChannelReadWorker(
 
         if (result.IsErr)
             return result;
+        
         return await autoSaveRepository.DeleteSolutionSnapshotCodeAsync(new DeleteAutoSaveDto
         {
             ProblemId = problemId,
@@ -223,7 +207,6 @@ public sealed class CodeExecutionResultChannelReadWorker(
         try
         {
             var message = Encoding.UTF8.GetString(body.ToArray());
-            Console.WriteLine($"message raw: {message}");
             var response = JsonSerializer.Deserialize<ExecutionResponseRabbit>(message, _jsonSerializerOptions);
             if (response == null)
             {
@@ -273,6 +256,26 @@ public sealed class CodeExecutionResultChannelReadWorker(
             return Result<ExecutionQueueJobData, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("Error reading job data from cache. REASON: -||-"));
         }
 
+    }
+
+    private static ExecutionDataDto BuildExecutionData(ExecutionQueueJobData jobData,
+        SubmitExecuteResponse executionResponse, bool allTestsPassed)
+    {
+        return new ExecutionDataDto
+        {
+            ProblemId = jobData.ProblemId,
+            UserId = jobData.UserId,
+            Result = allTestsPassed
+                ? jobData.JobType == JobType.Testing ? TestCaseResult.Accepted : TestCaseResult.Rejected
+                : TestCaseResult.NotApplicable,
+            Status = executionResponse.Status,
+            ExitCode = executionResponse.ExecutionExitCode,
+            ExecutionEndNs = executionResponse.ExecutionEndTimeNs,
+            ExecutionStartNs = executionResponse.ExecutionStartTimeNs,
+            JvmMemPeakKb = executionResponse.JvmMemoryPeakKb,
+            ExecutionType = jobData.JobType,
+            TestingResults = executionResponse.TestResults
+        };
     }
 
     public async ValueTask DisposeAsync()

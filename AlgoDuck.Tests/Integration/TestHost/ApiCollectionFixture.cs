@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 
 namespace AlgoDuck.Tests.Integration.TestHost;
 
-public sealed class ApiCollectionFixture : IAsyncLifetime
+internal sealed class ApiCollectionFixture : IAsyncLifetime
 {
     private ApiFactory _factory = null!;
 

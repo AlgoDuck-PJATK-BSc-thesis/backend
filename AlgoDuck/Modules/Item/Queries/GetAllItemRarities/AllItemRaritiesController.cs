@@ -7,14 +7,19 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 [Authorize]
 [ApiController]
 [Route("api/item/rarity")]
-public class AllItemRaritiesController(
-    IAllItemRaritiesService allItemRaritiesService
-    ) : ControllerBase
+public class AllItemRaritiesController : ControllerBase
 {
+    private readonly IAllItemRaritiesService _allItemRaritiesService;
+
+    public AllItemRaritiesController(IAllItemRaritiesService allItemRaritiesService)
+    {
+        this._allItemRaritiesService = allItemRaritiesService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllItemRaritiesAsync(CancellationToken cancellationToken)
     {
-        return await allItemRaritiesService
+        return await _allItemRaritiesService
             .GetAllRaritiesAsync(cancellationToken)
             .ToActionResultAsync();
     }

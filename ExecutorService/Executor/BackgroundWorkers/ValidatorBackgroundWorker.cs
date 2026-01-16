@@ -3,6 +3,8 @@ using System.Text.Json;
 using AlgoDuckShared;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types.Config;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using ExecutorService.Executor.VmLaunchSystem;
 using RabbitMQ.Client;
@@ -82,22 +84,36 @@ public sealed class ValidatorBackgroundWorker(
         VmLease? vmLease = null;
         try
         {
-            var compilationResult = await compilationHandler.CompileAsync(request);
-
+            await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Compiling);
+            var compilationResult = await compilationHandler.CompileAsync(new VmJobRequestInterface<VmCompilationPayload>
+            {
+                JobId = request.JobId,
+                Payload = new VmCompilationPayload
+                {
+                    JobId = request.JobId,
+                    SrcFiles = request.JavaFiles
+                }
+            });
+            
             if (compilationResult is VmCompilationFailure failure)
             {
-                throw new CompilationException(failure.ErrorMsg);
+                throw new CompilationException(failure.Body);
             }
 
             vmLease = await vmLeaseTask;
-
+            
             await PublishStatusAsync(request.JobId, SubmitExecuteRequestRabbitStatus.Executing);
 
-            var successResult = (VmCompilationSuccess)compilationResult;
-            var result = await vmLease.QueryAsync<VmExecutionQuery, VmExecutionResponse>(
-                new VmExecutionQuery(successResult));
-
-            return result;
+            var successResult = (VmCompilationSuccess) compilationResult;
+            return await vmLease.QueryAsync<VmExecutionPayload, VmExecutionResponse>(new VmJobRequestInterface<VmExecutionPayload>()
+            {
+                JobId = request.JobId,
+                Payload = new VmExecutionPayload
+                {
+                    ClientSrc = successResult.Body,
+                    Entrypoint = request.Entrypoint
+                }
+            });
         }
         finally
         {

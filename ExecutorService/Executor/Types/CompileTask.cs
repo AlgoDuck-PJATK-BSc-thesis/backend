@@ -4,8 +4,8 @@ using ExecutorService.Executor.VmLaunchSystem;
 
 namespace ExecutorService.Executor.Types;
 
-internal class CompileTask(SubmitExecuteRequestRabbit request, TaskCompletionSource<VmCompilationResponse> tcs)
+internal class CompileTask(VmJobRequestInterface<VmCompilationPayload> request, TaskCompletionSource<VmCompilationResponse> tcs)
 {
-    internal SubmitExecuteRequestRabbit Request => request;
+    internal VmJobRequestInterface<VmCompilationPayload> Request => request;
     internal TaskCompletionSource<VmCompilationResponse> Tcs => tcs;
 }

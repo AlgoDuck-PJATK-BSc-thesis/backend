@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
+using ExecutorService.Executor.Types.OversubManagerTypes;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using Microsoft.OpenApi.Extensions;
 

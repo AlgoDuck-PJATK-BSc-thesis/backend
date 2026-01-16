@@ -1,6 +1,5 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Item.Queries.GetOwnedDucksPaged;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
 

@@ -11,16 +11,25 @@ namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpdateProblem;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "admin")]
-public class UpdateProblemController(
-   IUpdateProblemService updateProblemService
-   ) : ControllerBase
+public class UpdateProblemController : ControllerBase
 {
+
+   private readonly IUpdateProblemService updateProblemService;
+
+   public UpdateProblemController(IUpdateProblemService updateProblemService)
+   {
+      this.updateProblemService = updateProblemService;
+   }
+
    [HttpPut]
    public async Task<IActionResult> UpdateProblemAsync(
       [FromBody] UpsertProblemDto updateProblemDto,
       [FromQuery] Guid problemId,
       CancellationToken cancellationToken = default)
    {
+
+      Console.WriteLine(JsonSerializer.Serialize(updateProblemDto));
+      Console.WriteLine(problemId);
       return await User
          .GetUserId()
          .BindAsync(async userId =>

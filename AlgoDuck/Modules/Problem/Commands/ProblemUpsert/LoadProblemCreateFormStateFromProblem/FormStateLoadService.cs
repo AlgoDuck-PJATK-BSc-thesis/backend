@@ -55,6 +55,7 @@ public class FormStateLoadService(
          * (not that it's let me down before but better safe than sorry)
          */
 
+        Console.WriteLine(problemTemplate.Template);
         var templateBuilder = new StringBuilder(problemTemplate.Template);
         CodeAnalysisResult analysisResult;
         try
@@ -153,8 +154,9 @@ public class FormStateLoadService(
 
         Console.WriteLine(JsonSerializer.Serialize(testCase));
         var testCaseBuilder = new StringBuilder(template);
-        testCaseBuilder.Insert(analysisResult.MainMethodIndices.MethodFileEndIndex - 1, testCase.Setup);
+        testCaseBuilder.Insert(analysisResult.MainMethodIndices.MethodFileEndIndex, testCase.Setup);
 
+        Console.WriteLine(testCaseBuilder);
         var analyzer = new AnalyzerSimple(testCaseBuilder);
         var tcAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
 

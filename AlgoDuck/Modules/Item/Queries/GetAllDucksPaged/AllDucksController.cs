@@ -9,29 +9,28 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 [ApiController]
 [Route("api/item/duck")]
 [Authorize]
-public class AllDucksController(
-    IAllDucksService allDucksService
-    ) : ControllerBase
+public class AllDucksController: ControllerBase
 {
+
+    private readonly IAllDucksService _allDucksService;
+
+    public AllDucksController(IAllDucksService allDucksService)
+    {
+        _allDucksService = allDucksService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllItemsPagedAsync(
         [FromQuery] int currentPage,
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        
-        var userIdRes = User.GetUserId();
-        if (userIdRes.IsErr)
-            return userIdRes.ToActionResult();
-
-        var res = await allDucksService.GetAllDucksPagedAsync(new PagedRequestWithAttribution()
+        return await User.GetUserId().BindAsync(async userId => await _allDucksService.GetAllDucksPagedAsync(new PagedRequestWithAttribution()
         {
             PageSize = pageSize,
             CurrPage = currentPage,
-            UserId = userIdRes.AsT0
-        }, cancellationToken);
-
-        return res.ToActionResult();
+            UserId = userId
+        }, cancellationToken)).ToActionResultAsync();
     }
 }
 
