@@ -83,19 +83,15 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
             case "Plant":
             {
                 var plantResult = await GetPlantOwnershipStatistics(itemId, cancellationToken);
-                if (plantResult.IsErr)
-                    return Result<ItemSpecificStatistics, ErrorObject<string>>.Err(plantResult.AsErr!);
-                return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(plantResult.AsOk!);
+                return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(plantResult);
             }
             case "Duck":
             {
-                var plantResult = await GetDuckOwnershipStatistics(itemId, cancellationToken);
-                if (plantResult.IsErr)
-                    return Result<ItemSpecificStatistics, ErrorObject<string>>.Err(plantResult.AsErr!);
-                return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(plantResult.AsOk!);
+                var duckResult = await GetDuckOwnershipStatistics(itemId, cancellationToken);
+                return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(duckResult);
             }   
             default:
-                return Result<ItemSpecificStatistics, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("${itemType} not supported}"));
+                return Result<ItemSpecificStatistics, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest($"{itemType} not supported"));
         }
     }
 
@@ -137,13 +133,28 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
     }
 
 
-    private async Task<Result<DuckOwnershipStatistics, ErrorObject<string>>> GetDuckOwnershipStatistics(Guid itemId,
+    private async Task<DuckOwnershipStatistics> GetDuckOwnershipStatistics(Guid itemId,
         CancellationToken cancellationToken = default)
     {
         var allDuckOwnerships = await _dbContext.DuckOwnerships.Where(d => d.ItemId == itemId)
             .ToListAsync(cancellationToken: cancellationToken);
+        
+        var totalUserCount = await _dbContext.ApplicationUsers.CountAsync(cancellationToken: cancellationToken);
+        
         if (allDuckOwnerships.Count == 0)
-            return Result<DuckOwnershipStatistics, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"No data for item: {itemId} found"));
+        {
+            return new DuckOwnershipStatistics
+            {
+                OwnedByCount = 0,
+                OwnedByPercentageOfPopulation = 0,
+                UsedByPercentageOfPopulation = 0,
+                UsedByCount = 0,
+                UsedAsAvatar = 0,
+                UsedForPond = 0,
+                UsedAsAvatarPercentageOfPopulation = 0,
+                UsedForPondPercentageOfPopulation = 0,
+            };
+        }
 
         var selectedForPondCount = allDuckOwnerships.Count(d => d.SelectedForPond);
         var selectedForAvatarCount = allDuckOwnerships.Count(d => d.SelectedAsAvatar);
@@ -151,36 +162,48 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
             .Concat(allDuckOwnerships.Select(so => new { so.UserId, so.SelectedAsAvatar })).Select(s => s.UserId)
             .Distinct().Count();
         
-        var totalUserCount = await _dbContext.ApplicationUsers.CountAsync(cancellationToken: cancellationToken);
-        return Result<DuckOwnershipStatistics, ErrorObject<string>>.Ok(new DuckOwnershipStatistics
+        return new DuckOwnershipStatistics
         {
             OwnedByCount = allDuckOwnerships.Count,
-            OwnedByPercentageOfPopulation = (double)allDuckOwnerships.Count / totalUserCount,
-            UsedByPercentageOfPopulation = (double) usedByCount / totalUserCount, 
+            OwnedByPercentageOfPopulation = totalUserCount > 0 ? (double)allDuckOwnerships.Count / totalUserCount : 0,
+            UsedByPercentageOfPopulation = totalUserCount > 0 ? (double)usedByCount / totalUserCount : 0,
             UsedByCount = usedByCount,
             UsedAsAvatar = selectedForAvatarCount,
             UsedForPond = selectedForPondCount,
-            UsedAsAvatarPercentageOfPopulation =  (double)selectedForAvatarCount / totalUserCount,
-            UsedForPondPercentageOfPopulation =  (double)selectedForPondCount / totalUserCount,
-        });
+            UsedAsAvatarPercentageOfPopulation = totalUserCount > 0 ? (double)selectedForAvatarCount / totalUserCount : 0,
+            UsedForPondPercentageOfPopulation = totalUserCount > 0 ? (double)selectedForPondCount / totalUserCount : 0,
+        };
     }
     
-    private async Task<Result<PlantOwnershipStatistics, ErrorObject<string>>> GetPlantOwnershipStatistics(Guid itemId,
+    private async Task<PlantOwnershipStatistics> GetPlantOwnershipStatistics(Guid itemId,
         CancellationToken cancellationToken = default)
     {
         var allPlantOwnerships = await _dbContext.PlantOwnerships.Where(p => p.ItemId == itemId).ToListAsync(cancellationToken: cancellationToken);
+        var totalUserCount = await _dbContext.ApplicationUsers.CountAsync(cancellationToken: cancellationToken);
+
+        if (allPlantOwnerships.Count == 0)
+        {
+            return new PlantOwnershipStatistics
+            {
+                UsedForPond = 0,
+                OwnedByCount = 0,
+                UsedByCount = 0,
+                OwnedByPercentageOfPopulation = 0,
+                UsedForPondPercentageOfPopulation = 0,
+                UsedByPercentageOfPopulation = 0,
+            };
+        }
 
         var selectedForPond = allPlantOwnerships.Where(po => po is { GridX: not null, GridY: not null }).ToList();
-        var totalUserCount = await _dbContext.ApplicationUsers.CountAsync(cancellationToken: cancellationToken);
-        return Result<PlantOwnershipStatistics, ErrorObject<string>>.Ok(new PlantOwnershipStatistics
+        
+        return new PlantOwnershipStatistics
         {
-            UsedForPond = selectedForPond.Count(),
+            UsedForPond = selectedForPond.Count,
             OwnedByCount = allPlantOwnerships.Count,
             UsedByCount = selectedForPond.Count,
-            OwnedByPercentageOfPopulation = (double)allPlantOwnerships.Count / totalUserCount,
-            UsedForPondPercentageOfPopulation =  (double)selectedForPond.Count / totalUserCount,
-            UsedByPercentageOfPopulation = (double)selectedForPond.Count / totalUserCount,
-        });
-        
+            OwnedByPercentageOfPopulation = totalUserCount > 0 ? (double)allPlantOwnerships.Count / totalUserCount : 0,
+            UsedForPondPercentageOfPopulation = totalUserCount > 0 ? (double)selectedForPond.Count / totalUserCount : 0,
+            UsedByPercentageOfPopulation = totalUserCount > 0 ? (double)selectedForPond.Count / totalUserCount : 0,
+        };
     }
 }

@@ -4,6 +4,7 @@ using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
 using AlgoDuck.Modules.Problem.Commands.CreateEmptyAssistantChat;
 using AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
+using AlgoDuck.Modules.Problem.Commands.DeleteLayout;
 using AlgoDuck.Modules.Problem.Commands.DeleteProblem;
 using AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.CreateProblem;
@@ -13,6 +14,11 @@ using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertUtils;
 using AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 using AlgoDuck.Modules.Problem.Commands.UpdateChatName;
 using AlgoDuck.Modules.Problem.Commands.UpdateEditorPreferences;
+using AlgoDuck.Modules.Problem.Commands.UpdateLayoutName;
+using AlgoDuck.Modules.Problem.Queries.AdminGetCategoryPreview;
+using AlgoDuck.Modules.Problem.Queries.AdminGetCodeAnalysisResultForProblemCreation;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemCreatorPreview;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemDetailsPaged;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllAvailableThemes;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;
@@ -20,12 +26,10 @@ using AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
 using AlgoDuck.Modules.Problem.Queries.GetAllOwnedEditorLayouts;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 using AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
-using AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 using AlgoDuck.Modules.Problem.Queries.GetCustomLayoutDetails;
 using AlgoDuck.Modules.Problem.Queries.GetPreviousSolutionDataById;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
-using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetUserEditorPreferences;
 using AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
@@ -181,6 +185,18 @@ internal static class ProblemDependencyInitializer
 
         builder.Services.AddScoped<IAllThemesRepository, AllThemesRepository>();
         builder.Services.AddScoped<IAllThemesService, AllThemesService>();
+        
+        builder.Services.AddScoped<IGetCategoryPreviewRepository, GetCategoryPreviewRepository>();
+        builder.Services.AddScoped<IGetCategoryPreviewService, GetCategoryPreviewService>();
+        
+        builder.Services.AddScoped<IGetProblemCreatorPreviewService, GetProblemCreatorPreviewService>();
+        builder.Services.AddScoped<IGetProblemCreatorPreviewRepository, GetProblemCreatorPreviewRepository>();
+        
+        builder.Services.AddScoped<IUpdateLayoutNameRepository, UpdateLayoutNameRepository>();
+        builder.Services.AddScoped<IUpdateLayoutNameService, UpdateLayoutNameService>();
+        
+        builder.Services.AddScoped<IDeleteLayoutRepository, DeleteLayoutRepository>();
+        builder.Services.AddScoped<IDeleteLayoutService, DeleteLayoutService>();
         
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {

@@ -18,10 +18,10 @@ public class CustomLayoutDetailsController : ControllerBase
         _customLayoutDetailsService = customLayoutDetailsService;
     }
 
-    [HttpGet]
+    [HttpPut]
     public async Task<IActionResult> GetLayoutDetailsAsync([FromQuery] Guid layoutId, CancellationToken cancellationToken)
     {
-        return await User.GetUserId().BindAsync(async userId => await _customLayoutDetailsService.GetCustomLayoutDetailsASync(
+        return await User.GetUserId().BindAsync(async userId => await _customLayoutDetailsService.SetCustomLayoutDetailsASync(
             new CustomLayoutDetailsRequestDto
             {
                 LayoutId = layoutId,

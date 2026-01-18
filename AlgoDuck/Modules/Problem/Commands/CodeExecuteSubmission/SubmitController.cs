@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
@@ -12,7 +13,7 @@ namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 [ApiController]
 [Route("/api/executor/[controller]")]
-[Authorize/*("user,admin")*/]
+[Authorize]
 public class SubmitController(IExecutorSubmitService executorService) : ControllerBase
 {
     [HttpPost]
@@ -61,8 +62,10 @@ public enum JobType : byte
 
 public class SubmitExecuteRequest
 {
+    private const int MaxCodeLengthBytes = 128 * 1024;
     internal Guid JobId { get; set; }
     internal Guid UserId { get; set; }
     public required Guid ProblemId { get; set; }
+    [MaxLength(MaxCodeLengthBytes)]
     public required string CodeB64 { get; set; }
 }

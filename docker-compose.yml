@@ -25,7 +25,6 @@ services:
     depends_on:
       - mq
       - redis
-    privileged: true
     volumes:
       - firecracker_images:/app/firecracker/images
     develop:

@@ -1,6 +1,5 @@
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using System.ComponentModel.DataAnnotations;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
-using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +26,8 @@ public class DryRunController(IExecutorDryRunService executorService) : Controll
 
 public class DryRunExecuteRequest
 {
+    private const int MaxCodeLengthBytes = 128 * 1024;
+    [MaxLength(MaxCodeLengthBytes)]
     public required string CodeB64 { get; set; }
     internal Guid UserId { get; set; } 
-}
-
-public class SubmitExecuteRequest
-{
-    public required Guid ProblemId { get; set; }
-    public required string CodeB64 { get; set; }
 }

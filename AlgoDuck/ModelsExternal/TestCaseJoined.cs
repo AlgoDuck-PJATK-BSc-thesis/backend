@@ -12,5 +12,5 @@ public class TestCaseJoined
     public required string Setup { get; set; } = string.Empty; // Arrange
     public required string[] Call { get; set; } = []; // Act
     public required string Expected { get; set; } = string.Empty; // Assert
-    public bool OrderMatters = false; /* TODO: Make this not static*/
+    public bool OrderMatters = false; 
 }

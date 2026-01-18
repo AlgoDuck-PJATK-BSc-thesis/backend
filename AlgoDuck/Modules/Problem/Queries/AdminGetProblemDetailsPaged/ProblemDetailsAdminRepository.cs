@@ -4,7 +4,7 @@ using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemDetailsPaged;
 
 public interface IPagedProblemDetailsAdminRepository
 {
@@ -35,32 +35,33 @@ public class PagedProblemDetailsAdminRepository : IPagedProblemDetailsAdminRepos
 
         var actualPage = Math.Clamp(columnFilterRequest.CurrPage, 1, totalPagesCount);
 
-        var problemQueryPaged = _dbContext.Problems
+        var problemQueryBase = _dbContext.Problems
             .Include(i => i.Category)
             .Include(i => i.Difficulty)
             .Include(i => i.CodeExecutionStatistics)
-            .Include(i => i.CreatedByUser)
-            .OrderBy(i => i.CreatedAt)
-            .Skip((actualPage - 1) * columnFilterRequest.PageSize)
-            .Take(columnFilterRequest.PageSize);
+            .Include(i => i.CreatedByUser);
 
         var problemsOrdered = columnFilterRequest.FurtherData.OrderBy switch
         {
-            FetchableColumn.CreatedAt => problemQueryPaged.OrderBy(i => i.CreatedAt),
-            FetchableColumn.Category => problemQueryPaged.OrderBy(i => i.Category.CategoryName),
-            FetchableColumn.CreatedBy => problemQueryPaged.OrderBy(i => i.CreatedByUserId),
-            FetchableColumn.CompletionRatio => problemQueryPaged.OrderBy(i =>
+            FetchableColumn.CreatedOn => problemQueryBase.OrderBy(i => i.CreatedAt),
+            FetchableColumn.Category => problemQueryBase.OrderBy(i => i.Category.CategoryName),
+            FetchableColumn.CreatedBy => problemQueryBase.OrderBy(i => i.CreatedByUserId),
+            FetchableColumn.CompletionRatio => problemQueryBase.OrderBy(i =>
                 i.CodeExecutionStatistics.Count == 0
                     ? 0f
                     : (float)i.CodeExecutionStatistics.Count(e => e.TestCaseResult == TestCaseResult.Accepted) /
                       i.CodeExecutionStatistics.Count),
-            FetchableColumn.Difficulty => problemQueryPaged.OrderBy(i => i.Difficulty.DifficultyName),
-            FetchableColumn.ProblemId => problemQueryPaged.OrderBy(i => i.ProblemId),
-            FetchableColumn.Name => problemQueryPaged.OrderBy(i => i.ProblemTitle),
-            _ => problemQueryPaged
+            FetchableColumn.Difficulty => problemQueryBase.OrderBy(i => i.Difficulty.DifficultyName),
+            FetchableColumn.ProblemId => problemQueryBase.OrderBy(i => i.ProblemId),
+            FetchableColumn.Name => problemQueryBase.OrderBy(i => i.ProblemTitle),
+            _ => problemQueryBase.OrderBy(i => i.CreatedAt) 
         };
 
-        var problemQuerySelected = problemsOrdered.Select(i => new ProblemDetailsDto
+        var problemQueryPaged = problemsOrdered
+            .Skip((actualPage - 1) * columnFilterRequest.PageSize)
+            .Take(columnFilterRequest.PageSize);
+
+        var problemQuerySelected = problemQueryPaged.Select(i => new ProblemDetailsDto
         {
             Category = columnFilterRequest.FurtherData.Fields.Contains(FetchableColumn.Category)
                 ? new CategoryDto
@@ -73,9 +74,9 @@ public class PagedProblemDetailsAdminRepository : IPagedProblemDetailsAdminRepos
                 ? (!i.CodeExecutionStatistics.Any()
                     ? 0f
                     : (float)i.CodeExecutionStatistics.Count(e => e.TestCaseResult == TestCaseResult.Accepted) /
-                      i.CodeExecutionStatistics.Count())
+                      i.CodeExecutionStatistics.Count)
                 : null,
-            CreatedAt = columnFilterRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedAt) ? i.CreatedAt : null,
+            CreatedOn = columnFilterRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedOn) ? i.CreatedAt : null,
             CreatedBy = columnFilterRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedBy) ? new CreatingUserDto
             {
                 Id = i.CreatedByUserId,

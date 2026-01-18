@@ -11,7 +11,6 @@ using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
 using AlgoDuck.Shared.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Problem.Commands.InsertTestCaseIntoUserCode;
 

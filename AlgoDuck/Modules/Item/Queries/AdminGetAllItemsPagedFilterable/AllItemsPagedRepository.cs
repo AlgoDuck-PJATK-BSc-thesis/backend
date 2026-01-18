@@ -24,26 +24,25 @@ public class AllItemsPagedRepository(
         
         var actualPage = Math.Clamp(itemRequest.CurrPage, 1, totalPagesCount);
         
-        var itemQueryPaged = dbContext.Items
-            .Include(i => i.Purchases)
-            .OrderBy(i => i.ItemId) /* TODO: replace this with createdAt */
-            .Skip((actualPage - 1) * itemRequest.PageSize)
-            .Take(itemRequest.PageSize);
-
+        var itemQueryBase = dbContext.Items
+            .Include(i => i.Purchases);
 
         var itemsOrdered = itemRequest.FurtherData.OrderBy switch
         {
-            FetchableColumn.ItemId => itemQueryPaged.OrderBy(i => i.ItemId),
-            FetchableColumn.ItemName => itemQueryPaged.OrderBy(i => i.Name),
-            FetchableColumn.CreatedOn => itemQueryPaged.OrderBy(i => i.CreatedAt),
-            FetchableColumn.CreatedBy => itemQueryPaged.OrderBy(i => i.CreatedBy),
-            FetchableColumn.OwnedCount => itemQueryPaged.OrderBy(i => i.Purchases.Count),
-            // ReSharper disable once EntityFramework.ClientSideDbFunctionCall
-            FetchableColumn.Type => itemQueryPaged.OrderBy(i => EF.Property<string>(i, "type")),
-            _ => itemQueryPaged
+            FetchableColumn.ItemId => itemQueryBase.OrderByDescending(i => i.ItemId),
+            FetchableColumn.ItemName => itemQueryBase.OrderByDescending(i => i.Name),
+            FetchableColumn.CreatedOn => itemQueryBase.OrderByDescending(i => i.CreatedAt),
+            FetchableColumn.CreatedBy => itemQueryBase.OrderByDescending(i => i.CreatedBy),
+            FetchableColumn.OwnedCount => itemQueryBase.OrderByDescending(i => i.Purchases.Count),
+            FetchableColumn.Type => itemQueryBase.OrderByDescending(i => EF.Property<string>(i, "type")),
+            _ => itemQueryBase.OrderBy(i => i.ItemId)
         };
+
+        var itemQueryPaged = itemsOrdered
+            .Skip((actualPage - 1) * itemRequest.PageSize)
+            .Take(itemRequest.PageSize);
         
-        var itemQuerySelected = itemsOrdered.Select(i => new ItemDto
+        var itemQuerySelected = itemQueryPaged.Select(i => new ItemDto
         {
             CreatedOn = itemRequest.FurtherData.Fields.Contains(FetchableColumn.CreatedOn) ? DateTime.UtcNow : null,
             ItemId = i.ItemId,

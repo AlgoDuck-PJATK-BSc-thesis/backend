@@ -1,12 +1,10 @@
-
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemDetailsPaged;
 
 [Authorize(Roles = "admin")]
 [ApiController]
@@ -46,7 +44,7 @@ public class ProblemDetailsAdminController : ControllerBase
 
 public enum FetchableColumn{
     Name,
-    CreatedAt,
+    CreatedOn,
     CreatedBy,
     ProblemId,
     Category,
@@ -57,7 +55,7 @@ public enum FetchableColumn{
 public class ProblemDetailsDto
 {
     public string? Name { get; set; }
-    public DateTime? CreatedAt { get; set; }
+    public DateTime? CreatedOn { get; set; }
     public CreatingUserDto? CreatedBy { get; set; }
     public Guid ProblemId { get; set; }
     public double? CompletionRatio { get; set; }

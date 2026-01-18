@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AlgoDuck.Modules.Item.Commands.DeleteItem;
 
-[Authorize("admin")]
+[Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/admin/item")]
 public class DeleteItemController(

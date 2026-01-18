@@ -11,13 +11,16 @@ public partial class EditorLayout : IEntityTypeConfiguration<EditorLayout>
     public required string LayoutName { get; set; }
 
     public List<OwnsLayout> OwnedBy { get; set; } = [];
-
+    public bool IsDefaultLayout { get; set; } = false;
     public void Configure(EntityTypeBuilder<EditorLayout> builder)
     {
         builder.HasKey(e => e.EditorLayoutId).HasName("editor_layout_pk");
 
         builder.ToTable("editor_layout");
 
+        builder.Property(e => e.IsDefaultLayout)
+            .HasColumnName("is_default_layout");
+        
         builder.Property(e => e.EditorLayoutId)
             .ValueGeneratedNever()
             .HasColumnName("editor_layout_id");

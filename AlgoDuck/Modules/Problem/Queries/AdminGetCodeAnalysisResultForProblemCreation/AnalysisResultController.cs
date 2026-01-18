@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
@@ -10,9 +9,9 @@ using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetCodeAnalysisResultForProblemCreation;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetCodeAnalysisResultForProblemCreation;
 
-[Authorize( Roles = "admin" )]
+[Authorize(Roles = "admin")]
 [Route("api/[controller]")]
 public class AnalysisResultController(
     IAnalysisResultService analysisResultService

@@ -51,6 +51,11 @@ public class UpdateItemService : IUpdateItemService
 
     public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(CreateItemRequestDto updateItemRequestDto, CancellationToken cancellationToken = default)
     {
+        foreach (var formFile in updateItemRequestDto.Sprites)
+        {
+            Console.WriteLine(formFile.Name);
+        }
+
         return await _updateItemRepository.UpdateItemAsync(updateItemRequestDto, cancellationToken);
     }
 }

@@ -23,7 +23,7 @@ public class UserConfig : IEntityTypeConfiguration<UserConfig>
 
     public DateTimeOffset? StudyReminderNextAtUtc { get; set; }
 
-    public Guid EditorThemeId { get; set; }
+    public Guid EditorThemeId { get; set; } = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796");
     public virtual EditorTheme EditorTheme { get; set; } = null!;
     
     public int EditorFontSize { get; set; } = 11;

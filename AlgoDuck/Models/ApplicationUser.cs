@@ -4,8 +4,33 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AlgoDuck.Models;
 
-public class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
+public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
+    public ApplicationUser()
+    {
+        Id = Guid.NewGuid();
+        
+        EditorLayouts = new List<OwnsLayout>
+        {
+            new()
+            { 
+                UserId = Id,
+                LayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
+                IsSelected = true
+            },
+            new()
+            { 
+                UserId = Id,
+                LayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972")
+            },
+            new()
+            { 
+                UserId = Id,
+                LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273")
+            }
+        };
+    }
+    
     public int Coins { get; set; }
 
     public int Experience { get; set; }
@@ -16,31 +41,31 @@ public class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<Appl
 
     public DateTime? CohortJoinedAt { get; set; }
 
-    public virtual Cohort? Cohort { get; set; }
+    public Cohort? Cohort { get; set; }
 
-    public virtual ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
+    public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
     
-    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     
-    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+    public ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    public virtual ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
+    public ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
 
-    public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();
+    public ICollection<Session> Sessions { get; set; } = new List<Session>();
 
-    public virtual ICollection<UserAchievement> UserAchievements { get; set; } = new List<UserAchievement>();
+    public ICollection<UserAchievement> UserAchievements { get; set; } = new List<UserAchievement>();
 
-    public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
+    public ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
 
-    public virtual UserConfig? UserConfig { get; set; }
+    public UserConfig? UserConfig { get; set; }
 
-    public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
+    public ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
     
     public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
-    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
-    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
-    public virtual ICollection<Item> CreatedItems { get; set; } = new List<Item>();
-    public virtual ICollection<OwnsLayout> EditorLayouts { get; set; } = new List<OwnsLayout>();
+    public ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
+    public ICollection<Item> CreatedItems { get; set; } = new List<Item>();
+    public ICollection<OwnsLayout> EditorLayouts { get; set; } = new List<OwnsLayout>();
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

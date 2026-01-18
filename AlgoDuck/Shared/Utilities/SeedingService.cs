@@ -19,6 +19,7 @@ public class DataSeedingService(
 {
     public async Task SeedDataAsync()
     {
+        await SeedEditorLayouts();
         await SeedRolesAsync();
         await SeedSeededUsersAsync();
         await SeedRarities();
@@ -29,8 +30,6 @@ public class DataSeedingService(
         await SeedProblems();
         await SeedTestCases();
         await SeedEditorThemes();
-        await SeedEditorLayouts();
-        await SeedEditorLayoutOwnerships();
         await SeedUserConfigsAsync();
     }
 
@@ -55,7 +54,7 @@ public class DataSeedingService(
                 new()
                 {
                     EditorFontSize = 11,
-                    EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
+                    // EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
                     EmailNotificationsEnabled = false,
                     IsDarkMode = true,
                     IsHighContrast = false,
@@ -194,39 +193,7 @@ public class DataSeedingService(
         }
     }
 
-
-    private async Task SeedEditorLayoutOwnerships()
-    {
-        if (!await context.OwnsLayouts.AnyAsync())
-        {
-            var ownerships = new List<OwnsLayout>()
-            {
-                new()
-                {
-                    IsSelected = true,
-                    LayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
-                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
-                },
-                
-                new()
-                {
-                    IsSelected = false,
-                    LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273"),
-                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
-                },
-                
-                new()
-                {
-                   IsSelected = false,
-                   LayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972"),
-                   UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
-                }   
-            };
-            
-            await  context.OwnsLayouts.AddRangeAsync(ownerships);
-            await context.SaveChangesAsync();
-        }
-    }
+    
     private async Task SeedEditorLayouts()
     {
 
@@ -238,16 +205,19 @@ public class DataSeedingService(
                 {
                     EditorLayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
                     LayoutName = "default",
+                    IsDefaultLayout = true
                 },
                 new()
                 {
                     EditorLayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972"),
                     LayoutName = "I use wayland btw",
+                    IsDefaultLayout = true
                 },
                 new()
                 {
                     EditorLayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273"),
                     LayoutName = "Tab enjoyer",
+                    IsDefaultLayout = true
                 }
             };
             
@@ -296,7 +266,18 @@ public class DataSeedingService(
             {
                 new Category
                 {
-                    CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"), CategoryName = "test category 4"
+                    CategoryId = Guid.Parse("d018bd6e-2cb0-412c-939f-27b3cf654e58"), 
+                    CategoryName = "test category 4"
+                },
+                new Category
+                {
+                    CategoryId = Guid.Parse("5c721265-24a9-4ed8-8214-f415d4a9bede"), 
+                    CategoryName = "test category 4"
+                },
+                new Category
+                {
+                    CategoryId = Guid.Parse("3b676e51-aa3c-40d5-af15-1cfe04b52c37"), 
+                    CategoryName = "test category 4"
                 },
             };
 
@@ -704,15 +685,15 @@ public class DataSeedingService(
                     CountryCode = SupportedLanguage.En,
                     Title = "Linked List Cycle Detection",
                     Description =
-                        "In many applications, linked lists are used to represent dynamic data structures.  \nHowever, faulty logic or unintended pointer manipulations can sometimes cause a **cycle** to appear in the list, meaning that traversal never reaches a `null` terminator.  \n\nYour task is to implement a cycle detection algorithm for a **doubly linked list**. Specifically, you should: \n1. **Define a `Node` class**  \n- Contains an integer value  \n- Has both `next` and `prev` references  \n\n2. **Implement a method `hasCycle(Node start)`**  \n- Determines whether a cycle exists starting from the provided node  \n3. **Use Floyd's Tortoise and Hare algorithm**  \n- A classic two-pointer technique  \n- Detects the cycle efficiently in **O(n) time** and **O(1) space**  \nA correct solution should be able to identify both the **presence and absence of cycles** for lists of varying sizes.  \n### Edge Cases to Consider\n- Empty list (`null` start node)  \n- Single-node list without a cycle  \n- Single-node list that links to itself"
+                        "<p>In many applications, linked lists are used to represent dynamic data structures.<br>However, faulty logic or unintended pointer manipulations can sometimes cause a <strong>cycle</strong> to appear in the list, meaning that traversal never reaches a <code>null</code> terminator.</p><p>Your task is to implement a cycle detection algorithm for a <strong>doubly linked list</strong>. Specifically, you should:</p><ol><li><p><strong>Define a </strong><code>Node</code><strong> class</strong></p></li></ol><ul><li><p>Contains an integer value</p></li><li><p>Has both <code>next</code> and <code>prev</code> references</p></li></ul><ol start=\"2\"><li><p><strong>Implement a method </strong><code>hasCycle(Node start)</code></p></li></ol><ul><li><p>Determines whether a cycle exists starting from the provided node</p></li></ul><ol start=\"3\"><li><p><strong>Use Floyd's Tortoise and Hare algorithm</strong></p></li></ol><ul><li><p>A classic two-pointer technique</p></li><li><p>Detects the cycle efficiently in <strong>O(n) time</strong> and <strong>O(1) space</strong><br>A correct solution should be able to identify both the <strong>presence and absence of cycles</strong> for lists of varying sizes.</p></li></ul><h3><strong>Edge Cases to Consider</strong></h3><ul><li><p>Empty list (<code>null</code> start node)</p></li><li><p>Single-node list without a cycle</p></li><li><p>Single-node list that links to itself</p></li></ul><p></p>"
                 },
                 new()
                 {
                     ProblemId = Guid.Parse("4263ebea-54de-437c-cf4c-b8f7e1f487f2"),
                     CountryCode = SupportedLanguage.En,
                     Title = "Two Sum",
-                    Description =
-                        "Given an array of integers `nums` and an integer `target`, return the **indices** of the two numbers that add up to `target`.\n\nYou may assume that each input has **exactly one solution**, and you **cannot use the same element twice**.\n\nYou can return the answer in any order.\n\n### Example 1\n**Input:** nums = [2, 7, 11, 15], target = 9  \n**Output:** [0, 1]  \n**Explanation:** nums[0] + nums[1] = 2 + 7 = 9\n\n### Example 2\n**Input:** nums = [3, 2, 4], target = 6  \n**Output:** [1, 2]  \n**Explanation:** nums[1] + nums[2] = 2 + 4 = 6\n\n### Constraints\n- 2 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9\n- -10^9 <= target <= 10^9\n- Only one valid answer exists\n\n### Follow-up\nCan you solve it in less than O(n²) time complexity?"
+                    Description = 
+                        "<p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return the <strong>indices</strong> of the two numbers that add up to <code>target</code>.</p><p>You may assume that each input has <strong>exactly one solution</strong>, and you <strong>cannot use the same element twice</strong>.</p><p>You can return the answer in any order.</p><h3><strong>Example 1</strong></h3><p><strong>Input:</strong> nums = [2, 7, 11, 15], target = 9<br><strong>Output:</strong> [0, 1]<br><strong>Explanation:</strong> nums[0] + nums[1] = 2 + 7 = 9</p><h3><strong>Example 2</strong></h3><p><strong>Input:</strong> nums = [3, 2, 4], target = 6<br><strong>Output:</strong> [1, 2]<br><strong>Explanation:</strong> nums[1] + nums[2] = 2 + 4 = 6</p><h3><strong>Constraints</strong></h3><ul><li><p>2 &lt;= nums.length &lt;= 10^4</p></li><li><p>-10^9 &lt;= nums[i] &lt;= 10^9</p></li><li><p>-10^9 &lt;= target &lt;= 10^9</p></li><li><p>Only one valid answer exists</p></li></ul><h3><strong>Follow-up</strong></h3><p>Can you solve it in less than O(n²) time complexity?</p>"
                 }
             ];
 
@@ -899,7 +880,7 @@ public class DataSeedingService(
                             TestCaseId = Guid.Parse("c18ddef1-6910-4445-bb4b-41f5a1580f72"),
                             Expected = "{tc_3_var_2}",
                             Call = ["{tc_3_var_0}", "{tc_3_var_1}"],
-                            Setup = "int[] {tc_3_var_0} = new int[] {1, 5, 3, 7, 9, 2};\n        int {tc_3_var_1} = 10;\n        int[] {tc_3_var_2} = new int[] {2, 4};"
+                            Setup = "int[] {tc_3_var_0} = new int[] {1, 5, 3, 7, 9, 2};\n        int {tc_3_var_1} = 10;\n        int[] {tc_3_var_2} = new int[] {2, 3};"
                         }
                     ]
                 }

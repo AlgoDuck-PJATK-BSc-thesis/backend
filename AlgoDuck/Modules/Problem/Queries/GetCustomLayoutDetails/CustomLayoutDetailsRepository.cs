@@ -14,9 +14,9 @@ public interface ICustomLayoutDetailsRepository
 public class CustomLayoutDetailsRepository : ICustomLayoutDetailsRepository
 {
     private readonly IAwsS3Client _s3Client;
-    private readonly ApplicationQueryDbContext _dbContext;
+    private readonly ApplicationCommandDbContext _dbContext;
 
-    public CustomLayoutDetailsRepository(IAwsS3Client s3Client, ApplicationQueryDbContext dbContext)
+    public CustomLayoutDetailsRepository(IAwsS3Client s3Client, ApplicationCommandDbContext dbContext)
     {
         _s3Client = s3Client;
         _dbContext = dbContext;
@@ -41,6 +41,13 @@ public class CustomLayoutDetailsRepository : ICustomLayoutDetailsRepository
         
         if (layoutS3FetchTask.Result.IsErr)
             return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Err(layoutS3FetchTask.Result.AsErr!);
+
+        await _dbContext.OwnsLayouts
+            .Where(l => l.UserId == requestDto.UserId && l.IsSelected)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(e => e.IsSelected, false), cancellationToken: cancellationToken);
+                
+        layoutDbFetchTask.Result.IsSelected = true;
+        await _dbContext.SaveChangesAsync(cancellationToken);
         
         return Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>.Ok(new CustomLayoutDetailsResponseDto()
         {

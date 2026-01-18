@@ -13,10 +13,15 @@ public interface IAssistantClient
 }
 
 [Authorize]
-public sealed class AssistantHub(
-    IAssistantService assistantService
-    ) : Hub<IAssistantClient>
+public sealed class AssistantHub : Hub<IAssistantClient>
 {
+    private readonly IAssistantService _assistantService;
+
+    public AssistantHub(IAssistantService assistantService)
+    {
+        _assistantService = assistantService;
+    }
+
     public async IAsyncEnumerable<IApiResponse> GetAssistance(AssistantRequestDto assistantRequest)
     {
         var userId = Context.User?.GetUserId();
@@ -32,7 +37,7 @@ public sealed class AssistantHub(
 
         assistantRequest.UserId = userId.AsOk;
 
-        await foreach (var chatCompletionPartial in  assistantService.GetAssistanceAsync(assistantRequest))
+        await foreach (var chatCompletionPartial in  _assistantService.GetAssistanceAsync(assistantRequest))
         {
             if (chatCompletionPartial.IsErr)
             {

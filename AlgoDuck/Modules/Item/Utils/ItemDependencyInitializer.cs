@@ -15,7 +15,9 @@ using AlgoDuck.Modules.Item.Queries.GetAllItemRarities;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
+using AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetUserPreviewData;
 
 namespace AlgoDuck.Modules.Item.Utils;
 
@@ -73,8 +75,13 @@ internal static class ItemDependencyInitializer
         
         builder.Services.AddScoped<IUpdateItemRepository, UpdateItemRepository>();
         builder.Services.AddScoped<IUpdateItemService, UpdateItemService>();
-        
-        
+
+        builder.Services.AddScoped<IGetMySelectedIconService, GetMySelectedIconService>();
+        builder.Services.AddScoped<IGetMySelectedIconRepository, GetMySelectedIconRepository>();
+
+        builder.Services.AddScoped<IGetUserPreviewService, GetUserPreviewService>();
+        builder.Services.AddScoped<IGetUserPreviewRepository, GetUserPreviewRepository>();
+
         builder.Services.Configure<AwardsConfig>(
             builder.Configuration.GetSection("Awards"));
         

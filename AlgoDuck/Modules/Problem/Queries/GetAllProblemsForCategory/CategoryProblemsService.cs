@@ -4,7 +4,7 @@ namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 
 public interface ICategoryProblemsService
 {
-    public Task<Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default);
+    public Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default);
 }
 
 public class CategoryProblemsService : ICategoryProblemsService
@@ -16,7 +16,7 @@ public class CategoryProblemsService : ICategoryProblemsService
         _categoryProblemsRepository = categoryProblemsRepository;
     }
 
-    public async Task<Result<ICollection<ProblemDisplayDto>, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default)
+    public async Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default)
     {
         return await _categoryProblemsRepository.GetAllProblemsForCategoryAsync(categoryId, cancellationToken);
     }

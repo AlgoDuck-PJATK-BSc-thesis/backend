@@ -80,7 +80,6 @@ public class SharedProblemRepository(
         });
     }
     
-    /*TODO: Since these repeat in the submit command perhaps we could extract them to a separate TestCaseRepo/TemplateRepo?*/
     public async Task<Result<ProblemS3PartialTemplate, ErrorObject<string>>> GetTemplateAsync(Guid exerciseId, CancellationToken cancellationToken = default)
     {
         var templatePath = $"problems/{exerciseId}/template.xml";

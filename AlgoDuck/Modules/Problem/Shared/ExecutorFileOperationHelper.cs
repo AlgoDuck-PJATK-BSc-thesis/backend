@@ -143,6 +143,7 @@ public class ExecutorFileOperationHelper
 
     public void InsertTestCases(List<TestCaseJoined> testCases, CodeAnalysisResult analysisResult)
     {
+        Console.WriteLine(JsonSerializer.Serialize(testCases));
         UserSolutionData.FileContents.Append(JavaCode.NormalizerCode);
         
         NormalizeTestCaseVariables(testCases);
@@ -152,8 +153,8 @@ public class ExecutorFileOperationHelper
         foreach (var testCase in testCases)
         {
             ArrangeTestCase(testCase, analysisResult.MainClassName);
-            ActTestCase(testCase);
-            AssertTestCase(testCase);
+            var assertedVarName = ActTestCase(testCase);
+            AssertTestCase(testCase, assertedVarName);
         }
     }
     
@@ -209,23 +210,23 @@ public class ExecutorFileOperationHelper
         InsertAtEndOfMainMethod(setup);
     }
 
-    private void ActTestCase(TestCaseJoined testCase)
+    private string ActTestCase(TestCaseJoined testCase)
     {
         var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
-        var variableName = GuidToJavaVariableName(testCase.TestCaseId);
+        var variableName = GuidToJavaVariableName(Guid.NewGuid());
         
         InsertAtEndOfMainMethod($"var {variableName} = {testCase.CallFunc}({args});");
+        return variableName;
     }
 
-    private void AssertTestCase(TestCaseJoined testCase)
+    private void AssertTestCase(TestCaseJoined testCase, string assertedVarName)
     {
-        var variableName = GuidToJavaVariableName(testCase.TestCaseId);
         var orderMatters = testCase.OrderMatters.ToString().ToLowerInvariant();
         
         var assertExpression = 
             $"\" {ControlSymbols.TestCaseIdPrefix}{testCase.TestCaseId} \" + " +
             $"{JavaCode.NormalizerClassName}.normalize({testCase.Expected}, {orderMatters})" +
-            $".equals({JavaCode.NormalizerClassName}.normalize({variableName}, {orderMatters}))";
+            $".equals({JavaCode.NormalizerClassName}.normalize({assertedVarName}, {orderMatters}))";
 
         InsertAtEndOfMainMethod(CreateSignedPrintStatement(assertExpression, SigningType.Answer));
     }
@@ -253,8 +254,10 @@ public class ExecutorFileOperationHelper
 
     private void InsertAtEndOfMainMethod(string code)
     {
+        UserSolutionData.FileContents.Insert(UserSolutionData.MainMethod!.MethodFileEndIndex, "\n\t\t");
+        UserSolutionData.MainMethod.MethodFileEndIndex += 3;
         UserSolutionData.FileContents.Insert(
-            UserSolutionData.MainMethod!.MethodFileEndIndex /*TODO: here 1 - 1*/, 
+            UserSolutionData.MainMethod!.MethodFileEndIndex, 
             code);
         UserSolutionData.MainMethod.MethodFileEndIndex += code.Length;
     }

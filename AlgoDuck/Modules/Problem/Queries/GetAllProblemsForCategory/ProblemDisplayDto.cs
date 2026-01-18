@@ -1,5 +1,13 @@
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 
+
+public class CategoryDto
+{
+    public required Guid CategoryId { get; set; }
+    public required string Name { get; set; }
+    public required ICollection<ProblemDisplayDto> Problems { get; set; }
+}
+
 public class ProblemDisplayDto
 {
     public required Guid ProblemId { get; set; }

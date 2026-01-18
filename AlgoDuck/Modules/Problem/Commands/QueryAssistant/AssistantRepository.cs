@@ -21,14 +21,19 @@ public interface IAssistantRepository
         params ChatMessageInsertDto[] request); /* I hate the fact that cancellation token is not last in the arg list */
 }
 
-public class AssistantRepository(
-    ApplicationCommandDbContext dbContext
-) : IAssistantRepository
+public class AssistantRepository : IAssistantRepository
 {
+    private readonly ApplicationCommandDbContext _dbContext;
+
+    public AssistantRepository(ApplicationCommandDbContext dbContext)
+    {
+        this._dbContext = dbContext;
+    }
+
     public async Task<Result<AssistantChat?, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        var result = await dbContext.AssistantChats
+        var result = await _dbContext.AssistantChats
             .Include(e => e.Messages.OrderByDescending(ie => ie.CreatedOn).Take(10))
             .ThenInclude(e => e.Fragments)
             .FirstOrDefaultAsync(e => e.Id == request.ChatId, cancellationToken);
@@ -45,7 +50,7 @@ public class AssistantRepository(
         var messageCounter = 0;
         foreach (var chatMessageInsertDto in chatMessagesGrouped)
         {
-            var assistantChat = await dbContext.AssistantChats.FirstOrDefaultAsync(
+            var assistantChat = await _dbContext.AssistantChats.FirstOrDefaultAsync(
                 ch => ch.Id == chatMessageInsertDto.Key,
                 cancellationToken: cancellationToken);
 
@@ -55,11 +60,11 @@ public class AssistantRepository(
                 assistantChat = new AssistantChat
                 {
                     Id = firstMessage.ChatId,
-                    Name = firstMessage.ChatName,
+                    Name = firstMessage.ChatName.IsNullOrEmpty() ? firstMessage.ChatName : "Unnamed",
                     ProblemId = firstMessage.ProblemId,
                     UserId = firstMessage.UserId,
                 };
-                dbContext.AssistantChats.Add(assistantChat);
+                _dbContext.AssistantChats.Add(assistantChat);
             }
 
             if (assistantChat.Name.IsNullOrEmpty() && chatMessageInsertDto.Any())
@@ -81,7 +86,7 @@ public class AssistantRepository(
             }
         }
         
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<int, ErrorObject<string>>.Ok(messageCounter);
     }
 }

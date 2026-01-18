@@ -105,8 +105,10 @@ internal sealed class SubmitService(
         if (testCases.IsErr)
             Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Test cases for problem {submission.ProblemId} not found"));
-        
+
+        Console.WriteLine(helper.UserSolutionData.FileContents);
         helper.InsertTestCases(testCases.AsT0.ToList(), codeAnalysisResult);
+        Console.WriteLine(helper.UserSolutionData.FileContents);
 
         return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
     }

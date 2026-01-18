@@ -1,7 +1,8 @@
+using System.Text.Json;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Shared.Http;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemDetailsPagedAdmin;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemDetailsPaged;
 
 public interface IPagedProblemDetailsAdminService
 {
@@ -20,6 +21,12 @@ public class PagedProblemDetailsAdminService : IPagedProblemDetailsAdminService
     public async Task<Result<PageData<ProblemDetailsDto>, ErrorObject<string>>> GetProblemDetailsAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> columnFilterRequest,
         CancellationToken cancellationToken = default)
     {
-        return await _pagedProblemDetailsAdminRepository.GetProblemDetailsAsync(columnFilterRequest, cancellationToken);
+        var res = await _pagedProblemDetailsAdminRepository.GetProblemDetailsAsync(columnFilterRequest,
+            cancellationToken);
+        if (res.IsOk)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(res.AsOk!));
+        }
+        return res;
     }
 }

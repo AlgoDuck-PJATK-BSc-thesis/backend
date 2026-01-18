@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AlgoDuck.Models;
+using AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.Http;
@@ -23,15 +24,25 @@ public class SimpleStreamingUpdate
     public required ChatMessageContent ContentUpdate { get; init; }
 }
 
-public class AssistantService(
-    OpenAIClient openAiClient,
-    IAssistantRepository assistantRepository,
-    ISharedProblemRepository problemRepository
-    ) : IAssistantService
+public class AssistantService : IAssistantService
 {
+    private readonly OpenAIClient _openAiClient;
+    private readonly IAssistantRepository _assistantRepository;
+    private readonly ISharedProblemRepository _problemRepository;
+    private readonly IGetMySelectedIconRepository _iconRepository;
+
+    public AssistantService(ISharedProblemRepository problemRepository, IAssistantRepository assistantRepository, OpenAIClient openAiClient, IGetMySelectedIconRepository iconRepository)
+    {
+        _problemRepository = problemRepository;
+        _assistantRepository = assistantRepository;
+        _openAiClient = openAiClient;
+        _iconRepository = iconRepository;
+    }
+
+
     public async IAsyncEnumerable<Result<ChatCompletionStreamedDto, ErrorObject<string>>> GetAssistanceAsync(AssistantRequestDto request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var chatDataResult = await assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
+        var chatDataResult = await _assistantRepository.GetChatDataIfExistsAsync(request, cancellationToken);
         if (chatDataResult.IsErr)
         {
             yield return Result<ChatCompletionStreamedDto, ErrorObject<string>>.Err(chatDataResult.AsT1);
@@ -40,7 +51,7 @@ public class AssistantService(
         
         var chatData = chatDataResult.AsOk!;
 
-        var problemDataResult = await problemRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
+        var problemDataResult = await _problemRepository.GetProblemDetailsAsync(request.ExerciseId, cancellationToken: cancellationToken);
         
         if (problemDataResult.IsErr)
         {
@@ -48,14 +59,14 @@ public class AssistantService(
             yield break;
         }
 
-        var assistantQueryJson = BuildAssistantQuery(request, problemDataResult.AsT0, chatData);
-        Console.WriteLine(assistantQueryJson);
+        var duckItemNameResult = await _iconRepository.GetMySelectedIconAsync(request.UserId, cancellationToken);
+        var duckItemName = duckItemNameResult.IsErr ? "default" : duckItemNameResult.AsOk!.ItemName;
+        
+        var assistantQueryJson = BuildAssistantQuery(request, problemDataResult.AsT0, chatData, duckItemName);
         var message = ChatMessage.CreateUserMessage(assistantQueryJson);
 
-        Console.WriteLine(message);
-        
         var parser = new SignalParser();
-        AsyncCollectionResult<StreamingChatCompletionUpdate> completionUpdates = openAiClient
+        AsyncCollectionResult<StreamingChatCompletionUpdate> completionUpdates = _openAiClient
             .GetChatClient("gpt-5-nano")
             .CompleteChatStreamingAsync([message],
                 new ChatCompletionOptions(),
@@ -104,8 +115,7 @@ public class AssistantService(
 
         var generatedChatName = nameBuilder.ToString().Trim();
 
-        Console.WriteLine(generatedChatName);
-        await assistantRepository.CreateNewChatMessagesAsync(cancellationToken, new ChatMessageInsertDto
+        await _assistantRepository.CreateNewChatMessagesAsync(cancellationToken, new ChatMessageInsertDto
         {
             Author = MessageAuthor.User,
             UserId = request.UserId,
@@ -146,15 +156,14 @@ public class AssistantService(
     }
     
 
-    private static string BuildAssistantQuery(AssistantRequestDto request, ProblemDto problemData, AssistantChat? chatData)
+    private static string BuildAssistantQuery(AssistantRequestDto request, ProblemDto problemData, AssistantChat? chatData, string itemName)
     {
-        var duckType = "pirate"; // TODO: Fetch from db once that's ready
         var input = new ModelInputJsonSchema
         {
             ChatName = chatData?.Name,
             ProblemDescription = problemData.Description,
             ProvidedTemplate = problemData.TemplateContents,
-            Role = $"{duckType} - a helpful programming ducky/ADS field expert",
+            Role = $"{itemName} - a helpful programming ducky/ADS field expert",
             Instructions = "Help out the user with the exercise. generate a chat name based on the user query and exercise contents. Use markdown where possible to emphasise points. Titles do not need to be continuous strings; \"some title\" this is preferred to \"some-title\"",
             UserCode = Encoding.UTF8.GetString(Convert.FromBase64String(request.CodeB64)),
             UserQueryToAssistant = Encoding.UTF8.GetString(Convert.FromBase64String(request.Query)),
