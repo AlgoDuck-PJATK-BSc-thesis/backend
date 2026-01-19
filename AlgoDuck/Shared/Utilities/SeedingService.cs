@@ -20,8 +20,10 @@ public class DataSeedingService(
     public async Task SeedDataAsync()
     {
         await SeedEditorLayouts();
+        await SeedEditorThemes();
         await SeedRolesAsync();
         await SeedSeededUsersAsync();
+        await SeedUserConfigsAsync();
         await SeedRarities();
         await SeedCategories();
         await SeedDifficulties();
@@ -29,8 +31,6 @@ public class DataSeedingService(
         await EnsureDefaultsForSeededUsersAsync();
         await SeedProblems();
         await SeedTestCases();
-        await SeedEditorThemes();
-        await SeedUserConfigsAsync();
     }
 
     private async Task SeedRolesAsync()
@@ -47,25 +47,41 @@ public class DataSeedingService(
 
     private async Task SeedUserConfigsAsync()
     {
-        if (!await context.UserConfigs.AnyAsync())
+        var userIds = await context.ApplicationUsers
+            .AsNoTracking()
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        if (userIds.Count == 0)
         {
-            var configs = new List<UserConfig>
-            {
-                new()
-                {
-                    EditorFontSize = 11,
-                    // EditorThemeId = Guid.Parse("276cc32e-a0bd-408e-b6f0-0f4e3ff80796"),
-                    EmailNotificationsEnabled = false,
-                    IsDarkMode = true,
-                    IsHighContrast = false,
-                    UserId = Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab")
-                }
-            };
-            
-            await context.UserConfigs.AddRangeAsync(configs);
-            await context.SaveChangesAsync();
+            return;
         }
+
+        var existingConfigUserIds = await context.UserConfigs
+            .AsNoTracking()
+            .Select(c => c.UserId)
+            .ToListAsync();
+
+        var missing = userIds.Except(existingConfigUserIds).ToList();
+
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        var configs = missing.Select(id => new UserConfig
+        {
+            UserId = id,
+            EditorFontSize = 11,
+            EmailNotificationsEnabled = false,
+            IsDarkMode = true,
+            IsHighContrast = false
+        }).ToList();
+
+        await context.UserConfigs.AddRangeAsync(configs);
+        await context.SaveChangesAsync();
     }
+
     
     private async Task SeedSeededUsersAsync()
     {

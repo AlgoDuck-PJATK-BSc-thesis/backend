@@ -8,35 +8,59 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
 {
     public ApplicationUser()
     {
-        Id = Guid.NewGuid();
-        
-        EditorLayouts = new List<OwnsLayout>
-        {
-            new()
-            { 
-                UserId = Id,
-                LayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
-                IsSelected = true
-            },
-            new()
-            { 
-                UserId = Id,
-                LayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972")
-            },
-            new()
-            { 
-                UserId = Id,
-                LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273")
-            }
-        };
     }
-    
+
+    public ApplicationUser EnrichWithDefaults()
+    {
+        if (Id == Guid.Empty)
+        {
+            Id = Guid.NewGuid();
+        }
+
+        if (EditorLayouts is null || EditorLayouts.Count == 0)
+        {
+            EditorLayouts = new List<OwnsLayout>
+            {
+                new()
+                {
+                    UserId = Id,
+                    LayoutId = Guid.Parse("7d2e1c42-f7da-4261-a8c1-42826d976116"),
+                    IsSelected = true
+                },
+                new()
+                {
+                    UserId = Id,
+                    LayoutId = Guid.Parse("3922523c-7c2f-4a9a-9f43-9fc5b8698972")
+                },
+                new()
+                {
+                    UserId = Id,
+                    LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273")
+                }
+            };
+        }
+
+        if (UserConfig is null)
+        {
+            UserConfig = new UserConfig
+            {
+                UserId = Id,
+                IsDarkMode = true,
+                IsHighContrast = true,
+                EmailNotificationsEnabled = false,
+                EditorFontSize = 11
+            };
+        }
+
+        return this;
+    }
+
     public int Coins { get; set; }
 
     public int Experience { get; set; }
 
     public int AmountSolved { get; set; }
-    
+
     public Guid? CohortId { get; set; }
 
     public DateTime? CohortJoinedAt { get; set; }
@@ -44,9 +68,9 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
     public Cohort? Cohort { get; set; }
 
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
-    
+
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
-    
+
     public ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
@@ -60,12 +84,17 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
     public UserConfig? UserConfig { get; set; }
 
     public ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
-    
-    public ICollection<PurchasedTestCase> PurchasedTestCases = new List<PurchasedTestCase>();
+
+    public ICollection<PurchasedTestCase> PurchasedTestCases { get; set; } = new List<PurchasedTestCase>();
+
     public ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+
     public ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
+
     public ICollection<Item> CreatedItems { get; set; } = new List<Item>();
+
     public ICollection<OwnsLayout> EditorLayouts { get; set; } = new List<OwnsLayout>();
+
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

@@ -62,10 +62,10 @@ public sealed class CohortRepository : ICohortRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task AddAsync(Models.Cohort cohort, CancellationToken cancellationToken)
+    public async Task AddAsync(Models.Cohort cohort, CancellationToken cancellationToken)
     {
         _commandDb.Cohorts.Add(cohort);
-        return Task.CompletedTask;
+        await _commandDb.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<(IReadOnlyList<Models.Cohort> Items, int TotalCount)> GetPagedAsync(

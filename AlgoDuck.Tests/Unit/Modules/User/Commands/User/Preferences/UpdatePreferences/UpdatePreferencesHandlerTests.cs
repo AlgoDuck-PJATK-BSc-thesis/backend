@@ -2,6 +2,7 @@ using System.Reflection;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
+using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences.UpdatePreferences;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Reminders;
@@ -39,7 +40,7 @@ public sealed class UpdatePreferencesHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenUserConfigMissing_ThenThrowsUserNotFoundException()
+    public async Task HandleAsync_WhenUserMissing_ThenThrowsUserNotFoundException()
     {
         await using var dbContext = CreateCommandDbContext();
 
@@ -55,10 +56,36 @@ public sealed class UpdatePreferencesHandlerTests
         var calculator = new ReminderNextAtCalculator();
         var handler = new UpdatePreferencesHandler(dbContext, validator.Object, calculator);
 
-        var ex = await Assert.ThrowsAsync<UserNotFoundException>(() =>
+        await Assert.ThrowsAsync<UserNotFoundException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
+    }
 
-        Assert.Contains("configuration", ex.Message, StringComparison.OrdinalIgnoreCase);
+    [Fact]
+    public async Task HandleAsync_WhenUserExistsButConfigMissing_ThenCreatesConfigAndUpdates()
+    {
+        await using var dbContext = CreateCommandDbContext();
+
+        var userId = Guid.NewGuid();
+        SeedUser(dbContext, userId);
+
+        var dto = new UpdatePreferencesDto
+        {
+            IsDarkMode = false,
+            IsHighContrast = true,
+            EmailNotificationsEnabled = false
+        };
+
+        var validator = CreateValidatorMock(dto);
+        var calculator = new ReminderNextAtCalculator();
+        var handler = new UpdatePreferencesHandler(dbContext, validator.Object, calculator);
+
+        await handler.HandleAsync(userId, dto, CancellationToken.None);
+
+        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId);
+        Assert.NotNull(cfg);
+        Assert.False(cfg!.IsDarkMode);
+        Assert.True(cfg.IsHighContrast);
+        Assert.False(cfg.EmailNotificationsEnabled);
     }
 
     [Fact]
@@ -67,6 +94,7 @@ public sealed class UpdatePreferencesHandlerTests
         await using var dbContext = CreateCommandDbContext();
 
         var userId = Guid.NewGuid();
+        SeedUser(dbContext, userId);
         var config = SeedUserConfig(dbContext, userId);
 
         var dto = new UpdatePreferencesDto
@@ -78,7 +106,7 @@ public sealed class UpdatePreferencesHandlerTests
             {
                 new() { Day = "Mon", Enabled = true, Hour = 9, Minute = 0 },
                 new() { Day = "Wed", Enabled = true, Hour = 19, Minute = 0 },
-                new() { Day = "Sun", Enabled = false, Hour = 10, Minute = 0 } 
+                new() { Day = "Sun", Enabled = false, Hour = 10, Minute = 0 }
             }
         };
 
@@ -111,6 +139,7 @@ public sealed class UpdatePreferencesHandlerTests
         await using var dbContext = CreateCommandDbContext();
 
         var userId = Guid.NewGuid();
+        SeedUser(dbContext, userId);
         var config = SeedUserConfig(dbContext, userId);
 
         SetNullableDateTimeOffsetIfPresent(config, "StudyReminderNextAtUtc", DateTimeOffset.UtcNow.AddHours(1));
@@ -144,6 +173,18 @@ public sealed class UpdatePreferencesHandlerTests
             .Options;
 
         return new ApplicationCommandDbContext(options);
+    }
+
+    static void SeedUser(ApplicationCommandDbContext dbContext, Guid userId)
+    {
+        dbContext.Users.Add(new ApplicationUser
+        {
+            Id = userId,
+            UserName = "test-user",
+            Email = "test@example.com",
+            EmailConfirmed = true
+        });
+        dbContext.SaveChanges();
     }
 
     static Mock<IValidator<UpdatePreferencesDto>> CreateValidatorMock(UpdatePreferencesDto dto)
@@ -268,5 +309,16 @@ public sealed class UpdatePreferencesHandlerTests
         var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(prop);
         return (DateTimeOffset?)prop.GetValue(target);
+    }
+
+    static void SetNullableDateTimeOffsetIfPresent(object target, string propertyName, DateTimeOffset? value, bool force = false)
+    {
+        var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (prop is null) return;
+
+        if (prop.PropertyType == typeof(DateTimeOffset?))
+        {
+            prop.SetValue(target, value);
+        }
     }
 }

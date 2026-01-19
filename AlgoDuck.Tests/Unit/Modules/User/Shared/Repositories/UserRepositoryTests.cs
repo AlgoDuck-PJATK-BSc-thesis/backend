@@ -51,7 +51,7 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByIdAsync(userId, CancellationToken.None);
 
         result.Should().NotBeNull();
-        result.Id.Should().Be(userId);
+        result!.Id.Should().Be(userId);
         result.UserConfig.Should().NotBeNull();
         result.UserConfig!.UserId.Should().Be(userId);
     }
@@ -84,7 +84,7 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByNameAsync("unique-user", CancellationToken.None);
 
         result.Should().NotBeNull();
-        result.UserName.Should().Be("unique-user");
+        result!.UserName.Should().Be("unique-user");
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class UserRepositoryTests
         var result = await repository.GetByEmailAsync("email@test.local", CancellationToken.None);
 
         result.Should().NotBeNull();
-        result.Email.Should().Be("email@test.local");
+        result!.Email.Should().Be("email@test.local");
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public sealed class UserRepositoryTests
 
         var loaded = await repository.GetByIdAsync(userId, CancellationToken.None);
         loaded.Should().NotBeNull();
-        loaded.UserName = "after";
+        loaded!.UserName = "after";
 
         await repository.UpdateAsync(loaded, CancellationToken.None);
 
@@ -136,6 +136,6 @@ public sealed class UserRepositoryTests
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         reloaded.Should().NotBeNull();
-        reloaded.UserName.Should().Be("after");
+        reloaded!.UserName.Should().Be("after");
     }
 }

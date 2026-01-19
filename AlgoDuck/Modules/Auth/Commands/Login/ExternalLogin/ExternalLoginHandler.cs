@@ -1,3 +1,4 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
@@ -5,6 +6,7 @@ using AlgoDuck.Modules.Auth.Shared.Utils;
 using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Auth.Commands.Login.ExternalLogin;
 
@@ -14,17 +16,20 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
     private readonly ITokenService _tokenService;
     private readonly IValidator<ExternalLoginDto> _validator;
     private readonly IDefaultDuckService _defaultDuckService;
+    private readonly ApplicationCommandDbContext _dbContext;
 
     public ExternalLoginHandler(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
         IValidator<ExternalLoginDto> validator,
-        IDefaultDuckService defaultDuckService)
+        IDefaultDuckService defaultDuckService,
+        ApplicationCommandDbContext dbContext)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _validator = validator;
         _defaultDuckService = defaultDuckService;
+        _dbContext = dbContext;
     }
 
     public async Task<AuthResponse> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken)
@@ -48,7 +53,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
                 UserName = username,
                 Email = dto.Email,
                 EmailConfirmed = true
-            };
+            }.EnrichWithDefaults();
 
             for (var attempt = 0; attempt < 8; attempt++)
             {
@@ -112,6 +117,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
         }
 
         await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
+        await EnsureUserConfigExistsAsync(user.Id, cancellationToken);
 
         var existingByLogin = await _userManager.FindByLoginAsync(provider, dto.ExternalUserId);
         if (existingByLogin is not null && existingByLogin.Id != user.Id)
@@ -138,7 +144,30 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
         return authResponse;
     }
 
-    static bool NeedsUsernameMigration(ApplicationUser user, string email)
+    private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.UserConfigs
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
+
+        if (exists)
+        {
+            return;
+        }
+
+        _dbContext.UserConfigs.Add(new UserConfig
+        {
+            UserId = userId,
+            EditorFontSize = 11,
+            EmailNotificationsEnabled = false,
+            IsDarkMode = true,
+            IsHighContrast = false
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool NeedsUsernameMigration(ApplicationUser user, string email)
     {
         var uname = user.UserName ?? string.Empty;
         if (uname.Contains('@')) return true;

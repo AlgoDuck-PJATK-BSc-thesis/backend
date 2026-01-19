@@ -1,7 +1,9 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 
@@ -10,15 +12,18 @@ public sealed class CreateUserHandler : ICreateUserHandler
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IValidator<CreateUserDto> _validator;
     private readonly IDefaultDuckService _defaultDuckService;
+    private readonly ApplicationCommandDbContext _dbContext;
 
     public CreateUserHandler(
         UserManager<ApplicationUser> userManager,
         IValidator<CreateUserDto> validator,
-        IDefaultDuckService defaultDuckService)
+        IDefaultDuckService defaultDuckService,
+        ApplicationCommandDbContext dbContext)
     {
         _userManager = userManager;
         _validator = validator;
         _defaultDuckService = defaultDuckService;
+        _dbContext = dbContext;
     }
 
     public async Task<CreateUserResultDto> HandleAsync(CreateUserDto dto, CancellationToken cancellationToken)
@@ -44,7 +49,7 @@ public sealed class CreateUserHandler : ICreateUserHandler
             UserName = username,
             Email = email,
             EmailConfirmed = dto.EmailVerified
-        };
+        }.EnrichWithDefaults();
 
         var create = await _userManager.CreateAsync(user, dto.Password);
         if (!create.Succeeded)
@@ -66,6 +71,8 @@ public sealed class CreateUserHandler : ICreateUserHandler
             await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
         }
 
+        await EnsureUserConfigExistsAsync(user.Id, cancellationToken);
+
         return new CreateUserResultDto
         {
             UserId = user.Id,
@@ -74,6 +81,29 @@ public sealed class CreateUserHandler : ICreateUserHandler
             Role = roleToAssign,
             EmailVerified = user.EmailConfirmed
         };
+    }
+
+    private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.UserConfigs
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
+
+        if (exists)
+        {
+            return;
+        }
+
+        _dbContext.UserConfigs.Add(new UserConfig
+        {
+            UserId = userId,
+            EditorFontSize = 11,
+            EmailNotificationsEnabled = false,
+            IsDarkMode = true,
+            IsHighContrast = false
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<string> EnsureUniqueUsernameAsync(string username, CancellationToken cancellationToken)

@@ -21,6 +21,7 @@ public sealed class UserRepository : IUserRepository
     public async Task<ApplicationUser?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
         return await _queryDbContext.Users
+            .AsNoTracking()
             .Include(u => u.UserConfig)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }

@@ -1,8 +1,10 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Commands.Admin.CreateUser;
 using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace AlgoDuck.Tests.Unit.Modules.User.Commands.Admin.CreateUser;
@@ -15,12 +17,22 @@ public sealed class CreateUserHandlerTests
         return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
+    static ApplicationCommandDbContext CreateInMemoryDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationCommandDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        return new ApplicationCommandDbContext(options);
+    }
+
     [Fact]
     public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -42,7 +54,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -70,7 +83,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -99,7 +113,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -131,7 +146,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -164,7 +180,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -183,7 +200,12 @@ public sealed class CreateUserHandlerTests
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, string>((u, _) => createdUser = u);
+            .Callback<ApplicationUser, string>((u, _) =>
+            {
+                createdUser = u;
+                dbContext.ApplicationUsers.Add(u);
+                dbContext.SaveChanges();
+            });
 
         userManager
             .Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "admin"))
@@ -202,6 +224,9 @@ public sealed class CreateUserHandlerTests
         Assert.Equal("admin", result.Role);
         Assert.False(result.EmailVerified);
 
+        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser.Id);
+        Assert.NotNull(cfg);
+
         defaultDuckService.Verify(
             x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -212,7 +237,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -225,7 +251,19 @@ public sealed class CreateUserHandlerTests
 
         userManager.Setup(x => x.FindByEmailAsync("user@gmail.com")).ReturnsAsync((ApplicationUser?)null);
         userManager.Setup(x => x.FindByNameAsync("regular_user")).ReturnsAsync((ApplicationUser?)null);
-        userManager.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123")).ReturnsAsync(IdentityResult.Success);
+
+        ApplicationUser? createdUser = null;
+
+        userManager
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
+            .ReturnsAsync(IdentityResult.Success)
+            .Callback<ApplicationUser, string>((u, _) =>
+            {
+                createdUser = u;
+                dbContext.ApplicationUsers.Add(u);
+                dbContext.SaveChanges();
+            });
+
         userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "user")).ReturnsAsync(IdentityResult.Success);
 
         defaultDuckService
@@ -235,6 +273,10 @@ public sealed class CreateUserHandlerTests
         var result = await handler.HandleAsync(dto, CancellationToken.None);
 
         Assert.Equal("user", result.Role);
+
+        Assert.NotNull(createdUser);
+        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser!.Id);
+        Assert.NotNull(cfg);
 
         defaultDuckService.Verify(
             x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
@@ -246,7 +288,8 @@ public sealed class CreateUserHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object);
+        var dbContext = CreateInMemoryDbContext();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
 
         var dto = new CreateUserDto
         {
@@ -265,7 +308,12 @@ public sealed class CreateUserHandlerTests
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, string>((u, _) => createdUser = u);
+            .Callback<ApplicationUser, string>((u, _) =>
+            {
+                createdUser = u;
+                dbContext.ApplicationUsers.Add(u);
+                dbContext.SaveChanges();
+            });
 
         userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "user")).ReturnsAsync(IdentityResult.Success);
 
@@ -278,6 +326,9 @@ public sealed class CreateUserHandlerTests
         Assert.NotNull(createdUser);
         Assert.False(string.IsNullOrWhiteSpace(createdUser!.UserName));
         Assert.Equal(createdUser.UserName, result.Username);
+
+        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser.Id);
+        Assert.NotNull(cfg);
 
         defaultDuckService.Verify(
             x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),

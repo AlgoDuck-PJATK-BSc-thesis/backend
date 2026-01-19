@@ -1,8 +1,10 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands.Login.Register;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Shared.Utilities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using AuthValidationException = AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException;
@@ -23,20 +25,31 @@ public sealed class RegisterHandlerTests
         return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
     }
 
+    static ApplicationCommandDbContext CreateInMemoryDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationCommandDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        return new ApplicationCommandDbContext(options);
+    }
+
     [Fact]
     public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
     {
         var userManager = CreateUserManagerMock();
         var emailSender = new Mock<IEmailSender>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var config = CreateConfiguration("http://frontend");
+        var config = CreateConfiguration("http:" + "/" + "/frontend");
+        var dbContext = CreateInMemoryDbContext();
 
         var handler = new RegisterHandler(
             userManager.Object,
             emailSender.Object,
             new RegisterValidator(),
             config,
-            defaultDuckService.Object);
+            defaultDuckService.Object,
+            dbContext);
 
         await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
             handler.HandleAsync(new RegisterDto { UserName = "", Email = "", Password = "", ConfirmPassword = "" }, CancellationToken.None));
@@ -48,14 +61,16 @@ public sealed class RegisterHandlerTests
         var userManager = CreateUserManagerMock();
         var emailSender = new Mock<IEmailSender>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var config = CreateConfiguration("http://frontend");
+        var config = CreateConfiguration("http:" + "/" + "/frontend");
+        var dbContext = CreateInMemoryDbContext();
 
         var handler = new RegisterHandler(
             userManager.Object,
             emailSender.Object,
             new RegisterValidator(),
             config,
-            defaultDuckService.Object);
+            defaultDuckService.Object,
+            dbContext);
 
         var dto = new RegisterDto { UserName = "alice", Email = "alice@example.com", Password = "p", ConfirmPassword = "p" };
 
@@ -69,12 +84,13 @@ public sealed class RegisterHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenRegistrationSucceeds_AssignsDefaultRole_EnsuresAlgoduckOwnedAndSelected_AndSendsEmail()
+    public async Task HandleAsync_WhenRegistrationSucceeds_AssignsDefaultRole_EnsuresAlgoduckOwnedAndSelected_SendsEmail_AndCreatesUserConfig()
     {
         var userManager = CreateUserManagerMock();
         var emailSender = new Mock<IEmailSender>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
-        var config = CreateConfiguration("http://frontend");
+        var config = CreateConfiguration("http:" + "/" + "/frontend");
+        var dbContext = CreateInMemoryDbContext();
 
         var createdUserId = Guid.NewGuid();
 
@@ -83,7 +99,12 @@ public sealed class RegisterHandlerTests
 
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
-            .Callback<ApplicationUser, string>((u, _) => u.Id = createdUserId)
+            .Callback<ApplicationUser, string>((u, _) =>
+            {
+                u.Id = createdUserId;
+                dbContext.ApplicationUsers.Add(u);
+                dbContext.SaveChanges();
+            })
             .ReturnsAsync(IdentityResult.Success);
 
         defaultDuckService
@@ -102,7 +123,8 @@ public sealed class RegisterHandlerTests
             emailSender.Object,
             new RegisterValidator(),
             config,
-            defaultDuckService.Object);
+            defaultDuckService.Object,
+            dbContext);
 
         var dto = new RegisterDto { UserName = "bob", Email = "bob@example.com", Password = "p", ConfirmPassword = "p" };
 
@@ -121,5 +143,8 @@ public sealed class RegisterHandlerTests
         emailSender.Verify(
             x => x.SendEmailConfirmationAsync(createdUserId, "bob@example.com", It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUserId);
+        Assert.NotNull(cfg);
     }
 }

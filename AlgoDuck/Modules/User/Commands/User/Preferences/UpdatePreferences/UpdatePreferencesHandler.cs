@@ -1,11 +1,10 @@
-
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Reminders;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
+namespace AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences.UpdatePreferences;
 
 public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
 {
@@ -32,12 +31,30 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
             throw new Shared.Exceptions.ValidationException("User identifier is invalid.");
         }
 
+        var userExists = await _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.Id == userId, cancellationToken);
+
+        if (!userExists)
+        {
+            throw new UserNotFoundException("User not found.");
+        }
+
         var config = await _dbContext.UserConfigs
             .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
 
         if (config is null)
         {
-            throw new UserNotFoundException("User configuration not found.");
+            config = new Models.UserConfig
+            {
+                UserId = userId,
+                EditorFontSize = 11,
+                EmailNotificationsEnabled = false,
+                IsDarkMode = true,
+                IsHighContrast = false
+            };
+
+            _dbContext.UserConfigs.Add(config);
         }
 
         var emailBefore = config.EmailNotificationsEnabled;

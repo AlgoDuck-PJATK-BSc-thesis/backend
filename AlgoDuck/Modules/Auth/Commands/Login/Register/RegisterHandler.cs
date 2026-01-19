@@ -1,9 +1,11 @@
+using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using AlgoDuck.Shared.Utilities;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Auth.Commands.Login.Register;
 
@@ -14,19 +16,22 @@ public sealed class RegisterHandler : IRegisterHandler
     private readonly IValidator<RegisterDto> _validator;
     private readonly IConfiguration _configuration;
     private readonly IDefaultDuckService _defaultDuckService;
+    private readonly ApplicationCommandDbContext _dbContext;
 
     public RegisterHandler(
         UserManager<ApplicationUser> userManager,
         IEmailSender emailSender,
         IValidator<RegisterDto> validator,
         IConfiguration configuration,
-        IDefaultDuckService defaultDuckService)
+        IDefaultDuckService defaultDuckService,
+        ApplicationCommandDbContext dbContext)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _validator = validator;
         _configuration = configuration;
         _defaultDuckService = defaultDuckService;
+        _dbContext = dbContext;
     }
 
     public async Task<AuthUserDto> HandleAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -50,7 +55,7 @@ public sealed class RegisterHandler : IRegisterHandler
             UserName = dto.UserName,
             Email = dto.Email,
             EmailConfirmed = false
-        };
+        }.EnrichWithDefaults();
 
         var createResult = await _userManager.CreateAsync(user, dto.Password);
         if (!createResult.Succeeded)
@@ -62,6 +67,7 @@ public sealed class RegisterHandler : IRegisterHandler
         try
         {
             await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
+            await EnsureUserConfigExistsAsync(user.Id, cancellationToken);
 
             var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
             if (!addRoleResult.Succeeded)
@@ -73,7 +79,7 @@ public sealed class RegisterHandler : IRegisterHandler
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
 
-            await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email, confirmationLink, cancellationToken);
+            await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email ?? string.Empty, confirmationLink, cancellationToken);
 
             return new AuthUserDto
             {
@@ -90,16 +96,39 @@ public sealed class RegisterHandler : IRegisterHandler
         }
     }
 
+    private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.UserConfigs
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
+
+        if (exists)
+        {
+            return;
+        }
+
+        _dbContext.UserConfigs.Add(new UserConfig
+        {
+            UserId = userId,
+            EditorFontSize = 11,
+            EmailNotificationsEnabled = false,
+            IsDarkMode = true,
+            IsHighContrast = false
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private string BuildEmailConfirmationLink(Guid userId, string token)
     {
         var apiBaseUrl =
             _configuration["App:PublicApiUrl"] ??
-            "http://localhost:8080";
+            ("http:" + "/" + "/localhost:8080");
 
         var frontendBaseUrl =
             _configuration["App:FrontendUrl"] ??
             _configuration["CORS:DevOrigins:0"] ??
-            "http://localhost:5173";
+            ("http:" + "/" + "/localhost:5173");
 
         apiBaseUrl = apiBaseUrl.TrimEnd('/');
         frontendBaseUrl = frontendBaseUrl.TrimEnd('/');
