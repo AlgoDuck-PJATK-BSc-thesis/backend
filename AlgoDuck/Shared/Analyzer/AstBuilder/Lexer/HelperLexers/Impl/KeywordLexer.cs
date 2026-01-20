@@ -47,6 +47,7 @@ public class KeywordLexer(char[] fileChars, FilePosition filePosition, List<Toke
             "return" => CreateToken(TokenType.Return, startPos),
             "class" => CreateToken(TokenType.Class, startPos),
             "interface" => CreateToken(TokenType.Interface, startPos),
+            "record" => CreateToken(TokenType.Record, startPos),
             "enum" => CreateToken(TokenType.Enum, startPos),
             "extends" => CreateToken(TokenType.Extends, startPos),
             "implements" => CreateToken(TokenType.Implements, startPos),

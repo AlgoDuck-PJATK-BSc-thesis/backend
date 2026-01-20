@@ -39,8 +39,8 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
     {
         IItemTypeSpecificData? result = type switch
         {
-            "Duck" => await _dbContext.DuckItems.Where(d => d.ItemId == itemId).Select(d => new DuckData()).FirstOrDefaultAsync(cancellationToken: cancellationToken),
-            "Plant" => await _dbContext.PlantItems.Where(d => d.ItemId == itemId).Select(d => new PlantData
+            "duck" => await _dbContext.DuckItems.Where(d => d.ItemId == itemId).Select(d => new DuckData()).FirstOrDefaultAsync(cancellationToken: cancellationToken),
+            "plant" => await _dbContext.PlantItems.Where(d => d.ItemId == itemId).Select(d => new PlantData
             {
                 Height = d.Height,
                 Width = d.Width
@@ -80,12 +80,12 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
     {
         switch (itemType)
         {
-            case "Plant":
+            case "plant":
             {
                 var plantResult = await GetPlantOwnershipStatistics(itemId, cancellationToken);
                 return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(plantResult);
             }
-            case "Duck":
+            case "duck":
             {
                 var duckResult = await GetDuckOwnershipStatistics(itemId, cancellationToken);
                 return Result<ItemSpecificStatistics, ErrorObject<string>>.Ok(duckResult);
@@ -98,7 +98,7 @@ public class FullItemDetailsRepository : IFullItemDetailsRepository
     public async Task<Result<ItemPurchaseTimeseriesData, ErrorObject<string>>> GetItemPurchaseTimeseriesDataAsync(
         TimeSeriesDataRequest request, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Purchases.Where(p => p.PurchasedAt > request.StartDate);
+        var query = _dbContext.Purchases.Where(p => p.ItemId == request.ItemId && p.PurchasedAt > request.StartDate);
 
         var buckets = request.Granularity switch
         {

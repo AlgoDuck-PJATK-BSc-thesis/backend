@@ -10,13 +10,18 @@ public interface IFormStateLoadRepository
     public Task<Result<FullProblemDataDto, ErrorObject<string>>> GetFullProblemDataAsync(Guid problemId, CancellationToken cancellationToken = default);
 }
 
-public class FormStateLoadLoadRepository(
-    ApplicationQueryDbContext dbContext
-) : IFormStateLoadRepository
+public class FormStateLoadLoadRepository : IFormStateLoadRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public FormStateLoadLoadRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<FullProblemDataDto, ErrorObject<string>>> GetFullProblemDataAsync(Guid problemId, CancellationToken cancellationToken = default)
     {
-        var problem = await dbContext.Problems.Include(p => p.Tags)
+        var problem = await _dbContext.Problems.Include(p => p.Tags)
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken);    
         if (problem == null) 
             return Result<FullProblemDataDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"problem {problemId} not found"));

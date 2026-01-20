@@ -44,7 +44,7 @@ public sealed class CreateUserHandler : ICreateUserHandler
             UserName = username,
             Email = email,
             EmailConfirmed = dto.EmailVerified
-        };
+        }.EnrichWithDefaults();
 
         var create = await _userManager.CreateAsync(user, dto.Password);
         if (!create.Succeeded)

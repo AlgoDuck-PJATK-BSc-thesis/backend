@@ -10,13 +10,18 @@ public interface IAllItemRaritiesRepository
     public Task<Result<ICollection<ItemRarityDto>, ErrorObject<string>>> GetAllRaritiesAsync(CancellationToken cancellationToken = default);
 }
 
-public class AllItemRaritiesRepository(
-    ApplicationQueryDbContext dbContext
-) : IAllItemRaritiesRepository
+public class AllItemRaritiesRepository : IAllItemRaritiesRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public AllItemRaritiesRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<ICollection<ItemRarityDto>, ErrorObject<string>>> GetAllRaritiesAsync(CancellationToken cancellationToken = default)
     {
-        return Result<ICollection<ItemRarityDto>, ErrorObject<string>>.Ok(await dbContext.Rarities.Select(d => new ItemRarityDto
+        return Result<ICollection<ItemRarityDto>, ErrorObject<string>>.Ok(await _dbContext.Rarities.OrderBy(e => e.RarityLevel).Select(d => new ItemRarityDto
         {
             RarityId = d.RarityId,
             Name = d.RarityName

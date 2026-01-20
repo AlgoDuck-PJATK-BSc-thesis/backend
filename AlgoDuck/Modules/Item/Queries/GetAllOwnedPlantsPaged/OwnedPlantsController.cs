@@ -1,4 +1,3 @@
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -8,10 +7,15 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 
 [Route("api/user/item/plant")]
 [Authorize]
-public class OwnedPlantsController(
-    IOwnedPlantsService ownedPlantsService
-    ) : ControllerBase
+public class OwnedPlantsController : ControllerBase
 {
+    private readonly IOwnedPlantsService _ownedPlantsService;
+
+    public OwnedPlantsController(IOwnedPlantsService ownedPlantsService)
+    {
+        _ownedPlantsService = ownedPlantsService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetOwnedPlantsPagedAsync([FromQuery] int page,
         [FromQuery] int pageSize, CancellationToken cancellationToken)
@@ -20,7 +24,7 @@ public class OwnedPlantsController(
         if (userIdRes.IsErr)
             return userIdRes.ToActionResult();
 
-        var itemsResult = await ownedPlantsService.GetOwnedPlantsAsync(new OwnedItemsRequest
+        var itemsResult = await _ownedPlantsService.GetOwnedPlantsAsync(new OwnedItemsRequest
         {
             CurrPage = page,
             PageSize = pageSize,

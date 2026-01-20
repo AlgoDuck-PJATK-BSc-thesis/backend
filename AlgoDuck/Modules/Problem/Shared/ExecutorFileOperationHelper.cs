@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
@@ -68,6 +69,8 @@ public class ExecutorFileOperationHelper
             }
             """;
     }
+
+    private static readonly Regex VariablePatternRegex = new(@"\{tc_(\d+)_var_(\d+)\}", RegexOptions.Compiled);
 
     public required UserSolutionData UserSolutionData { get; set; }
 
@@ -143,18 +146,18 @@ public class ExecutorFileOperationHelper
 
     public void InsertTestCases(List<TestCaseJoined> testCases, CodeAnalysisResult analysisResult)
     {
-        Console.WriteLine(JsonSerializer.Serialize(testCases));
         UserSolutionData.FileContents.Append(JavaCode.NormalizerCode);
         
         NormalizeTestCaseVariables(testCases);
 
         NormalizeTestCaseMethodCalls(testCases, analysisResult);
 
-        foreach (var testCase in testCases)
+        foreach (var testCase in testCases.AsEnumerable().Reverse())
         {
-            ArrangeTestCase(testCase, analysisResult.MainClassName);
-            var assertedVarName = ActTestCase(testCase);
+            var assertedVarName = GenerateUniqueVariableName();
             AssertTestCase(testCase, assertedVarName);
+            ActTestCaseAtStart(testCase, assertedVarName);
+            ArrangeTestCaseAtStart(testCase, analysisResult.MainClassName);
         }
     }
     
@@ -163,10 +166,10 @@ public class ExecutorFileOperationHelper
         NormalizeTestCaseVariables(testCases);
         NormalizeTestCaseMethodCalls(testCases, analysisResult);
     
-        foreach (var testCaseJoined in testCases)
+        foreach (var testCaseJoined in testCases.Reverse())
         {
-            ArrangeTestCase(testCaseJoined, analysisResult.MainClassName);
-            ActTestCase(testCaseJoined);
+            ActTestCaseAtStart(testCaseJoined, GenerateUniqueVariableName());
+            ArrangeTestCaseAtStart(testCaseJoined, analysisResult.MainClassName);
         }
     }
 
@@ -184,39 +187,93 @@ public class ExecutorFileOperationHelper
             }
         }
     }
+
     private static void NormalizeTestCaseVariables(IEnumerable<TestCaseJoined> testCases)
     {
-        foreach (var (testCase, testCaseIndex) in testCases.Select((tc, i) => (tc, i)))
+        var testCasesList = testCases.ToList();
+        
+        var maxVariablesPerTestCase = FindMaxVariableIndices(testCasesList);
+        
+        for (var testCaseIndex = 0; testCaseIndex <= maxVariablesPerTestCase.Keys.DefaultIfEmpty(-1).Max(); testCaseIndex++)
         {
-            for (var varIndex = 0; varIndex < testCase.VariableCount; varIndex++)
+            if (!maxVariablesPerTestCase.TryGetValue(testCaseIndex, out var maxVarIndex))
+                continue;
+                
+            for (var varIndex = 0; varIndex <= maxVarIndex; varIndex++)
             {
                 var newVariableName = GenerateUniqueVariableName();
                 var interpolationPattern = $"{{tc_{testCaseIndex}_var_{varIndex}}}";
 
-                testCase.Setup = testCase.Setup.Replace(interpolationPattern, newVariableName);
-                testCase.Expected = testCase.Expected.Replace(interpolationPattern, newVariableName);
-                
-                for (var i = 0; i < testCase.Call.Length; i++)
+                foreach (var testCase in testCasesList)
                 {
-                    testCase.Call[i] = testCase.Call[i].Replace(interpolationPattern, newVariableName);
+                    testCase.Setup = testCase.Setup.Replace(interpolationPattern, newVariableName);
+                    testCase.Expected = testCase.Expected.Replace(interpolationPattern, newVariableName);
+                    
+                    for (var i = 0; i < testCase.Call.Length; i++)
+                    {
+                        testCase.Call[i] = testCase.Call[i].Replace(interpolationPattern, newVariableName);
+                    }
                 }
             }
         }
     }
 
-    private void ArrangeTestCase(TestCaseJoined testCase, string mainClassName)
+    private static Dictionary<int, int> FindMaxVariableIndices(IEnumerable<TestCaseJoined> testCases)
     {
-        var setup = testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName);
-        InsertAtEndOfMainMethod(setup);
+        var maxVariablesPerTestCase = new Dictionary<int, int>();
+
+        foreach (var testCase in testCases)
+        {
+            ScanForVariablePatterns(testCase.Setup, maxVariablesPerTestCase);
+            
+            ScanForVariablePatterns(testCase.Expected, maxVariablesPerTestCase);
+            
+            foreach (var call in testCase.Call)
+            {
+                ScanForVariablePatterns(call, maxVariablesPerTestCase);
+            }
+        }
+
+        return maxVariablesPerTestCase;
     }
 
-    private string ActTestCase(TestCaseJoined testCase)
+    private static void ScanForVariablePatterns(string content, Dictionary<int, int> maxVariablesPerTestCase)
+    {
+        if (string.IsNullOrEmpty(content))
+            return;
+
+        var matches = VariablePatternRegex.Matches(content);
+        
+        foreach (Match match in matches)
+        {
+            if (int.TryParse(match.Groups[1].Value, out var testCaseIndex) &&
+                int.TryParse(match.Groups[2].Value, out var varIndex))
+            {
+                if (maxVariablesPerTestCase.TryGetValue(testCaseIndex, out var currentMax))
+                {
+                    if (varIndex > currentMax)
+                    {
+                        maxVariablesPerTestCase[testCaseIndex] = varIndex;
+                    }
+                }
+                else
+                {
+                    maxVariablesPerTestCase[testCaseIndex] = varIndex;
+                }
+            }
+        }
+    }
+
+    private void ArrangeTestCaseAtStart(TestCaseJoined testCase, string mainClassName)
+    {
+        var setup = testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", mainClassName);
+        InsertAtStartOfMainMethod(setup + "\n\t\t");
+    }
+
+    private void ActTestCaseAtStart(TestCaseJoined testCase, string variableName)
     {
         var args = testCase.Call.Length == 0 ? "" : string.Join(",", testCase.Call);
-        var variableName = GuidToJavaVariableName(Guid.NewGuid());
-        
-        InsertAtEndOfMainMethod($"var {variableName} = {testCase.CallFunc}({args});");
-        return variableName;
+        InsertAtStartOfMainMethod($"var {variableName} = {testCase.CallFunc}({args});\n\t\t");
     }
 
     private void AssertTestCase(TestCaseJoined testCase, string assertedVarName)
@@ -228,7 +285,7 @@ public class ExecutorFileOperationHelper
             $"{JavaCode.NormalizerClassName}.normalize({testCase.Expected}, {orderMatters})" +
             $".equals({JavaCode.NormalizerClassName}.normalize({assertedVarName}, {orderMatters}))";
 
-        InsertAtEndOfMainMethod(CreateSignedPrintStatement(assertExpression, SigningType.Answer));
+        InsertAtStartOfMainMethod(CreateSignedPrintStatement(assertExpression, SigningType.Answer));
     }
 
 
@@ -272,7 +329,6 @@ public class ExecutorFileOperationHelper
 
     private static string GenerateUniqueVariableName()
     {
-        // Prefix with 'a' because Java variable names cannot start with numbers
         return $"a{Guid.NewGuid():N}";
     }
 

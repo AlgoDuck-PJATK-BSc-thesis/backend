@@ -1,5 +1,4 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +9,15 @@ namespace AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class UserSolutionsController(
-    IUserSolutionService userSolutionService
-    ) : ControllerBase
+public class UserSolutionsController : ControllerBase
 {
+    private readonly IUserSolutionService _userSolutionService;
+
+    public UserSolutionsController(IUserSolutionService userSolutionService)
+    {
+        _userSolutionService = userSolutionService;
+    }
+
     public async Task<IActionResult> GetAllUserSolutionsAsync([FromQuery] Guid problemId, [FromQuery] int pageSize, [FromQuery] int currentPage, CancellationToken cancellationToken)
     {
         
@@ -22,7 +26,7 @@ public class UserSolutionsController(
         if (userIdResult.IsErr)
             return userIdResult.ToActionResult();
 
-        var userSolutionResult = await userSolutionService.GetAllUserSolutionsAsync(new UserSolutionRequestDto
+        var userSolutionResult = await _userSolutionService.GetAllUserSolutionsAsync(new UserSolutionRequestDto
         {
             ProblemId = problemId,
            PagedRequestWithAttribution = new PagedRequestWithAttribution

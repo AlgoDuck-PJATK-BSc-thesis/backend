@@ -8,31 +8,37 @@ namespace AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 
 public interface ILoadAutoSaveRepository
 {
-    public Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> TryGetLastAutoSaveAsync(AutoSaveRequestDto request, CancellationToken cancellationToken = default);
+    public Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> TryGetLastAutoSaveAsync(AutoSaveRequestDto request,
+        CancellationToken cancellationToken = default);
 }
 
-public class LoadAutoSaveRepository(
-    ApplicationQueryDbContext dbContext,
-    IAwsS3Client s3Client
-) : ILoadAutoSaveRepository
+public class LoadAutoSaveRepository : ILoadAutoSaveRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+    private readonly IAwsS3Client _s3Client;
 
-    public async Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> TryGetLastAutoSaveAsync(AutoSaveRequestDto request, CancellationToken cancellationToken = default)
+    public LoadAutoSaveRepository(IAwsS3Client s3Client, ApplicationQueryDbContext dbContext)
     {
+        _s3Client = s3Client;
+        _dbContext = dbContext;
+    }
 
-        var result = await dbContext.UserSolutionSnapshots
+    public async Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> TryGetLastAutoSaveAsync(
+        AutoSaveRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var result = await _dbContext.UserSolutionSnapshots
             .Include(e => e.TestingSnapshotsResults)
             .FirstOrDefaultAsync(e => e.ProblemId == request.ProblemId && e.UserId == request.UserId,
                 cancellationToken: cancellationToken);
-        
+
         var objectPath = $"users/{request.UserId}/problems/autosave/{request.ProblemId}.xml";
 
-        var autoSaveGetResult = await s3Client.GetXmlObjectByPathAsync<AutoSaveDto>(objectPath, cancellationToken);
+        var autoSaveGetResult = await _s3Client.GetXmlObjectByPathAsync<AutoSaveDto>(objectPath, cancellationToken);
         if (autoSaveGetResult.IsErr)
             return Result<AutoSaveResponseDto?, ErrorObject<string>>.Err(autoSaveGetResult.AsT1);
 
         Console.WriteLine(autoSaveGetResult.AsOk!.UserCodeB64);
-        
+
         return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(new AutoSaveResponseDto
         {
             ProblemId = autoSaveGetResult.AsT0.ProblemId,
@@ -43,5 +49,5 @@ public class LoadAutoSaveRepository(
                 TestId = tr.TestCaseId
             }).ToList()
         });
-    }    
+    }
 }

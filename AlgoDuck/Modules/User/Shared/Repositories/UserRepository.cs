@@ -20,8 +20,7 @@ public sealed class UserRepository : IUserRepository
 
     public async Task<ApplicationUser?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
-        return await _queryDbContext.Users
-            .Include(u => u.UserConfig)
+        return await _commandDbContext.Users
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 

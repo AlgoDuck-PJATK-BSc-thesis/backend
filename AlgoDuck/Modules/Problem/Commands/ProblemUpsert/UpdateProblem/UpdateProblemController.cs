@@ -1,24 +1,24 @@
 using System.Text.Json;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertTypes;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpdateProblem;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "admin")]
+[EnableRateLimiting("CodeExecution")]
 public class UpdateProblemController : ControllerBase
 {
-
-   private readonly IUpdateProblemService updateProblemService;
+   private readonly IUpdateProblemService _updateProblemService;
 
    public UpdateProblemController(IUpdateProblemService updateProblemService)
    {
-      this.updateProblemService = updateProblemService;
+      _updateProblemService = updateProblemService;
    }
 
    [HttpPut]
@@ -27,15 +27,13 @@ public class UpdateProblemController : ControllerBase
       [FromQuery] Guid problemId,
       CancellationToken cancellationToken = default)
    {
-
       Console.WriteLine(JsonSerializer.Serialize(updateProblemDto));
-      Console.WriteLine(problemId);
       return await User
          .GetUserId()
          .BindAsync(async userId =>
          {
             updateProblemDto.RequestingUserId = userId;
-            return await updateProblemService.UpdateProblemAsync(updateProblemDto, problemId, cancellationToken);
+            return await _updateProblemService.UpdateProblemAsync(updateProblemDto, problemId, cancellationToken);
          }).ToActionResultAsync();
    }
 }

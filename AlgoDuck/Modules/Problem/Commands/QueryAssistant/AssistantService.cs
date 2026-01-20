@@ -2,13 +2,11 @@ using System.ClientModel;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.Http;
-using Microsoft.IdentityModel.Tokens;
 using OpenAI;
 using OpenAI.Chat;
 

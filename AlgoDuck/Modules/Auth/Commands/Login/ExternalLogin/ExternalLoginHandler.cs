@@ -48,7 +48,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
                 UserName = username,
                 Email = dto.Email,
                 EmailConfirmed = true
-            };
+            }.EnrichWithDefaults();
 
             for (var attempt = 0; attempt < 8; attempt++)
             {

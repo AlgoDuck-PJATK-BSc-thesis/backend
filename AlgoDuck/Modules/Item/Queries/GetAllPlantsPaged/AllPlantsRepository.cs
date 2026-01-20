@@ -11,13 +11,18 @@ public interface IAllPlantsRepository
     public Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default);
 }
 
-public class AllPlantsRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IAllPlantsRepository
+public class AllPlantsRepository : IAllPlantsRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public AllPlantsRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)
     {
-        var totalItems = await dbContext.PlantItems.CountAsync(cancellationToken);
+        var totalItems = await _dbContext.PlantItems.CountAsync(cancellationToken);
 
         var pageCount = (int) Math.Ceiling((float) totalItems / pagedRequest.PageSize);
         
@@ -30,7 +35,7 @@ public class AllPlantsRepository(
             TotalItems = totalItems,
             NextCursor = actualPage < pageCount ? actualPage + 1 : null,
             PrevCursor = actualPage > 1 ? actualPage - 1 : null,
-            Items = await dbContext.PlantItems
+            Items = await _dbContext.PlantItems
                 .Include(i => i.Purchases).ThenInclude(p => p.User)
                 .Include(i => i.Rarity)
                 .Where(i => i.Purchasable)

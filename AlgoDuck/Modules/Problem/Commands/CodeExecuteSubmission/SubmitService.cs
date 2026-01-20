@@ -25,15 +25,23 @@ public interface IExecutorSubmitService
 
 }
 
-internal sealed class SubmitService(
-    IRabbitMqConnectionService rabbitMqConnectionService,
-    IExecutorSubmitRepository executorSubmitRepository,
-    IOptions<MessageQueuesConfig> messageQueuesConfig,
-    IDatabase redis,
-    ISharedProblemRepository sharedProblemRepository
-    ) : IExecutorSubmitService, IAsyncDisposable
+internal sealed class SubmitService : IExecutorSubmitService, IAsyncDisposable
 {
     private IChannel? _channel;
+
+    private readonly IRabbitMqConnectionService _rabbitMqConnectionService;
+    private readonly IOptions<MessageQueuesConfig> _messageQueuesConfig;
+    private readonly IDatabase _redis;
+    private readonly ISharedProblemRepository _sharedProblemRepository;
+
+    public SubmitService(ISharedProblemRepository sharedProblemRepository, IDatabase redis, IOptions<MessageQueuesConfig> messageQueuesConfig, IRabbitMqConnectionService rabbitMqConnectionService)
+    {
+        _sharedProblemRepository = sharedProblemRepository;
+        _redis = redis;
+        _messageQueuesConfig = messageQueuesConfig;
+        _rabbitMqConnectionService = rabbitMqConnectionService;
+    }
+
 
     private async Task<IChannel> GetChannelAsync(CancellationToken cancellationToken = default)
     {
@@ -41,11 +49,11 @@ internal sealed class SubmitService(
         {
             return _channel;
         }
-        var connection = await rabbitMqConnectionService.GetConnection(cancellationToken);
+        var connection = await _rabbitMqConnectionService.GetConnection(cancellationToken);
         _channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
         
         await _channel.QueueDeclareAsync(
-            queue: messageQueuesConfig.Value.Execution.Write,
+            queue: _messageQueuesConfig.Value.Execution.Write,
             durable: true,
             exclusive: false,
             autoDelete: false, cancellationToken: cancellationToken);
@@ -72,12 +80,12 @@ internal sealed class SubmitService(
             JobType = JobType.Testing
         };
         
-        await redis.StringSetAsync(
+        await _redis.StringSetAsync(
             new RedisKey(jobData.JobId.ToString()),
             new RedisValue(JsonSerializer.Serialize(jobData)),
             TimeSpan.FromMinutes(5));
         
-        var exerciseTemplateResult = await sharedProblemRepository.GetTemplateAsync(submission.ProblemId, cancellationToken: cancellationToken);
+        var exerciseTemplateResult = await _sharedProblemRepository.GetTemplateAsync(submission.ProblemId, cancellationToken: cancellationToken);
         if (exerciseTemplateResult.IsErr)
             Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Template for problem {submission.ProblemId} not found"));
@@ -90,6 +98,10 @@ internal sealed class SubmitService(
             codeAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Submission);
             userSolutionData.IngestCodeAnalysisResult(codeAnalysisResult);
         }
+        catch (EntryPointNotFoundException ex)
+        {
+            return Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Code entrypoint not found. Exiting early"));
+        }
         catch (JavaSyntaxException ex)
         {
             return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
@@ -100,15 +112,13 @@ internal sealed class SubmitService(
             UserSolutionData = userSolutionData
         };
 
-        var testCases = await sharedProblemRepository.GetTestCasesAsync(submission.ProblemId, cancellationToken);
+        var testCases = await _sharedProblemRepository.GetTestCasesAsync(submission.ProblemId, cancellationToken);
         
         if (testCases.IsErr)
             Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Test cases for problem {submission.ProblemId} not found"));
 
-        Console.WriteLine(helper.UserSolutionData.FileContents);
         helper.InsertTestCases(testCases.AsT0.ToList(), codeAnalysisResult);
-        Console.WriteLine(helper.UserSolutionData.FileContents);
 
         return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
     }
@@ -126,7 +136,7 @@ internal sealed class SubmitService(
 
         await channel.BasicPublishAsync(
             exchange: "",
-            routingKey: messageQueuesConfig.Value.Execution.Write, 
+            routingKey: _messageQueuesConfig.Value.Execution.Write, 
             mandatory: false,
             basicProperties: new BasicProperties
             {

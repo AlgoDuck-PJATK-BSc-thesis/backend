@@ -10,13 +10,18 @@ public interface IAllItemsPagedRepository
     public Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default);
 }
 
-public class AllItemsPagedRepository(
-    ApplicationQueryDbContext dbContext
-) : IAllItemsPagedRepository
+public class AllItemsPagedRepository : IAllItemsPagedRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public AllItemsPagedRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default)
     {
-        var totalItemCount = await dbContext.Items.CountAsync(cancellationToken);
+        var totalItemCount = await _dbContext.Items.CountAsync(cancellationToken);
         var totalPagesCount = (int) Math.Ceiling(totalItemCount / (double)itemRequest.PageSize);
         
         if (totalPagesCount <= 0)
@@ -24,7 +29,7 @@ public class AllItemsPagedRepository(
         
         var actualPage = Math.Clamp(itemRequest.CurrPage, 1, totalPagesCount);
         
-        var itemQueryBase = dbContext.Items
+        var itemQueryBase = _dbContext.Items
             .Include(i => i.Purchases);
 
         var itemsOrdered = itemRequest.FurtherData.OrderBy switch

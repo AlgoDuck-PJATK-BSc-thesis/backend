@@ -7,12 +7,17 @@ public interface IAllDifficultiesService
     public Task<Result<ICollection<DifficultyDto>, ErrorObject<string>>> GetAllDifficultiesAsync(CancellationToken cancellationToken = default);
 }
 
-public class AllDifficultiesService(
-    IAllDifficultiesRepository allDifficultiesRepository
-    ) : IAllDifficultiesService
+public class AllDifficultiesService : IAllDifficultiesService
 {
+    private readonly IAllDifficultiesRepository _allDifficultiesRepository;
+
+    public AllDifficultiesService(IAllDifficultiesRepository allDifficultiesRepository)
+    {
+        _allDifficultiesRepository = allDifficultiesRepository;
+    }
+
     public async Task<Result<ICollection<DifficultyDto>, ErrorObject<string>>> GetAllDifficultiesAsync(CancellationToken cancellationToken = default)
     {
-        return await allDifficultiesRepository.GetAllDifficultiesAsync(cancellationToken);
+        return await _allDifficultiesRepository.GetAllDifficultiesAsync(cancellationToken);
     }
 }

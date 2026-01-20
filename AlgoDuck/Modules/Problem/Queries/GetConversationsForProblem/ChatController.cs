@@ -8,16 +8,21 @@ namespace AlgoDuck.Modules.Problem.Queries.GetConversationsForProblem;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ChatController(
-    IChatService chatService
-    ) : ControllerBase
+public class ChatController : ControllerBase
 {
+    private readonly IChatService _chatService;
+
+    public ChatController(IChatService chatService)
+    {
+        _chatService = chatService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllChatsForProblemAsync([FromQuery] Guid problemId, CancellationToken cancellationToken)
     {
         return Ok(new StandardApiResponse<ChatList>
         {
-            Body = await chatService.GetChatsForProblemAsync(new ChatListRequestDto()
+            Body = await _chatService.GetChatsForProblemAsync(new ChatListRequestDto()
             {
                 ProblemId = problemId,
                 UserId = User.GetUserId()
@@ -26,45 +31,7 @@ public class ChatController(
     }
 }
 
-public interface IChatService
-{
-    public Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken);
-}
 
-public class ChatService(
-    IChatRepository chatRepository
-    ) : IChatService
-{
-    public async Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken)
-    {
-        return await chatRepository.GetChatsForProblemAsync(request, cancellationToken);
-    }
-}
-
-public interface IChatRepository
-{
-    public Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken);
-}
-
-public class ChatRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IChatRepository
-{
-    public async Task<ChatList> GetChatsForProblemAsync(ChatListRequestDto request, CancellationToken cancellationToken)
-    {
-        return new ChatList
-        {
-            Chats = await dbContext.AssistantChats
-                .Include(c => c.Messages)
-                .Where(c => c.ProblemId == request.ProblemId && c.UserId == request.UserId && c.Messages.Count > 0)
-                .Select(c => new ChatDetail
-                {
-                    ChatName = c.Name,
-                    ChatId = c.Id
-                }).ToListAsync(cancellationToken: cancellationToken) 
-        };
-    }
-}
 
 public class ChatListRequestDto
 {

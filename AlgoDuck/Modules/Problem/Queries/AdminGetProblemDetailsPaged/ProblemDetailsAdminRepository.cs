@@ -49,8 +49,7 @@ public class PagedProblemDetailsAdminRepository : IPagedProblemDetailsAdminRepos
             FetchableColumn.CompletionRatio => problemQueryBase.OrderBy(i =>
                 i.CodeExecutionStatistics.Count == 0
                     ? 0f
-                    : (float)i.CodeExecutionStatistics.Count(e => e.TestCaseResult == TestCaseResult.Accepted) /
-                      i.CodeExecutionStatistics.Count),
+                    : (float)i.CodeExecutionStatistics.Count(e => e.TestCaseResult == TestCaseResult.Accepted) / i.CodeExecutionStatistics.Count),
             FetchableColumn.Difficulty => problemQueryBase.OrderBy(i => i.Difficulty.DifficultyName),
             FetchableColumn.ProblemId => problemQueryBase.OrderBy(i => i.ProblemId),
             FetchableColumn.Name => problemQueryBase.OrderBy(i => i.ProblemTitle),

@@ -707,6 +707,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("rarity_id");
 
+                    b.Property<int>("RarityLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("rarity_level");
+
                     b.Property<string>("RarityName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1286,7 +1290,7 @@ namespace AlgoDuck.Migrations
                 {
                     b.HasBaseType("AlgoDuck.Models.Item");
 
-                    b.HasDiscriminator().HasValue("Duck");
+                    b.HasDiscriminator().HasValue("duck");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PlantItem", b =>
@@ -1301,7 +1305,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("plant_width");
 
-                    b.HasDiscriminator().HasValue("Plant");
+                    b.HasDiscriminator().HasValue("plant");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.DuckOwnership", b =>
@@ -1316,7 +1320,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("duck_selected_for_pond");
 
-                    b.HasDiscriminator().HasValue("Duck");
+                    b.HasDiscriminator().HasValue("duck");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PlantOwnership", b =>
@@ -1331,7 +1335,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("plant_grid_y");
 
-                    b.HasDiscriminator().HasValue("Plant");
+                    b.HasDiscriminator().HasValue("plant");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>

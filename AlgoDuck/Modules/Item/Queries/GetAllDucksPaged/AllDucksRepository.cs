@@ -12,7 +12,6 @@ public interface IAllDucksRepository
 
 public class AllDucksRepository : IAllDucksRepository
 {
-
     private readonly ApplicationQueryDbContext _dbContext;
 
     public AllDucksRepository(ApplicationQueryDbContext dbContext)

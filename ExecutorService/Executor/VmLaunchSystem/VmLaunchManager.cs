@@ -79,7 +79,9 @@ public sealed class VmLaunchManager : IAsyncDisposable
         _oversubManager = new VmOversubManager(_activeVms, _defaultResourceAllocations);
     }
 
-    private async Task<Guid> DispatchVmAsync(FilesystemType filesystemType, string? vmName = null,
+    private async Task<Guid> DispatchVmAsync(
+        FilesystemType filesystemType,
+        string? vmName = null,
         CancellationToken ct = default)
     {
         using var activity = new Activity("DispatchVm").Start();
@@ -102,7 +104,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
             VmId = vmId,
             VmName = vmName ?? GenerateName(),
             AllocatedResources = _defaultResourceAllocations[filesystemType],
-            FilesystemId = await _pooler.EnqueueFilesystemRequestAsync(filesystemType),
+            FilesystemId = await _pooler.EnqueueFilesystemRequestAsync(filesystemType, ct),
             GuestCid = guestCid,
             VmType = filesystemType,
             VsockPath = $"/var/algoduck/vsocks/{vmId}.vsock",
@@ -129,14 +131,14 @@ public sealed class VmLaunchManager : IAsyncDisposable
         var sw = Stopwatch.StartNew();
         launchProcess.Start();
 
-        using var processCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        processCts.CancelAfter(_config.Timeouts.VmLaunchTimeout);
+        using var launchTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        launchTimeoutCts.CancelAfter(_config.Timeouts.VmLaunchTimeout);
 
         try
         {
-            await launchProcess.WaitForExitAsync(processCts.Token);
+            await launchProcess.WaitForExitAsync(launchTimeoutCts.Token);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (launchTimeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
         {
             launchProcess.Kill(entireProcessTree: true);
             throw new TimeoutException($"VM launch timed out after {_config.Timeouts.VmLaunchTimeout}");
@@ -176,7 +178,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
         _activeVms[vmId] = createdVmConfig;
 
         if (filesystemType != FilesystemType.Compiler) return vmId;
-        
+
         _logger.LogDebug("Extracting file hashes for compiler VM {VmId}", vmId);
         var res = await QueryVmAsync<VmHealthCheckPayload, VmCompilerHealthCheckResponse>(
             new VmJobRequest<VmHealthCheckPayload>
@@ -189,7 +191,6 @@ public sealed class VmLaunchManager : IAsyncDisposable
                 }
             }, ct);
         _activeVms[vmId].FileHashes = res.FileHashes;
-        Console.WriteLine(JsonSerializer.Serialize(res.FileHashes));
         _logger.LogDebug("Compiler VM {VmId} ready with {HashCount} file hashes", vmId, res.FileHashes.Count);
 
         return vmId;
@@ -211,23 +212,47 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
         vmConfig.ServicedJobs.Add(jobRequest.JobId);
 
+        using var timeoutCts = new CancellationTokenSource(_config.Timeouts.QueryTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            return await ExecuteVsockQueryAsync<T, TResult>(vmConfig, jobRequest, linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning("Job {JobId} on VM {VmId} timed out, terminating VM",
+                jobRequest.JobId, jobRequest.VmId);
+            TerminateVm(jobRequest.VmId, preserveFilesystem: false);
+
+            throw new VmQueryTimedOutException();
+        }
+    }
+
+    private async Task<TResult> ExecuteVsockQueryAsync<T, TResult>(
+        VmConfig vmConfig,
+        VmJobRequest<T> jobRequest,
+        CancellationToken ct)
+        where T : VmPayload
+        where TResult : VmInputResponse
+    {
         var retryPolicy = Policy
             .Handle<SocketException>()
             .Or<IOException>()
-            .Or<TimeoutException>()
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100),
                 onRetry: (exception, delay, attempt, _) =>
                 {
-                    Console.WriteLine(
-                        $"Retry {attempt} for VM {jobRequest.VmId} after {delay.TotalMilliseconds}ms due to: {exception.Message}");
+                    _logger.LogDebug(
+                        "Retry {Attempt} for VM {VmId} after {Delay}ms due to: {Message}",
+                        attempt, jobRequest.VmId, delay.TotalMilliseconds, exception.Message);
                 });
 
-        return await retryPolicy.ExecuteAsync(async (cancellationToken) =>
+        return await retryPolicy.ExecuteAsync(async () =>
         {
             using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            await socket.ConnectAsync(new UnixDomainSocketEndPoint(vmConfig.VsockPath!), cancellationToken);
+            await socket.ConnectAsync(new UnixDomainSocketEndPoint(vmConfig.VsockPath!), ct);
 
             await using var stream = new NetworkStream(socket, ownsSocket: false);
             await using var writer = new StreamWriter(stream, new UTF8Encoding(false));
@@ -236,7 +261,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
             await writer.WriteLineAsync("CONNECT 5050");
 
-            var connectResponse = await reader.ReadLineAsync(cancellationToken);
+            var connectResponse = await reader.ReadLineAsync(ct);
             if (connectResponse == null || !connectResponse.StartsWith("OK "))
             {
                 throw new IOException($"Vsock connect failed: {connectResponse}");
@@ -244,13 +269,14 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
             var payload = JsonSerializer.Serialize<VmPayload>(jobRequest.Payload);
             await writer.WriteAsync(payload);
-            await stream.WriteAsync(new byte[] { 0x04 }, cancellationToken);
+            await stream.WriteAsync(new byte[] { 0x04 }, ct);
 
             var buffer = new StringBuilder();
             var charBuffer = new char[4096];
+
             while (true)
             {
-                var bytesRead = await reader.ReadAsync(charBuffer, cancellationToken);
+                var bytesRead = await reader.ReadAsync(charBuffer, ct);
                 if (bytesRead == 0) break;
 
                 var chunk = new string(charBuffer, 0, bytesRead);
@@ -266,7 +292,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
             return JsonSerializer.Deserialize<TResult>(buffer.ToString(), _defaultSerializerOptions)
                    ?? throw new InvalidOperationException("Failed to deserialize response");
-        }, ct);
+        });
     }
 
     public bool TerminateVm(Guid vmId, bool preserveFilesystem)
@@ -352,7 +378,9 @@ public sealed class VmLaunchManager : IAsyncDisposable
         return channel.Writer.TryWrite(vmConfig);
     }
 
-    public async Task<VmLease> AcquireVmAsync(FilesystemType filesystemType, string? vmName = null,
+    public async Task<VmLease> AcquireVmAsync(
+        FilesystemType filesystemType,
+        string? vmName = null,
         CancellationToken ct = default)
     {
         var vmId = await DispatchVmAsync(filesystemType, vmName, ct);
@@ -361,7 +389,7 @@ public sealed class VmLaunchManager : IAsyncDisposable
 
     private static string GenerateName()
     {
-        return $"vm-{Guid.NewGuid():N}".Substring(0, 16);
+        return $"vm-{Guid.NewGuid():N}"[..16];
     }
 
     public async ValueTask DisposeAsync()

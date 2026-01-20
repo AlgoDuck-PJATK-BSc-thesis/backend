@@ -14,19 +14,27 @@ using StackExchange.Redis;
 
 namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
-
 public interface IExecutorDryRunService
 {
-    internal Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> DryRunUserCodeAsync(DryRunExecuteRequest request, CancellationToken cancellationToken = default);
+    internal Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> DryRunUserCodeAsync(
+        DryRunExecuteRequest request, CancellationToken cancellationToken = default);
 }
 
-internal sealed class DryRunService(
-    IRabbitMqConnectionService rabbitMqConnectionService,
-    IOptions<MessageQueuesConfig> messageQueuesConfig,
-    IDatabase redis
-    ) : IExecutorDryRunService, IAsyncDisposable
+internal sealed class DryRunService : IExecutorDryRunService, IAsyncDisposable
 {
+    private readonly IRabbitMqConnectionService _rabbitMqConnectionService;
+    private readonly IOptions<MessageQueuesConfig> _messageQueuesConfig;
+    private readonly IDatabase _redis;
+
     private IChannel? _channel;
+
+    public DryRunService(IDatabase redis, IOptions<MessageQueuesConfig> messageQueuesConfig,
+        IRabbitMqConnectionService rabbitMqConnectionService)
+    {
+        _redis = redis;
+        _messageQueuesConfig = messageQueuesConfig;
+        _rabbitMqConnectionService = rabbitMqConnectionService;
+    }
 
     private async Task<IChannel> GetChannelAsync(CancellationToken cancellationToken = default)
     {
@@ -34,19 +42,21 @@ internal sealed class DryRunService(
         {
             return _channel;
         }
-        var connection = await rabbitMqConnectionService.GetConnection(cancellationToken);
+
+        var connection = await _rabbitMqConnectionService.GetConnection(cancellationToken);
         _channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        
+
         await _channel.QueueDeclareAsync(
-            queue: messageQueuesConfig.Value.Execution.Write,
+            queue: _messageQueuesConfig.Value.Execution.Write,
             durable: true,
             exclusive: false,
             autoDelete: false, cancellationToken: cancellationToken);
-        
+
         return _channel;
     }
 
-    public async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> DryRunUserCodeAsync(DryRunExecuteRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> DryRunUserCodeAsync(
+        DryRunExecuteRequest request, CancellationToken cancellationToken = default)
     {
         var userSolutionData = new UserSolutionData
         {
@@ -71,18 +81,19 @@ internal sealed class DryRunService(
             return await SendExecutionRequestToQueueAsync(userSolutionData, request.UserId, cancellationToken);
         }
 
-        await redis.StringSetAsync(
+        await _redis.StringSetAsync(
             new RedisKey(userSolutionData.ExecutionId.ToString()),
             new RedisValue(JsonSerializer.Serialize(jobData)),
             TimeSpan.FromMinutes(5));
-        
+
         return await SendExecutionRequestToQueueAsync(userSolutionData, request.UserId, cancellationToken);
     }
-    
-    private async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> SendExecutionRequestToQueueAsync(UserSolutionData userSolutionData, Guid userId, CancellationToken cancellationToken = default)
+
+    private async Task<Result<ExecutionEnqueueingResultDto, ErrorObject<string>>> SendExecutionRequestToQueueAsync(
+        UserSolutionData userSolutionData, Guid userId, CancellationToken cancellationToken = default)
     {
         var channel = await GetChannelAsync(cancellationToken);
-        
+
         var innerBody = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new SubmitExecuteRequestRabbit
         {
             JobId = userSolutionData.ExecutionId,
@@ -92,15 +103,15 @@ internal sealed class DryRunService(
 
         await channel.BasicPublishAsync(
             exchange: "",
-            routingKey: messageQueuesConfig.Value.Execution.Write, 
+            routingKey: _messageQueuesConfig.Value.Execution.Write,
             mandatory: false,
             basicProperties: new BasicProperties
             {
                 Persistent = true
             },
-            body: innerBody, 
+            body: innerBody,
             cancellationToken: cancellationToken);
-        
+
         return Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Ok(new ExecutionEnqueueingResultDto
         {
             JobId = userSolutionData.ExecutionId,

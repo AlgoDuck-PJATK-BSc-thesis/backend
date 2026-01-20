@@ -6,10 +6,9 @@ namespace AlgoDuck.Models;
 
 public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfiguration<ApplicationUser>
 {
-    public ApplicationUser()
+
+    public ApplicationUser EnrichWithDefaults()
     {
-        Id = Guid.NewGuid();
-        
         EditorLayouts = new List<OwnsLayout>
         {
             new()
@@ -29,6 +28,15 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
                 LayoutId = Guid.Parse("b9647438-6bec-45e6-a942-207dc40be273")
             }
         };
+
+        UserConfig = new UserConfig
+        {
+            UserId = Id,
+            IsDarkMode = true,
+            IsHighContrast = true,
+            EmailNotificationsEnabled = false,
+        };
+        return this;
     }
     
     public int Coins { get; set; }

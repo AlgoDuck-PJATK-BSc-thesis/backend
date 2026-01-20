@@ -1,3 +1,5 @@
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats.Types;
+
 namespace AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin.Types;
 
 public class ProblemStatsDto

@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace AlgoDuck.Modules.Item.Queries.AdminGetFullItemDetails.Types;
 
-[JsonDerivedType(typeof(DuckData), "Duck")]
-[JsonDerivedType(typeof(PlantData), "Plant")]
+[JsonDerivedType(typeof(DuckData), "duck")]
+[JsonDerivedType(typeof(PlantData), "plant")]
 public interface IItemTypeSpecificData;
 
 public class DuckData : IItemTypeSpecificData;

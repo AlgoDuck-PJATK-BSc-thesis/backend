@@ -1,10 +1,9 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+namespace AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 
 public interface IOwnedItemsRepository
 {
@@ -12,14 +11,18 @@ public interface IOwnedItemsRepository
         CancellationToken cancellationToken = default);
 }
 
-public class OwnedUsedItemsRepository(
-    ApplicationQueryDbContext dbContext
-) : IOwnedItemsRepository
+public class OwnedUsedItemsRepository : IOwnedItemsRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public OwnedUsedItemsRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<OwnedItemsDto, ErrorObject<string>>> GetOwnedItemsByUserId(Guid userId,
         CancellationToken cancellationToken = default)
     {
-        
         var ownedPlantsRes =  await GetOwnedUsedPlants(userId, cancellationToken);
         if (ownedPlantsRes.IsErr)
             return Result<OwnedItemsDto, ErrorObject<string>>.Err(ownedPlantsRes.AsT1);
@@ -38,7 +41,7 @@ public class OwnedUsedItemsRepository(
     private async Task<Result<ICollection<OwnedDuckItemDto>, ErrorObject<string>>> GetOwnedUsedDucks(Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return Result<ICollection<OwnedDuckItemDto>, ErrorObject<string>>.Ok(await dbContext.DuckOwnerships
+        return Result<ICollection<OwnedDuckItemDto>, ErrorObject<string>>.Ok(await _dbContext.DuckOwnerships
             .Where(e => e.UserId == userId && e.SelectedForPond).Select(d => new OwnedDuckItemDto()
             {
                 ItemId = d.ItemId,
@@ -50,7 +53,7 @@ public class OwnedUsedItemsRepository(
     private async Task<Result<ICollection<OwnedPlantItemDto>, ErrorObject<string>>> GetOwnedUsedPlants(Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var ownedPlants = await dbContext.PlantOwnerships
+        var ownedPlants = await _dbContext.PlantOwnerships
             .Include(e => e.Item)
             .Where(e => e.UserId == userId && e.GridX != null && e.GridY != null)
             .ToListAsync(cancellationToken);

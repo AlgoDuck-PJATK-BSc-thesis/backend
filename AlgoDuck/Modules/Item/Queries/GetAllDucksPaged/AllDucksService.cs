@@ -10,12 +10,11 @@ public interface IAllDucksService
 
 public class AllDucksService : IAllDucksService
 {
-
     private readonly IAllDucksRepository _allDucksRepository;
 
     public AllDucksService(IAllDucksRepository allDucksRepository)
     {
-        this._allDucksRepository = allDucksRepository;
+        _allDucksRepository = allDucksRepository;
     }
 
     public async Task<Result<PageData<DuckItemDto>, ErrorObject<string>>> GetAllDucksPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)

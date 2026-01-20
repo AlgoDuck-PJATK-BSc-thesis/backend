@@ -1,23 +1,31 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 
 public interface IProblemCategoriesRepository
 {
-    public Task<IEnumerable<CategoryDto>> GetAllAsync();
+    public Task<Result<IEnumerable<CategoryDto>, ErrorObject<string>>> GetAllAsync(CancellationToken cancellationToken = default);
+    
 }
 
-public class ProblemCategoriesRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IProblemCategoriesRepository
+public class ProblemCategoriesRepository : IProblemCategoriesRepository
 {
-    public async Task<IEnumerable<CategoryDto>> GetAllAsync()
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public ProblemCategoriesRepository(ApplicationQueryDbContext dbContext)
     {
-        return await dbContext.Categories.Select(c => new CategoryDto
-        {
-            CategoryId = c.CategoryId,
-            CategoryName = c.CategoryName,
-        }).ToListAsync();
+        _dbContext = dbContext;
+    }
+
+    public async Task<Result<IEnumerable<CategoryDto>, ErrorObject<string>>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return Result<IEnumerable<CategoryDto>, ErrorObject<string>>.Ok(await _dbContext.Categories.Select(c =>
+            new CategoryDto
+            {
+                CategoryId = c.CategoryId,
+                CategoryName = c.CategoryName,
+            }).ToListAsync(cancellationToken: cancellationToken));
     }
 }

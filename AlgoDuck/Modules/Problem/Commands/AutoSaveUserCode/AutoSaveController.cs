@@ -1,4 +1,3 @@
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
@@ -10,10 +9,15 @@ namespace AlgoDuck.Modules.Problem.Commands.AutoSaveUserCode;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AutoSaveController(
-    IAutoSaveService autoSaveService
-) : ControllerBase
+public class AutoSaveController : ControllerBase
 {
+    private readonly IAutoSaveService _autoSaveService;
+
+    public AutoSaveController(IAutoSaveService autoSaveService)
+    {
+        _autoSaveService = autoSaveService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> AutoSaveCodeAsync([FromBody] AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken)
@@ -23,7 +27,7 @@ public class AutoSaveController(
             .BindAsync(async idResult =>
             {
                 autoSaveDto.UserId = idResult;
-                return await autoSaveService.AutoSaveCodeAsync(autoSaveDto, cancellationToken);
+                return await _autoSaveService.AutoSaveCodeAsync(autoSaveDto, cancellationToken);
             }).ToActionResultAsync("autosave completed successfully");
     }
 }

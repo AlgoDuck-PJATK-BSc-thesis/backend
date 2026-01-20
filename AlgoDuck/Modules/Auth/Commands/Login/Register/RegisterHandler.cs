@@ -50,7 +50,7 @@ public sealed class RegisterHandler : IRegisterHandler
             UserName = dto.UserName,
             Email = dto.Email,
             EmailConfirmed = false
-        };
+        }.EnrichWithDefaults();
 
         var createResult = await _userManager.CreateAsync(user, dto.Password);
         if (!createResult.Succeeded)

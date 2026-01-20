@@ -15,16 +15,28 @@ using StackExchange.Redis;
 
 namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.CreateProblem;
 
-public class CreateProblemService(
-    IRabbitMqChannelFactory channelFactory,
-    ITestCaseProcessor testCaseProcessor,
-    IValidationJobPublisher validationJobPublisher,
-    ICreateProblemRepository createProblemRepository,
-    IOptions<MessageQueuesConfig> channelData,
-    IDatabase redis
-
-) : ICreateProblemService
+public class CreateProblemService : ICreateProblemService
 {
+    private readonly IRabbitMqChannelFactory _channelFactory;
+    private readonly ITestCaseProcessor _testCaseProcessor;
+    private readonly IValidationJobPublisher _validationJobPublisher;
+    private readonly ICreateProblemRepository _createProblemRepository;
+    private readonly IOptions<MessageQueuesConfig> _channelData;
+    private readonly IDatabase _redis;
+
+    public CreateProblemService(IRabbitMqChannelFactory channelFactory, ITestCaseProcessor testCaseProcessor,
+        IValidationJobPublisher validationJobPublisher, ICreateProblemRepository createProblemRepository,
+        IOptions<MessageQueuesConfig> channelData, IDatabase redis)
+    {
+        _channelFactory = channelFactory;
+        _testCaseProcessor = testCaseProcessor;
+        _validationJobPublisher = validationJobPublisher;
+        _createProblemRepository = createProblemRepository;
+        _channelData = channelData;
+        _redis = redis;
+    }
+
+
     public async Task<Result<UpsertProblemResultDto, ErrorObject<string>>> CreateProblemAsync(
         UpsertProblemDto problemDto,
         CancellationToken cancellationToken = default)
@@ -35,11 +47,11 @@ public class CreateProblemService(
 
         var (solutionData, analyzer, codeAnalysis) = analysisResult.AsT0;
 
-        var testCaseResult = testCaseProcessor.ProcessTestCases(
+        var testCaseResult = _testCaseProcessor.ProcessTestCases(
             problemDto.TestCases,
             analyzer,
             codeAnalysis);
-        
+
         if (testCaseResult.IsErr)
             return Result<UpsertProblemResultDto, ErrorObject<string>>.Err(testCaseResult.AsErr!);
 
@@ -49,18 +61,18 @@ public class CreateProblemService(
         helper.InsertTestCases(problemDto.TestCaseJoins, codeAnalysis);
 
 
-        var channel = await channelFactory.GetChannelAsync(new ChannelDeclareDto
+        var channel = await _channelFactory.GetChannelAsync(new ChannelDeclareDto
             {
-                ChannelName = channelData.Value.Validation.Read,
+                ChannelName = _channelData.Value.Validation.Read,
                 QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
             },
             new ChannelDeclareDto
             {
-                ChannelName = channelData.Value.Validation.Write,
+                ChannelName = _channelData.Value.Validation.Write,
                 QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
             });
 
-        await validationJobPublisher.PublishAsync(channel, solutionData, cancellationToken);
+        await _validationJobPublisher.PublishAsync(channel, solutionData, cancellationToken);
 
         return await PersistProblemAndCacheJob(problemDto, solutionData, cancellationToken);
     }
@@ -95,7 +107,7 @@ public class CreateProblemService(
         UserSolutionData solutionData,
         CancellationToken cancellationToken)
     {
-        return await createProblemRepository
+        return await _createProblemRepository
             .CreateProblemAsync(problemDto, cancellationToken)
             .BindAsync(async problemId =>
             {
@@ -106,7 +118,7 @@ public class CreateProblemService(
                     UpsertJobType = UpsertJobType.Insert
                 };
 
-                await redis.StringSetAsync(
+                await _redis.StringSetAsync(
                     new RedisKey(solutionData.ExecutionId.ToString()),
                     new RedisValue(JsonSerializer.Serialize(jobData)),
                     TimeSpan.FromMinutes(5));

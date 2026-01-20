@@ -25,21 +25,26 @@ public interface ICreateProblemRepository
         CancellationToken cancellationToken = default);
 }
 
-public class CreateProblemRepository(
-    ApplicationCommandDbContext dbContext,
-    IAwsS3Client s3Client
-) : ICreateProblemRepository
+public class CreateProblemRepository : ICreateProblemRepository
 {
+    private readonly ApplicationCommandDbContext _dbContext;
+    private readonly IAwsS3Client _s3Client;
+
+    public CreateProblemRepository(ApplicationCommandDbContext dbContext, IAwsS3Client s3Client)
+    {
+        _dbContext = dbContext;
+        _s3Client = s3Client;
+    }
+
     public async Task<Result<Guid, ErrorObject<string>>> CreateProblemAsync(
         UpsertProblemDto problemDto,
         CancellationToken cancellationToken = default)
     {
-
         var (s3TestCases, dbTestCases) = BuildTestCases(problemDto.TestCaseJoins);
         var problem = BuildProblemEntity(problemDto, dbTestCases);
 
-        await dbContext.Problems.AddAsync(problem, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.Problems.AddAsync(problem, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         await UploadProblemAssetsToS3(problem.ProblemId, problemDto, s3TestCases, cancellationToken);
 
@@ -50,11 +55,11 @@ public class CreateProblemRepository(
         Guid problemId,
         CancellationToken cancellationToken = default)
     {
-        var rowsAffected = await dbContext.Problems
+        var rowsAffected = await _dbContext.Problems
             .Where(p => p.ProblemId == problemId)
             .ExecuteDeleteAsync(cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (rowsAffected == 0)
         {
@@ -62,7 +67,7 @@ public class CreateProblemRepository(
                 ErrorObject<string>.NotFound($"Problem with id: {problemId} not found. Failed to delete"));
         }
 
-        var deletionResult = await s3Client.DeleteAllByPrefixAsync(
+        var deletionResult = await _s3Client.DeleteAllByPrefixAsync(
             S3Paths.ProblemPrefix(problemId),
             cancellationToken: cancellationToken);
 
@@ -75,7 +80,7 @@ public class CreateProblemRepository(
         Guid problemId,
         CancellationToken cancellationToken = default)
     {
-        var rowsUpdated = await dbContext.Problems
+        var rowsUpdated = await _dbContext.Problems
             .Where(p => p.ProblemId == problemId)
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(p => p.Status, ProblemStatus.Verified),
@@ -156,7 +161,7 @@ public class CreateProblemRepository(
         List<TestCaseS3Partial> testCases,
         CancellationToken cancellationToken)
     {
-        return s3Client.PostXmlObjectAsync(
+        return _s3Client.PostXmlObjectAsync(
             S3Paths.TestCases(problemId),
             new TestCaseS3WrapperObject
             {
@@ -173,7 +178,7 @@ public class CreateProblemRepository(
     {
         var languageCode = SupportedLanguage.En.GetDisplayName().ToLowerInvariant();
 
-        return s3Client.PostXmlObjectAsync(
+        return _s3Client.PostXmlObjectAsync(
             S3Paths.ProblemInfo(problemId, languageCode),
             new ProblemS3PartialInfo
             {
@@ -192,7 +197,7 @@ public class CreateProblemRepository(
     {
         var templateContent = Encoding.UTF8.GetString(Convert.FromBase64String(templateB64));
 
-        return s3Client.PostXmlObjectAsync(
+        return _s3Client.PostXmlObjectAsync(
             S3Paths.Template(problemId),
             new ProblemS3PartialTemplate
             {
@@ -206,11 +211,11 @@ public class CreateProblemRepository(
 internal static class S3Paths
 {
     public static string ProblemPrefix(Guid problemId) => $"problems/{problemId}";
-    
+
     public static string TestCases(Guid problemId) => $"problems/{problemId}/test-cases.xml";
-    
-    public static string ProblemInfo(Guid problemId, string languageCode) => 
+
+    public static string ProblemInfo(Guid problemId, string languageCode) =>
         $"problems/{problemId}/infos/{languageCode}.xml";
-    
+
     public static string Template(Guid problemId) => $"problems/{problemId}/template.xml";
 }

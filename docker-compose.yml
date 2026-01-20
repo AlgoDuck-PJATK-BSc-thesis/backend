@@ -27,12 +27,16 @@ services:
       - redis
     volumes:
       - firecracker_images:/app/firecracker/images
+    environment:
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
     develop:
       watch:
         - action: rebuild
           path: ExecutorService/
   
   algoduck:
+    environment:
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
     image: algoduck
     build:
       context: .

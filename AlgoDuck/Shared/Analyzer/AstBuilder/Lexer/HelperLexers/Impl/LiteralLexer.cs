@@ -13,16 +13,53 @@ public class LiteralLexer(char[] fileChars, FilePosition filePosition, List<Toke
     {
         var start = _filePosition.GetFilePos() - 1;
         var stringLit = new StringBuilder();
-        // check if this doesn't break if a file begins with '"' illegal statement so shouldn't pass either way but not because of a ArrayIndexOutOfBoundsException
-        // which might get thrown. PeekChar should handle it but best to check
-        //!CheckForChar('"') && !CheckForChar('\\', -1)
-        while (!(CheckForChar('"') && !CheckForChar('\\', -1)))
+    
+        if (CheckForChar('"') && CheckForChar('"', 1))
+        {
+            ConsumeChar(); // consume second "
+            ConsumeChar(); // consume third "
+            return ConsumeTextBlock(start);
+        }
+    
+        while (PeekChar() != null && !(CheckForChar('"') && !CheckForChar('\\', -1)))
         {
             stringLit.Append(ConsumeChar());
         }
 
-        ConsumeChar(); 
+        if (PeekChar() == null)
+        {
+            return CreateToken(TokenType.StringLit, start, stringLit.ToString());
+        }
+
+        ConsumeChar(); // consume closing "
         return CreateToken(TokenType.StringLit, start, stringLit.ToString());
+    }
+
+    private Token ConsumeTextBlock(int start)
+    {
+        var textBlock = new StringBuilder();
+    
+        while (PeekChar() != null && CheckForChar('\n') == false && CheckForChar('\r') == false)
+        {
+            ConsumeChar();
+        }
+    
+        if (CheckForChar('\r')) ConsumeChar();
+        if (CheckForChar('\n')) ConsumeChar();
+    
+        while (PeekChar() != null)
+        {
+            if (CheckForChar('"') && CheckForChar('"', 1) && CheckForChar('"', 2))
+            {
+                ConsumeChar(); // consume first "
+                ConsumeChar(); // consume second "
+                ConsumeChar(); // consume third "
+                return CreateToken(TokenType.StringLit, start, textBlock.ToString());
+            }
+            textBlock.Append(ConsumeChar());
+        }
+    
+        return CreateToken(TokenType.StringLit, start, textBlock.ToString());
     }
 
     public Token ConsumeCharLit()
@@ -30,10 +67,14 @@ public class LiteralLexer(char[] fileChars, FilePosition filePosition, List<Toke
         var start = _filePosition.GetFilePos() - 1;
         var charLit = new StringBuilder();
 
-        // same case as in ConsumeStringLit()
         while (!(CheckForChar('\'') && !CheckForChar('\\', -1)))
         {
             charLit.Append(ConsumeChar());
+        }
+        
+        if (PeekChar() == null)
+        {
+            return CreateToken(TokenType.CharLit, start, charLit.ToString());
         }
 
         ConsumeChar(); // consume closing '

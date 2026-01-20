@@ -1,16 +1,23 @@
+using AlgoDuck.Shared.Http;
+
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 
 public interface IProblemCategoriesService
 {
-    public Task<IEnumerable<CategoryDto>> GetAllAsync();
+    public Task<Result<IEnumerable<CategoryDto>, ErrorObject<string>>> GetAllAsync(CancellationToken cancellationToken = default);
 }
 
-public class ProblemCategoriesService(
-    IProblemCategoriesRepository repository
-    ) : IProblemCategoriesService
+public class ProblemCategoriesService : IProblemCategoriesService
 {
-    public async Task<IEnumerable<CategoryDto>> GetAllAsync()
+    private readonly IProblemCategoriesRepository _repository;
+
+    public ProblemCategoriesService(IProblemCategoriesRepository repository)
     {
-        return await repository.GetAllAsync();
+        _repository = repository;
+    }
+
+    public async Task<Result<IEnumerable<CategoryDto>, ErrorObject<string>>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetAllAsync(cancellationToken);
     }
 }

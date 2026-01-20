@@ -7,14 +7,19 @@ namespace AlgoDuck.Modules.Problem.Queries.GetAllDifficulties;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class AllDifficultiesController(
-    IAllDifficultiesService allDifficultiesService
-    ) : ControllerBase
+public class AllDifficultiesController : ControllerBase
 {
+    private readonly IAllDifficultiesService _allDifficultiesService;
+
+    public AllDifficultiesController(IAllDifficultiesService allDifficultiesService)
+    {
+        _allDifficultiesService = allDifficultiesService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllDifficultiesAsync()
     {
-        return await allDifficultiesService
+        return await _allDifficultiesService
             .GetAllDifficultiesAsync()
             .ToActionResultAsync();
     }

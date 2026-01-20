@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,10 +8,15 @@ namespace AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 [ApiController]
 [Route("api/user/item/pond")]
 [Authorize]
-public class OwnedUsedItemsController(
-    IOwnedItemsService ownedItemsService
-    ) : ControllerBase
+public class OwnedUsedItemsController : ControllerBase
 {
+    private readonly IOwnedItemsService _ownedItemsService;
+
+    public OwnedUsedItemsController(IOwnedItemsService ownedItemsService)
+    {
+        _ownedItemsService = ownedItemsService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetOwnedItemsByUserIdAsync(CancellationToken cancellationToken)
     {
@@ -21,7 +25,7 @@ public class OwnedUsedItemsController(
         if (userId.IsErr)
             return userId.ToActionResult();
 
-        var ownedItemsResult = await ownedItemsService.GetOwnedItemsByUserIdAsync(userId.AsT0, cancellationToken);
+        var ownedItemsResult = await _ownedItemsService.GetOwnedItemsByUserIdAsync(userId.AsT0, cancellationToken);
         return ownedItemsResult.ToActionResult();
     }
 }

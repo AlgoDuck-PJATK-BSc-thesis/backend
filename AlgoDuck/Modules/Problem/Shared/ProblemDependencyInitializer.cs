@@ -19,6 +19,7 @@ using AlgoDuck.Modules.Problem.Queries.AdminGetCategoryPreview;
 using AlgoDuck.Modules.Problem.Queries.AdminGetCodeAnalysisResultForProblemCreation;
 using AlgoDuck.Modules.Problem.Queries.AdminGetProblemCreatorPreview;
 using AlgoDuck.Modules.Problem.Queries.AdminGetProblemDetailsPaged;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 using AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 using AlgoDuck.Modules.Problem.Queries.GetAllAvailableThemes;
 using AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;

@@ -24,8 +24,8 @@ public abstract class Item : IEntityTypeConfiguration<Item>
         builder.ToTable("item");
 
         builder.HasDiscriminator<string>("type")
-            .HasValue<DuckItem>("Duck")
-            .HasValue<PlantItem>("Plant");
+            .HasValue<DuckItem>("duck")
+            .HasValue<PlantItem>("plant");
 
         builder.Property(e => e.ItemId)
             .ValueGeneratedNever()

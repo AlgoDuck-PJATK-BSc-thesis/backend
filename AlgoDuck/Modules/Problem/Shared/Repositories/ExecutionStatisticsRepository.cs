@@ -1,6 +1,9 @@
+using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
+using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
 using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Http;
 using AlgoDuckShared;
@@ -12,10 +15,15 @@ public interface IExecutionStatisticsRepository
     public Task<Result<bool, ErrorObject<string>>> RecordExecutionDataAsync(ExecutionDataDto executionData, CancellationToken cancellationToken = default);
 }
 
-public class ExecutionStatisticsRepository(
-    ApplicationCommandDbContext applicationCommandDbContext
-    ) : IExecutionStatisticsRepository
+public class ExecutionStatisticsRepository : IExecutionStatisticsRepository
 {
+    private readonly ApplicationCommandDbContext _applicationCommandDbContext;
+
+    public ExecutionStatisticsRepository(ApplicationCommandDbContext applicationCommandDbContext)
+    {
+        _applicationCommandDbContext = applicationCommandDbContext;
+    }
+
     public async Task<Result<bool, ErrorObject<string>>> RecordExecutionDataAsync(ExecutionDataDto executionData, CancellationToken cancellationToken = default)
     {
         var status = MapExecutorResponseToRdbStatus(executionData.Status);
@@ -24,7 +32,8 @@ public class ExecutionStatisticsRepository(
         try
         {
             var codeExecutionId = Guid.NewGuid();
-            await applicationCommandDbContext.CodeExecutionStatisticss.AddAsync(new CodeExecutionStatistics
+            var timeStampNowNanos = DateTime.Now.DateTimeToNanos();
+            await _applicationCommandDbContext.CodeExecutionStatisticss.AddAsync(new CodeExecutionStatistics
             {
                 CodeExecutionId = codeExecutionId,
                 UserId = executionData.UserId,
@@ -32,8 +41,8 @@ public class ExecutionStatisticsRepository(
                 Result = status.AsT0,
                 TestCaseResult = executionData.Result,
                 ExecutionType = executionData.ExecutionType,
-                ExecutionStartNs = executionData.ExecutionStartNs,
-                ExecutionEndNs = executionData.ExecutionEndNs,
+                ExecutionStartNs = executionData.ExecutionStartNs == 0 ? timeStampNowNanos : executionData.ExecutionStartNs,
+                ExecutionEndNs = executionData.ExecutionStartNs  == 0 ? timeStampNowNanos : executionData.ExecutionEndNs, // intentional repetition, these can only diverge with 1 being 0 and 2 not if something breaks. This is defensive
                 JvmPeakMemKb = executionData.JvmMemPeakKb,
                 ExitCode = executionData.ExitCode,
                 TestingResults = executionData.TestingResults.Select(t => new TestingResult
@@ -43,7 +52,7 @@ public class ExecutionStatisticsRepository(
                     TestCaseId = t.TestId
                 }).ToList()
             }, cancellationToken);
-            await applicationCommandDbContext.SaveChangesAsync(cancellationToken);
+            await _applicationCommandDbContext.SaveChangesAsync(cancellationToken);
         }
         catch(Exception e)
         {
