@@ -1,9 +1,10 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 
-public class ParserCore(List<Token> tokens, FilePosition filePosition)
+public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder)
 {
     protected Token ConsumeIfOfType(string expectedTokenMsg, params TokenType[] tokenType)
     {
@@ -15,7 +16,21 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
             return ConsumeToken();
         }
         
-        throw new JavaSyntaxException(expectedTokenMsg);
+        
+        throw new JavaSyntaxException($"expected: {string.Join(" or ", tokenType)} got: {peekedToken.Type}");
+    }
+
+    protected bool SkipIfOfType(TokenType expectedTokenType)
+    {
+        return TryConsumeTokenOfType(expectedTokenType, out var _);
+    }
+
+    protected bool TryConsumeTokenOfType(TokenType expectedTokenType, out Token? token)
+    {
+        token = null;
+        if (!CheckTokenType(expectedTokenType)) return false;
+        token = ConsumeToken();
+        return true;
     }
     
     protected Token? PeekToken(int offset = 0)
@@ -36,10 +51,15 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition)
         return tokens[filePos];
     }
     
-    protected  bool CheckTokenType(TokenType tokenType, int offset = 0)
+    protected bool CheckTokenType(TokenType tokenType, int offset = 0)
     {
         var peekedToken = PeekToken(offset);
-        return peekedToken is not null && peekedToken.Type == tokenType;
+        if (peekedToken == null)
+        {
+            throw new JavaSyntaxException($"{tokenType.ToString()} expected, nothing found");
+        }
+        return peekedToken.Type == tokenType;
+        
     }
     protected Token TryConsume()
     {

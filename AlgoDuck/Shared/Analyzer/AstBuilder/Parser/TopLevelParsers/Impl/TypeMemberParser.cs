@@ -5,16 +5,19 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers.Impl;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
+using ConsoleApp1.Analyzer._AnalyzerUtils.AstNodes.Types;
 
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
-public class TypeMemberParser(List<Token> tokens, FilePosition filePosition) : HighLevelParser(tokens, filePosition), ITypeMemberParser
+public class TypeMemberParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) : HighLevelParser(tokens, filePosition, symbolTableBuilder), ITypeMemberParser
 {
     private readonly FilePosition _filePosition = filePosition;
     private readonly List<Token> _tokens = tokens;
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
 
-    public AstNodeTypeMember<T> ParseTypeMember<T>(T member) where T: IType<T>
+    public AstNodeTypeMember<T> ParseTypeMember<T>(T member) where T: BaseType<T>
     {
         var forwardOffset = 0;
         /*
@@ -24,32 +27,44 @@ public class TypeMemberParser(List<Token> tokens, FilePosition filePosition) : H
          * - assignment or semicolon - "=" or ";" we parse for variable declaration
          * - open curly brace - "{" we parse for inline class declaration
          **/
-        while (!(CheckTokenType(TokenType.Ident, forwardOffset) && (CheckTokenType(TokenType.OpenParen, forwardOffset + 1) || CheckTokenType(TokenType.Assign, forwardOffset + 1) || CheckTokenType(TokenType.Semi, forwardOffset + 1) || CheckTokenType(TokenType.OpenCurly, forwardOffset + 1)))) 
+        while
+            (!((CheckTokenType(TokenType.Ident, forwardOffset) && CheckTokenType(TokenType.OpenParen, forwardOffset + 1)) ||
+              CheckTokenType(TokenType.Semi, forwardOffset) || CheckTokenType(TokenType.Class, forwardOffset) ||
+              CheckTokenType(TokenType.Interface, forwardOffset) || CheckTokenType(TokenType.Semi, forwardOffset) ||
+              CheckTokenType(TokenType.Assign, forwardOffset)))
         {
             forwardOffset++;
+            
         }
-
-        var typeMember = new AstNodeTypeMember<T>();
         
+        var typeMember = new AstNodeTypeMember<T>();
+
         typeMember.SetMemberType(member);
         
-        if (CheckTokenType(TokenType.Assign, forwardOffset+1) || CheckTokenType(TokenType.Semi, forwardOffset+1)) //variable declaration
+        if (CheckTokenType(TokenType.Assign, forwardOffset) || CheckTokenType(TokenType.Semi, forwardOffset)) //variable declaration
         {
-            typeMember.ClassMember = new MemberVariableParser(_tokens, _filePosition).ParseMemberVariableDeclaration(typeMember);
+            typeMember.ClassMember = new MemberVariableParser(_tokens, _filePosition, _symbolTableBuilder).ParseMemberVariableDeclaration(typeMember);
         }
-        else if (CheckTokenType(TokenType.OpenParen, forwardOffset+1)) //function declaration
+        else if (CheckTokenType(TokenType.Ident, forwardOffset) && CheckTokenType(TokenType.OpenParen, forwardOffset + 1)) //function declaration
         {
-            typeMember.ClassMember = new MemberFunctionParser(_tokens, _filePosition).ParseMemberFunctionDeclaration(typeMember);
+            typeMember.ClassMember = new MemberFunctionParser(_tokens, _filePosition, _symbolTableBuilder).ParseMemberFunctionDeclaration(typeMember);
         }
-        else if (CheckTokenType(TokenType.OpenCurly, forwardOffset+1))
+        else if (CheckTokenType(TokenType.Class, forwardOffset))
         {
             var astNodeMemberClass = new AstNodeMemberClass<T>
             {
-                Class = new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract])
+                Class = new ClassParser(_tokens, _filePosition, _symbolTableBuilder).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract])
             };
             astNodeMemberClass.SetMemberType(member);
             typeMember.ClassMember = astNodeMemberClass;
         }
+        else if (CheckTokenType(TokenType.Interface, forwardOffset))
+        {
+            new InterfaceParser(_tokens, _filePosition, _symbolTableBuilder).ParseInterface([
+                MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract
+            ]);
+        }
+
         
         return typeMember;
     }

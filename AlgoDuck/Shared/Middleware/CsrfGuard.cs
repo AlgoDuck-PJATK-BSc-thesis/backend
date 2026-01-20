@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Web;
-using AlgoDuck.Modules.Auth.Jwt;
+using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Shared.Http;
 using Microsoft.Extensions.Options;
 
@@ -14,10 +13,13 @@ public sealed class CsrfGuard
 
     private static readonly HashSet<string> AllowUnauthenticatedPosts = new(StringComparer.OrdinalIgnoreCase)
     {
-        "/api/auth/login-start",
-        "/api/auth/login-verify",
-        "/api/auth/refresh",
-        "/api/auth/email/confirm"
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/twofactor/verify-login",
+        "/api/auth/external-login",
+        "/api/auth/password-reset/request",
+        "/api/auth/password-reset/reset",
+        "/api/auth/email-verification/start"
     };
 
     private readonly RequestDelegate _next;
@@ -71,8 +73,8 @@ public sealed class CsrfGuard
         }
 
         var hasCredCookies =
-            ctx.Request.Cookies.ContainsKey(_jwt.JwtCookieName) ||
-            ctx.Request.Cookies.ContainsKey(_jwt.RefreshCookieName);
+            ctx.Request.Cookies.ContainsKey(_jwt.AccessTokenCookieName) ||
+            ctx.Request.Cookies.ContainsKey(_jwt.RefreshTokenCookieName);
 
         if (!hasCredCookies)
         {
@@ -80,16 +82,47 @@ public sealed class CsrfGuard
             return;
         }
 
-        var cookieVal = ctx.Request.Cookies[_jwt.CsrfCookieName];
+        var cookieRaw = ctx.Request.Cookies[_jwt.CsrfCookieName];
         var headerRaw = ctx.Request.Headers[_jwt.CsrfHeaderName].ToString();
-        
+
+        string? cookieVal = null;
+        if (!string.IsNullOrEmpty(cookieRaw))
+        {
+            cookieVal = Uri.UnescapeDataString(cookieRaw);
+        }
+
+        if (string.IsNullOrEmpty(cookieVal))
+        {
+            var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            var encoded = Uri.EscapeDataString(token);
+
+            ctx.Response.Cookies.Append(
+                _jwt.CsrfCookieName,
+                encoded,
+                new CookieOptions
+                {
+                    HttpOnly = false,
+                    Secure = !_env.IsDevelopment(),
+                    SameSite = SameSiteMode.Lax,
+                    Path = "/"
+                });
+
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
+            {
+                Status = Status.Error,
+                Message = "CSRF validation failed.",
+            });
+            return;
+        }
+
         string? headerVal = null;
         if (!string.IsNullOrEmpty(headerRaw))
         {
             headerVal = Uri.UnescapeDataString(headerRaw);
         }
 
-        if (!TimeSafeEquals(cookieVal, HttpUtility.UrlDecode(headerVal)))
+        if (!TimeSafeEquals(cookieVal, headerVal))
         {
             _logger.LogWarning(
                 "CSRF validation failed for {Method} {Path} from {IP}. HasCookie={HasCookie} HasHeader={HasHeader}",
@@ -103,7 +136,7 @@ public sealed class CsrfGuard
             await ctx.Response.WriteAsJsonAsync(new StandardApiResponse
             {
                 Status = Status.Error,
-                Message = "CSRF validation failed."
+                Message = "CSRF validation failed.",
             });
             return;
         }

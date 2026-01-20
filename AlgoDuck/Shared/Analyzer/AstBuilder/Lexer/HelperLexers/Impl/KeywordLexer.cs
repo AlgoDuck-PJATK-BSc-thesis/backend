@@ -8,8 +8,11 @@ namespace AlgoDuck.Shared.Analyzer.AstBuilder.Lexer.HelperLexers.Impl;
 public class KeywordLexer(char[] fileChars, FilePosition filePosition, List<Token> tokens) : LexerCore(fileChars, filePosition, tokens), IKeywordLexer
 {
     private readonly StringBuilder _keywordBuffer = new();
+    private readonly FilePosition _filePosition = filePosition;
+    
     public Token ConsumeKeyword(char triggerChar)
     {
+        var startPos = _filePosition.GetFilePos() - 1;
         _keywordBuffer.Append(triggerChar);
         while (PeekChar() != null && (char.IsLetterOrDigit(PeekChar()!.Value) || PeekChar()!.Value == '_'))
         {
@@ -18,33 +21,52 @@ public class KeywordLexer(char[] fileChars, FilePosition filePosition, List<Toke
         var result = _keywordBuffer.ToString();
         var token = result switch
         {
-            "private" => CreateToken(TokenType.Private),
-            "public" => CreateToken(TokenType.Public),
-            "protected" => CreateToken(TokenType.Protected),
-            "void" => CreateToken(TokenType.Void),
-            "byte" => CreateToken(TokenType.Byte),
-            "short" => CreateToken(TokenType.Short),
-            "int" => CreateToken(TokenType.Int),
-            "long" => CreateToken(TokenType.Long),
-            "float" => CreateToken(TokenType.Float),
-            "double" => CreateToken(TokenType.Double),
-            "char" => CreateToken(TokenType.Char),
-            "boolean" => CreateToken(TokenType.Boolean),
-            "static" => CreateToken(TokenType.Static),
-            "final" => CreateToken(TokenType.Final),
-            "class" => CreateToken(TokenType.Class),
-            "String" => CreateToken(TokenType.String),
-            "import" => CreateToken(TokenType.Import),
-            "interface" => CreateToken(TokenType.Interface),
-            "throws" => CreateToken(TokenType.Throws),
-            "abstract" => CreateToken(TokenType.Abstract),
-            "enum" => CreateToken(TokenType.Enum),
-            "implements" => CreateToken(TokenType.Implements),
-            "extends" => CreateToken(TokenType.Extends),
-            "super" => CreateToken(TokenType.Super),
-            "strictfp" => CreateToken(TokenType.Strictfp),
-            "default" => CreateToken(TokenType.Default),
-            _ => CreateToken(TokenType.Ident, result),
+            "private" => CreateToken(TokenType.Private, startPos),
+            "public" => CreateToken(TokenType.Public, startPos),
+            "protected" => CreateToken(TokenType.Protected, startPos),
+            "void" => CreateToken(TokenType.Void, startPos),
+            "byte" => CreateToken(TokenType.Byte, startPos),
+            "short" => CreateToken(TokenType.Short, startPos),
+            "int" => CreateToken(TokenType.Int, startPos),
+            "long" => CreateToken(TokenType.Long, startPos),
+            "float" => CreateToken(TokenType.Float, startPos),
+            "double" => CreateToken(TokenType.Double, startPos),
+            "var" => CreateToken(TokenType.Var, startPos),
+            "char" => CreateToken(TokenType.Char, startPos),
+            "boolean" => CreateToken(TokenType.Boolean, startPos),
+            "String" => CreateToken(TokenType.String, startPos),
+            "static" => CreateToken(TokenType.Static, startPos),
+            "final" => CreateToken(TokenType.Final, startPos),
+            "abstract" => CreateToken(TokenType.Abstract, startPos),
+            "strictfp" => CreateToken(TokenType.Strictfp, startPos),
+            "default" => CreateToken(TokenType.Default, startPos),
+            "transient" => CreateToken(TokenType.Transient, startPos),
+            "synchronized" => CreateToken(TokenType.Synchronized, startPos),
+            "volatile" => CreateToken(TokenType.Volatile, startPos),
+            "native" => CreateToken(TokenType.Native, startPos),
+            "return" => CreateToken(TokenType.Return, startPos),
+            "class" => CreateToken(TokenType.Class, startPos),
+            "interface" => CreateToken(TokenType.Interface, startPos),
+            "enum" => CreateToken(TokenType.Enum, startPos),
+            "extends" => CreateToken(TokenType.Extends, startPos),
+            "implements" => CreateToken(TokenType.Implements, startPos),
+            "import" => CreateToken(TokenType.Import, startPos),
+            "package" => CreateToken(TokenType.Package, startPos),
+            "throws" => CreateToken(TokenType.Throws, startPos),
+            "throw" => CreateToken(TokenType.Throw, startPos),
+            "try" => CreateToken(TokenType.Try, startPos),
+            "catch" => CreateToken(TokenType.Catch, startPos),
+            "finally" => CreateToken(TokenType.Finally, startPos),
+            "new" => CreateToken(TokenType.New, startPos),
+            "this" => CreateToken(TokenType.This, startPos),
+            "super" => CreateToken(TokenType.Super, startPos),
+            "instanceof" => CreateToken(TokenType.Instanceof, startPos),
+            "true" => CreateToken(TokenType.BooleanLit, startPos, "true"),
+            "null" => CreateToken(TokenType.NullLit, startPos, "null"),
+            "assert" => CreateToken(TokenType.Assert, startPos),
+            "false" => CreateToken(TokenType.BooleanLit, startPos, "false"),
+            
+            _ => CreateToken(TokenType.Ident, startPos, result),
         };
         _keywordBuffer.Clear();
         return token;

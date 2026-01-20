@@ -2,21 +2,31 @@ using System.Text.Json.Serialization;
 
 namespace AlgoDuck.Shared.Http;
 
-internal class StandardApiResponse<T>
+public interface IApiResponse;
+
+internal class StandardApiResponse<T> : IApiResponse
 {
+    [JsonPropertyOrder(0)]
     public Status Status { get; set; } = Status.Success;
-    public T? Body { get; set; }
+
+    [JsonPropertyOrder(1)]
     public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(2)]
+    public T? Body { get; set; }
 }
 
-internal class StandardApiResponse
+internal class StandardApiResponse : IApiResponse
 {
+    [JsonPropertyOrder(0)]
     public Status Status { get; set; } = Status.Success;
+
+    [JsonPropertyOrder(1)]
     public string Message { get; set; } = string.Empty;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-internal enum Status
+public enum Status
 {
     Success,
     Warning,

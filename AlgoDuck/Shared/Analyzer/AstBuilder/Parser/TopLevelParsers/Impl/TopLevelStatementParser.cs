@@ -7,12 +7,13 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 using OneOf;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Impl;
 
-public class TopLevelStatementParser(List<Token> tokens, FilePosition filePosition) :
-    HighLevelParser(tokens, filePosition),
+public class TopLevelStatementParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    HighLevelParser(tokens, filePosition, symbolTableBuilder),
     ITopLevelStatementParser
 {
     private readonly List<Token> _tokens = tokens;
@@ -26,10 +27,12 @@ public class TopLevelStatementParser(List<Token> tokens, FilePosition filePositi
             lookahead++;
         }
 
+        var classParser = new ClassParser(_tokens, _filePosition, symbolTableBuilder);
+        var interfaceParser = new InterfaceParser(_tokens, _filePosition, symbolTableBuilder);
         return PeekToken(lookahead)!.Type switch
         {
-            TokenType.Class => new ClassParser(_tokens, _filePosition).ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract]),
-            TokenType.Interface => new InterfaceParser(_tokens, _filePosition).ParseInterface([MemberModifier.Abstract, MemberModifier.Strictfp]),
+            TokenType.Class => classParser.ParseClass([MemberModifier.Final, MemberModifier.Static, MemberModifier.Abstract]),
+            TokenType.Interface => interfaceParser.ParseInterface([MemberModifier.Abstract, MemberModifier.Strictfp]),
             _ => throw new JavaSyntaxException($"Unexpected token: {PeekToken(lookahead)!.Type}")
         };
     }

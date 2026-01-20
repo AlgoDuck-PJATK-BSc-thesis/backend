@@ -1,0 +1,144 @@
+using AlgoDuck.DAL;
+using AlgoDuck.Models;
+using AlgoDuck.Modules.Auth.Shared.DTOs;
+using AlgoDuck.Modules.Auth.Shared.Interfaces;
+using AlgoDuck.Shared.Utilities;
+using FluentValidation;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace AlgoDuck.Modules.Auth.Commands.Login.Register;
+
+public sealed class RegisterHandler : IRegisterHandler
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IEmailSender _emailSender;
+    private readonly IValidator<RegisterDto> _validator;
+    private readonly IConfiguration _configuration;
+    private readonly IDefaultDuckService _defaultDuckService;
+    private readonly ApplicationCommandDbContext _dbContext;
+
+    public RegisterHandler(
+        UserManager<ApplicationUser> userManager,
+        IEmailSender emailSender,
+        IValidator<RegisterDto> validator,
+        IConfiguration configuration,
+        IDefaultDuckService defaultDuckService,
+        ApplicationCommandDbContext dbContext)
+    {
+        _userManager = userManager;
+        _emailSender = emailSender;
+        _validator = validator;
+        _configuration = configuration;
+        _defaultDuckService = defaultDuckService;
+        _dbContext = dbContext;
+    }
+
+    public async Task<AuthUserDto> HandleAsync(RegisterDto dto, CancellationToken cancellationToken)
+    {
+        await _validator.ValidateAndThrowAsync(dto, cancellationToken);
+
+        var existingByUserName = await _userManager.FindByNameAsync(dto.UserName);
+        if (existingByUserName is not null)
+        {
+            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException("Username is already taken.");
+        }
+
+        var existingByEmail = await _userManager.FindByEmailAsync(dto.Email);
+        if (existingByEmail is not null)
+        {
+            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException("Email is already registered.");
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = dto.UserName,
+            Email = dto.Email,
+            EmailConfirmed = false
+        }.EnrichWithDefaults();
+
+        var createResult = await _userManager.CreateAsync(user, dto.Password);
+        if (!createResult.Succeeded)
+        {
+            var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
+            throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"User registration failed: {errors}");
+        }
+
+        try
+        {
+            await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
+            await EnsureUserConfigExistsAsync(user.Id, cancellationToken);
+
+            var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
+            if (!addRoleResult.Succeeded)
+            {
+                var errors = string.Join("; ", addRoleResult.Errors.Select(e => e.Description));
+                throw new AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException($"Failed to assign default role: {errors}");
+            }
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = BuildEmailConfirmationLink(user.Id, token);
+
+            await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email ?? string.Empty, confirmationLink, cancellationToken);
+
+            return new AuthUserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                EmailConfirmed = user.EmailConfirmed
+            };
+        }
+        catch
+        {
+            await _userManager.DeleteAsync(user);
+            throw;
+        }
+    }
+
+    private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.UserConfigs
+            .AsNoTracking()
+            .AnyAsync(c => c.UserId == userId, cancellationToken);
+
+        if (exists)
+        {
+            return;
+        }
+
+        _dbContext.UserConfigs.Add(new UserConfig
+        {
+            UserId = userId,
+            EditorFontSize = 11,
+            EmailNotificationsEnabled = false,
+            IsDarkMode = true,
+            IsHighContrast = false
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private string BuildEmailConfirmationLink(Guid userId, string token)
+    {
+        var apiBaseUrl =
+            _configuration["App:PublicApiUrl"] ??
+            ("http:" + "/" + "/localhost:8080");
+
+        var frontendBaseUrl =
+            _configuration["App:FrontendUrl"] ??
+            _configuration["CORS:DevOrigins:0"] ??
+            ("http:" + "/" + "/localhost:5173");
+
+        apiBaseUrl = apiBaseUrl.TrimEnd('/');
+        frontendBaseUrl = frontendBaseUrl.TrimEnd('/');
+
+        var encodedToken = Uri.EscapeDataString(token);
+        var encodedUserId = Uri.EscapeDataString(userId.ToString());
+
+        var returnUrl = $"{frontendBaseUrl}/auth/email-confirmed?userId={encodedUserId}&token={encodedToken}";
+        var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+
+        return $"{apiBaseUrl}/auth/email-verification?userId={encodedUserId}&token={encodedToken}&returnUrl={encodedReturnUrl}";
+    }
+}

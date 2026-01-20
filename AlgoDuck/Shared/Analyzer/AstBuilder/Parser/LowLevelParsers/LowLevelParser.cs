@@ -5,20 +5,22 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 using OneOf;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers;
 
-public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
-    ParserCore(tokens, filePosition),
-    IGenericParser, IModifierParser, ITypeParser, IExpressionParser
+public class LowLevelParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    ParserCore(tokens, filePosition, symbolTableBuilder),
+    IGenericParser, IModifierParser, ITypeParser, IExpressionParser, IAnnotationParser
 {
-    private GenericParser _genericParser = new(tokens, filePosition);
-    private ModifierParser _modifierParser = new(tokens, filePosition);
-    private TypeParser _typeParser = new(tokens, filePosition);
-    private ExpressionParser _expressionParser = new(tokens, filePosition);
+    private readonly GenericParser _genericParser = new(tokens, filePosition, symbolTableBuilder);
+    private readonly ModifierParser _modifierParser = new(tokens, filePosition, symbolTableBuilder);
+    private readonly TypeParser _typeParser = new(tokens, filePosition, symbolTableBuilder);
+    private readonly ExpressionParser _expressionParser = new(tokens, filePosition, symbolTableBuilder);
+    private readonly AnnotationParser _annotationParser = new(tokens, filePosition, symbolTableBuilder);
     
-    public void ParseGenericDeclaration(IGenericSettable funcOrClass)
+    public void ParseGenericDeclaration(IGenerifiable funcOrClass)
     {
         _genericParser.ParseGenericDeclaration(funcOrClass);
     }
@@ -43,6 +45,11 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
         return _typeParser.ParseType();
     }
 
+    public OneOf<MemberType, ArrayType, ComplexTypeDeclaration> ParseStandardType()
+    {
+        return _typeParser.ParseStandardType();
+    }
+
     public bool TokenIsSimpleType(Token? token)
     {
         return _typeParser.TokenIsSimpleType(token);
@@ -63,8 +70,8 @@ public class LowLevelParser(List<Token> tokens, FilePosition filePosition) :
         return _expressionParser.ParseExpr(minPrecedence);
     }
 
-    // public NodeTerm? ParseTerm()
-    // {
-    //     return _expressionParser.ParseTerm();
-    // }
+    public AnnotationAstNode ParseAnnotation()
+    {
+        return _annotationParser.ParseAnnotation();
+    }
 }

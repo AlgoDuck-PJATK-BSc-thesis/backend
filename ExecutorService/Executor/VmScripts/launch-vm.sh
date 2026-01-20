@@ -24,7 +24,7 @@ cat > "$CONFIG_PATH" << EOF
 {
   "boot-source": {
     "kernel_image_path": "$KERNEL_PATH",
-    "boot_args": "console=ttyS0 init=/sbin/init quiet loglevel=0 selinux=0 reboot=k panic=-1 pci=off nomodules i8042.noaux i8042.nomux i8042.nopnp i8042.nokbd"
+    "boot_args": "console=ttyS0 init=/sbin/init reboot=k panic=1 i8042.noaux i8042.nomux i8042.nopnp i8042.nokbd nomodules"
   },
   "drives": [
     {
@@ -59,6 +59,6 @@ FIRECRACKER_PID=$!
     fi
 done
 
-rm -rf $FC_STDOUT_FILE
+#rm -rf $FC_STDOUT_FILE
 
 echo $FIRECRACKER_PID

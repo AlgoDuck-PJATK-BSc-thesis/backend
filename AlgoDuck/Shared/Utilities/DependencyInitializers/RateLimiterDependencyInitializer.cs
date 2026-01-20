@@ -31,6 +31,15 @@ public class RateLimiterDependencyInitializer
                 );
             };
     
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: "global",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 1000,
+                        Window = TimeSpan.FromMinutes(1)
+                    }));
+            
             options.AddPolicy("AuthTight", httpContext =>
             {
                 var key = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -45,6 +54,20 @@ public class RateLimiterDependencyInitializer
                         AutoReplenishment = true
                     }
                 );
+            });
+
+            options.AddPolicy("CodeExecution", httpContext =>
+            {
+                var key = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetSlidingWindowLimiter(partitionKey: key, s =>
+                    new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
             });
         });
     }

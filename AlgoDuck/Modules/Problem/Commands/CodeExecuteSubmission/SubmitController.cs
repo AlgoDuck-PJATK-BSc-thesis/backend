@@ -1,7 +1,11 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
+using AlgoDuck.Modules.Problem.Shared;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
-using AlgoDuckShared.Executor.SharedTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,18 +13,59 @@ namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 [ApiController]
 [Route("/api/executor/[controller]")]
-[Authorize/*("user,admin")*/]
+[Authorize]
 public class SubmitController(IExecutorSubmitService executorService) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> ExecuteCode([FromBody] SubmitExecuteRequest executeRequest)
+    public async Task<IActionResult> ExecuteCode([FromBody] SubmitExecuteRequest executeRequest, CancellationToken cancellationToken)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
-                     ?? throw new UserNotFoundException();
-        
-        return Ok(new StandardApiResponse<ExecuteResponse>
-        {
-            Body = await executorService.SubmitUserCodeAsync(executeRequest, Guid.Parse(userId))
-        });
+        var userIdResult = User.GetUserId();
+        if (userIdResult.IsErr)
+            return userIdResult.ToActionResult();
+
+        executeRequest.UserId = userIdResult.AsT0;
+
+        var res = await executorService.SubmitUserCodeRabbitAsync(executeRequest, cancellationToken);
+        return res.ToActionResult();
     }
+}
+
+public class ExecutionEnqueueingResultDto
+{
+    public required Guid JobId { get; set; }
+    public required Guid UserId { get; set; }
+}
+
+public class ExecutionQueueJobData
+{
+    public required Guid JobId { get; set; }
+    public required Guid UserId { get; set; }
+    public required Guid SigningKey { get; set; }
+    public Guid? ProblemId { get; set; }
+    public required string UserCodeB64 { get; set; } 
+    public required JobType JobType { get; set; }
+    public List<SubmitExecuteResponse> CachedResponses { get; set; } = [];
+}
+
+public class ExecutionQueueJobDataPublic
+{
+    public required Guid JobId { get; set; }
+    public required Guid UserId { get; set; }
+    public Guid? ProblemId { get; set; }
+    public List<SubmitExecuteResponse> CachedResponses { get; set; } = [];
+}
+
+public enum JobType : byte
+{
+    DryRun, Testing
+}
+
+public class SubmitExecuteRequest
+{
+    private const int MaxCodeLengthBytes = 128 * 1024;
+    internal Guid JobId { get; set; }
+    internal Guid UserId { get; set; }
+    public required Guid ProblemId { get; set; }
+    [MaxLength(MaxCodeLengthBytes)]
+    public required string CodeB64 { get; set; }
 }

@@ -1,6 +1,7 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser;
 
@@ -13,10 +14,13 @@ public class ParserSimple : IParser
 {
     public AstNodeProgram ParseProgram(List<List<Token>> compilationUnits)
     {
-        AstNodeProgram program = new();
-        foreach (var compilationUnit in compilationUnits)
+        var program = new AstNodeProgram
         {
-            var compilationUnitParser = new TopLevelParser(compilationUnit, new FilePosition());
+            SymbolTableBuilder = new SymbolTableBuilder()
+        };
+        
+        foreach (var compilationUnitParser in compilationUnits.Select(compilationUnit => new TopLevelParser(compilationUnit, program.SymbolTableBuilder)))
+        {
             program.ProgramCompilationUnits.Add(compilationUnitParser.ParseCompilationUnit());
         }
 

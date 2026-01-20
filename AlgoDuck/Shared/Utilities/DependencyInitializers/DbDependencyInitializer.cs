@@ -1,6 +1,7 @@
 using AlgoDuck.DAL;
-using AlgoDuck.Models;
+using AlgoDuck.Shared.S3;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace AlgoDuck.Shared.Utilities.DependencyInitializers;
 
@@ -11,24 +12,47 @@ internal static class DbDependencyInitializer
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
 
-        builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-            {
-                npgsql.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorCodesToAdd: null);
-            }));
-        
-        builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-            {
-                npgsql.EnableRetryOnFailure(
-                    maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorCodesToAdd: null);
-            }));
+        var useSqlite =
+            builder.Environment.IsEnvironment("Testing") ||
+            connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.EndsWith(".db", StringComparison.OrdinalIgnoreCase);
+
+        if (useSqlite)
+        {
+            builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
+                options.UseSqlite(connectionString));
+
+            builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
+                options.UseSqlite(connectionString));
+        }
+        else
+        {
+            builder.Services.AddDbContext<ApplicationCommandDbContext>(options =>
+                options.UseNpgsql(connectionString));
+
+            builder.Services.AddDbContext<ApplicationQueryDbContext>(options =>
+                options.UseNpgsql(connectionString));
+        }
 
         builder.Services.AddScoped<DataSeedingService>();
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        {
+            var configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+            return ConnectionMultiplexer.Connect(configuration);
+        });
+
+        builder.Services.AddSingleton<StackExchange.Redis.IDatabase>(sp =>
+        {
+            var redis = sp.GetRequiredService<IConnectionMultiplexer>();
+            return redis.GetDatabase();
+        });
+        
+        
+        builder.Services.Configure<RedisCachePrefixes>(
+            builder.Configuration.GetSection("RedisCachePrefixes"));
+        
+        
+        
     }
 }

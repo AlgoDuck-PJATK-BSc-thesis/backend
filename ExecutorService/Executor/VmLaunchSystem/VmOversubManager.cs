@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using ExecutorService.Errors.Exceptions;
 using ExecutorService.Executor.ResourceHandlers;
+using ExecutorService.Executor.Types.FilesystemPoolerTypes;
+using ExecutorService.Executor.Types.OversubManagerTypes;
 using ExecutorService.Executor.Types.VmLaunchTypes;
 using Microsoft.OpenApi.Extensions;
 
@@ -42,7 +44,7 @@ internal class VmOversubManager
 
     private const long ResourcePollingFrequencyMillis = 100;
 
-    public async Task<bool> EnqueueResourceRequest(ResourceRequestType requestType, FilesystemType vmType)
+    public async Task<bool> EnqueueResourceRequest(ResourceRequestType requestType, FilesystemType vmType, CancellationToken cancellationToken = default)
     {
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var request = new ResourceRequest
@@ -53,9 +55,7 @@ internal class VmOversubManager
             Type = requestType,
         };
 
-        Console.WriteLine("starting write");
         await _resourceRequests.Writer.WriteAsync(request, cts.Token);
-        Console.WriteLine("end write");
         return await request.Decision.Task;
     }
 
@@ -67,22 +67,17 @@ internal class VmOversubManager
             ResourceRequestType.Query => await CheckIfResourcesSufficientForQueryAsync(request, CalculateTotalClusterResourceUsage, _maxResourceUsage),
             _ => throw new ArgumentOutOfRangeException()
         };
-        Console.WriteLine($"Decision {request.Type.GetDisplayName()}: {requestConfirmed}");
         request.Decision.SetResult(requestConfirmed);
     }
     
     private async Task<bool> CheckIfResourcesSufficientForQueryAsync(ResourceRequest request, Func<TotalVmResourceAllocation> getCurrentValue, TotalVmResourceAllocation maxTarget)
     {
-        // Console.WriteLine("Checking if sufficent for query");
         var periodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(ResourcePollingFrequencyMillis));
         while (await periodicTimer.WaitForNextTickAsync(request.CancellationToken))
         {
             request.CancellationToken.ThrowIfCancellationRequested();
-            Console.WriteLine("calculating currVal");
             var currentValue = getCurrentValue();
 
-            Console.WriteLine($"Memory: {currentValue.MemMb}");
-            Console.WriteLine($"Cores: {currentValue.VcpuCount}");
             if (currentValue.VcpuCount + _defaultResourceAllocations[request.RequiredAllocation].VcpuCount <=
                 maxTarget.VcpuCount && currentValue.MemMb + _defaultResourceAllocations[request.RequiredAllocation].MemMB <=
                 maxTarget.MemMb)
@@ -100,16 +95,12 @@ internal class VmOversubManager
     
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            // Console.WriteLine("polling tick");
             foreach (var vmConfig in _activeVms.Values)
             {
                 await UpdateProcessStatistics(vmConfig, cancellationToken);
             }
-            // Console.WriteLine("stat update");
-            // Console.WriteLine(_resourceRequests.Reader.Count);
             while (_resourceRequests.Reader.TryRead(out var request))
             {
-                Console.WriteLine("servicing request");
             
                 await ValidateRequest(request);
             }
@@ -146,7 +137,6 @@ internal class VmOversubManager
                 acc.MemMb += vm.MemMb;
                 return acc;
             });
-        Console.WriteLine($"Cluster cpu usage {calculateTotalClusterResourceUsage.VcpuCount}");
         return calculateTotalClusterResourceUsage;
     }
     

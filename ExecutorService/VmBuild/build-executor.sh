@@ -6,10 +6,7 @@ cd /tmp
 rm -rf /tmp/rootfs-alp
 rm -rf executor-fs.ext4
 
-#note that seek 192 didn't work so I feel that 256 may be optimal
-
-# TODO skip creating journal and maybe do that cool no root disk space trick
-dd if=/dev/zero of=executor-fs.ext4 bs=1M count=0 seek=256
+dd if=/dev/zero of=executor-fs.ext4 bs=1M count=0 seek=272
 mkfs.ext4 executor-fs.ext4
 
 mkdir -p /tmp/rootfs-alp
@@ -30,7 +27,6 @@ chmod a-w "/tmp/rootfs-alp/sandbox/gson-2.13.1.jar"
 chmod a+r "/tmp/rootfs-alp/sandbox/gson-2.13.1.jar"
 
 cp /etc/resolv.conf /tmp/rootfs-alp/etc/resolv.conf
-
 cat > "/tmp/rootfs-alp/etc/apk/repositories" << EOF
 http://dl-cdn.alpinelinux.org/alpine/v3.21/main
 http://dl-cdn.alpinelinux.org/alpine/v3.21/community
@@ -41,57 +37,52 @@ mount -t sysfs sys sys/
 mount -o bind /dev dev/
 mount -o bind /dev/pts dev/pts/
 
-cat > "/tmp/rootfs-alp/sandbox/vsock-handler.sh" << 'EOF'
-#!/bin/sh
-
-content=""
-while IFS= read -r -n1 char; do
-    if [ "$(printf '%d' "'$char")" = "4" ]; then
-        break
-    fi
-    content="$content$char"
-done
-
-content_decoded=$(echo "$content" | base64 --decode)
-sync
-
-printf "%s" "$content_decoded" > /sandbox/content.json
-
-jq -r '.GeneratedClassFiles | to_entries[] | "\(.key) \(.value)"' /sandbox/content.json |
-while read -r file b64; do
-    echo "$b64" | base64 --decode > "/sandbox/$file"
-done
-entrypoint_name=$(jq -r '.Entrypoint' /sandbox/content.json)
-
-java -cp "/sandbox:.:/sandbox/gson-2.13.1.jar" $entrypoint_name 1>/sandbox/out.log 2>/sandbox/err.log
-out=$(jq -Rs . < /sandbox/out.log)
-err=$(jq -Rs . < /sandbox/err.log)
-
-echo "{\"out\":$out, \"err\":$err}"
-
-printf '\004'
-exit 0
-EOF
-chmod +x "/tmp/rootfs-alp/sandbox/vsock-handler.sh"
-
-touch "/tmp/rootfs-alp/tmp/exec.log"
-cat > "/tmp/rootfs-alp/sandbox/run.sh" << 'EOF'
-#!/bin/sh 
-socat VSOCK-LISTEN:5050 SYSTEM:"/sandbox/vsock-handler.sh"
-EOF
-
-chmod +x "/tmp/rootfs-alp/sandbox/run.sh"
+cp "$STARTING_DIR/ExecutionHandler.py" "/tmp/rootfs-alp/sandbox/main.py" 
 
 chroot /tmp/rootfs-alp /bin/sh << 'EOF'
 apk update
-apk add openjdk17-jre-headless coreutils openrc mdevd socat jq
+apk add openjdk17-jre-headless coreutils openrc mdevd python3
 
 echo 'ttyS0 root:root 660' > /etc/mdevd.conf
+
+cat > "/etc/init.d/cgroup-setup" << 'INNER_EOF'
+#!/sbin/openrc-run
+description="Setup cgroupv2 for sandbox"
+
+depend() {
+    before executor
+    need localmount
+    need sysfs 
+}
+
+start() {
+    if ! mountpoint -q /sys/fs/cgroup; then
+        mount -t cgroup2 none /sys/fs/cgroup
+    fi
+    
+    echo "+memory +io +pids" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null
+    
+    mkdir -p /sys/fs/cgroup/sandbox
+    
+    echo "0" > /sys/fs/cgroup/sandbox/memory.swap.max 2>/dev/null
+    
+    echo "100" > /sys/fs/cgroup/sandbox/pids.max
+    
+    ROOT_DEV=$(cat /sys/block/vda/dev 2>/dev/null || echo "254:0")
+    echo "$ROOT_DEV wbps=10485760 wiops=50 rbps=20971520 riops=100" > /sys/fs/cgroup/sandbox/io.max 2>/dev/null
+    
+    eend 0
+}
+INNER_EOF
+
+chmod +x /etc/init.d/cgroup-setup
+rc-update add cgroup-setup boot
 
 cat > "/etc/init.d/executor" << 'INNER_EOF'
 #!/sbin/openrc-run
 description="java executor script"
-command="/sandbox/run.sh"
+command="/usr/bin/python3"
+command_args="/sandbox/main.py"
 command_background=true
 pidfile="/run/executor.pid"
 start_stop_daemon_args="--make-pidfile"
@@ -99,11 +90,7 @@ start_stop_daemon_args="--make-pidfile"
 depend(){
     need localmount
     need mdevd
-}
-
-start_post(){
-    echo "READY" > /dev/ttyS0
-    exit 0
+    need cgroup-setup
 }
 
 INNER_EOF
@@ -112,7 +99,7 @@ chmod +x /etc/init.d/executor
 rc-update add executor default
 EOF
 
-echo "" >  /tmp/rootfs-alp/etc/resolv.conf
+echo "" > /tmp/rootfs-alp/etc/resolv.conf
 
 cd ~ || cd / || exit 1 
 
@@ -123,4 +110,4 @@ umount /tmp/rootfs-alp/sys
 umount /tmp/rootfs-alp
 
 rm -rf /tmp/rootfs-alp
-mv /tmp/executor-fs.ext4 $STARTING_DIR
+mv /tmp/executor-fs.ext4 "$STARTING_DIR"

@@ -7,17 +7,18 @@ namespace AlgoDuck.Models;
 
 public partial class Problem : IEntityTypeConfiguration<Problem>
 {
-    public Guid ProblemId { get; set; }
+    public Guid ProblemId { get; set; } = Guid.NewGuid();
 
     public string ProblemTitle { get; set; } = null!;
-
-    public string Description { get; set; } = null!;
-
     public DateTime CreatedAt { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public ApplicationUser CreatedByUser { get; set; } = null!;
+    public DateTime? LastUpdatedAt { get; set; }
 
     public Guid CategoryId { get; set; }
 
     public Guid DifficultyId { get; set; }
+    public ProblemStatus Status { get; set; } = ProblemStatus.Unverified;
 
     public virtual Category Category { get; set; } = null!;
 
@@ -28,7 +29,9 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
     public virtual ICollection<UserSolution> UserSolutions { get; set; } = new List<UserSolution>();
 
     public virtual ICollection<Contest> Contests { get; set; } = new List<Contest>();
-
+    public virtual ICollection<AssistantChat> AssistantChats { get; set; } = new List<AssistantChat>();
+    public virtual ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
+    public virtual ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public void Configure(EntityTypeBuilder<Problem> builder)
     {
@@ -40,13 +43,18 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
                 .ValueGeneratedNever()
                 .HasColumnName("problem_id");
         builder.Property(e => e.CategoryId).HasColumnName("category_id");
+        
         builder.Property(e => e.CreatedAt)
                 .HasColumnType("timestamp with time zone")
-                .HasColumnName("created_at");
-        builder.Property(e => e.Description)
-                .HasMaxLength(1024)
-                .HasColumnName("description");
-        builder.Property(e => e.DifficultyId).HasColumnName("difficulty_id");
+                .HasColumnName("created_at");    
+        
+        builder.Property(e => e.LastUpdatedAt)
+                .HasColumnType("timestamp with time zone")
+                .IsRequired(false)
+                .HasColumnName("updated_at");
+        
+        builder.Property(e => e.DifficultyId)
+            .HasColumnName("difficulty_id");
         builder.Property(e => e.ProblemTitle)
                 .HasMaxLength(256)
                 .HasColumnName("problem_title");
@@ -76,4 +84,9 @@ public partial class Problem : IEntityTypeConfiguration<Problem>
                         j.IndexerProperty<Guid>("ContestId").HasColumnName("contest_id");
                     });
     }
+}
+
+public enum ProblemStatus
+{
+    Verified, Unverified
 }

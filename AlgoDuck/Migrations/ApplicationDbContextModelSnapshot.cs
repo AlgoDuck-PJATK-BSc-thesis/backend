@@ -22,6 +22,64 @@ namespace AlgoDuck.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("api_key_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("key_hash");
+
+                    b.Property<string>("KeySalt")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("key_salt");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("prefix");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("api_key_pk");
+
+                    b.HasIndex("Prefix")
+                        .HasDatabaseName("api_key_prefix_idx");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("api_key", (string)null);
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -39,6 +97,10 @@ namespace AlgoDuck.Migrations
                     b.Property<Guid?>("CohortId")
                         .HasColumnType("uuid")
                         .HasColumnName("cohort_id");
+
+                    b.Property<DateTime?>("CohortJoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cohort_joined_at");
 
                     b.Property<int>("Coins")
                         .HasColumnType("integer")
@@ -75,8 +137,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("text")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PhoneNumber")
@@ -113,6 +174,91 @@ namespace AlgoDuck.Migrations
                     b.ToTable("application_user", (string)null);
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.AssistanceMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<Guid>("ChatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<bool>("IsUserMessage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_user_message");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ChatId");
+
+                    b.ToTable("assistance_message", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistantChat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("problem_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("assistant_chat_id");
+
+                    b.HasIndex("ProblemId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("assistant_chat", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistantMessageFragment", b =>
+                {
+                    b.Property<Guid>("MessageFragmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fragment_id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("fragment_content");
+
+                    b.Property<string>("FragmentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("fragment_type");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MessageFragmentId");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("assistant_message_code_fragment", (string)null);
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Category", b =>
                 {
                     b.Property<Guid>("CategoryId")
@@ -131,18 +277,91 @@ namespace AlgoDuck.Migrations
                     b.ToTable("category", (string)null);
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.CodeExecutionStatistics", b =>
+                {
+                    b.Property<Guid>("CodeExecutionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("code_execution_statistics_id");
+
+                    b.Property<long>("ExecutionEndNs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("execution_end_ns");
+
+                    b.Property<long>("ExecutionStartNs")
+                        .HasColumnType("bigint")
+                        .HasColumnName("execution_start_ns");
+
+                    b.Property<byte>("ExecutionType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("type");
+
+                    b.Property<int>("ExitCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("exit_code");
+
+                    b.Property<long>("JvmPeakMemKb")
+                        .HasColumnType("bigint")
+                        .HasColumnName("jvm_peak_mem_kb");
+
+                    b.Property<Guid?>("ProblemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("problem_id");
+
+                    b.Property<byte>("Result")
+                        .HasColumnType("smallint")
+                        .HasColumnName("result");
+
+                    b.Property<byte>("TestCaseResult")
+                        .HasColumnType("smallint")
+                        .HasColumnName("test_case_result");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("CodeExecutionId")
+                        .HasName("code_execution_statistics_id");
+
+                    b.HasIndex("ProblemId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("code_execution_statistics", (string)null);
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Cohort", b =>
                 {
                     b.Property<Guid>("CohortId")
                         .HasColumnType("uuid")
                         .HasColumnName("cohort_id");
 
-                    b.Property<Guid>("CreatedByUserId")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<string>("CreatedByUserLabel")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("created_by_user_label");
+
+                    b.Property<DateTime?>("EmptiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("emptied_at");
+
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("JoinCode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("join_code");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -154,6 +373,10 @@ namespace AlgoDuck.Migrations
                         .HasName("cohort_pk");
 
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("JoinCode")
+                        .IsUnique()
+                        .HasDatabaseName("cohort_join_code_uq");
 
                     b.ToTable("cohort", (string)null);
                 });
@@ -208,6 +431,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("difficulty_name");
 
+                    b.Property<decimal>("RewardScaler")
+                        .HasColumnType("numeric")
+                        .HasColumnName("reward_scaler");
+
                     b.HasKey("DifficultyId")
                         .HasName("difficulty_pk");
 
@@ -220,20 +447,18 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("editor_layout_id");
 
-                    b.Property<Guid>("EditorThemeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("editor_theme_id");
+                    b.Property<bool>("IsDefaultLayout")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default_layout");
 
-                    b.Property<Guid>("UserConfigId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_config_id");
+                    b.Property<string>("LayoutName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("layout_name");
 
                     b.HasKey("EditorLayoutId")
                         .HasName("editor_layout_pk");
-
-                    b.HasIndex("EditorThemeId");
-
-                    b.HasIndex("UserConfigId");
 
                     b.ToTable("editor_layout", (string)null);
                 });
@@ -262,6 +487,13 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("item_id");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)")
@@ -285,12 +517,54 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("rarity_id");
 
+                    b.Property<string>("type")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
                     b.HasKey("ItemId")
                         .HasName("shop_pk");
+
+                    b.HasIndex("CreatedById");
 
                     b.HasIndex("RarityId");
 
                     b.ToTable("item", (string)null);
+
+                    b.HasDiscriminator<string>("type").HasValue("Item");
+
+                    b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.ItemOwnership", b =>
+                {
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("PurchasedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purchased_at");
+
+                    b.Property<string>("ownership_type")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
+
+                    b.HasKey("ItemId", "UserId")
+                        .HasName("purchases_pk");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("purchase", (string)null);
+
+                    b.HasDiscriminator<string>("ownership_type").HasValue("ItemOwnership");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Message", b =>
@@ -308,6 +582,22 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("MediaContentType")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("media_content_type");
+
+                    b.Property<string>("MediaKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("media_key");
+
+                    b.Property<int>("MediaType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("media_type");
 
                     b.Property<string>("Message1")
                         .IsRequired()
@@ -329,6 +619,25 @@ namespace AlgoDuck.Migrations
                     b.ToTable("message", (string)null);
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.OwnsLayout", b =>
+                {
+                    b.Property<Guid>("LayoutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_selected");
+
+                    b.HasKey("LayoutId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("owns_layout", (string)null);
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Problem", b =>
                 {
                     b.Property<Guid>("ProblemId")
@@ -343,15 +652,16 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("description");
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("DifficultyId")
                         .HasColumnType("uuid")
                         .HasColumnName("difficulty_id");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<string>("ProblemTitle")
                         .IsRequired()
@@ -359,36 +669,19 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("problem_title");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.HasKey("ProblemId")
                         .HasName("problem_pk");
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("DifficultyId");
 
                     b.ToTable("problem", (string)null);
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.Purchase", b =>
-                {
-                    b.Property<Guid>("ItemId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("item_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<bool>("Selected")
-                        .HasColumnType("boolean")
-                        .HasColumnName("selected");
-
-                    b.HasKey("ItemId", "UserId")
-                        .HasName("purchases_pk");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("purchase", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>
@@ -405,7 +698,7 @@ namespace AlgoDuck.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PurchasedTestCases", (string)null);
+                    b.ToTable("PurchasedTestCases");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Rarity", b =>
@@ -424,6 +717,69 @@ namespace AlgoDuck.Migrations
                         .HasName("rarity_pk");
 
                     b.ToTable("rarity", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("refresh_token_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_token_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<string>("TokenPrefix")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_prefix");
+
+                    b.Property<string>("TokenSalt")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("token_salt");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("refresh_token_pk");
+
+                    b.HasIndex("ReplacedByTokenId");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("TokenPrefix")
+                        .HasDatabaseName("refresh_token_prefix_idx");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_token", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
@@ -482,24 +838,6 @@ namespace AlgoDuck.Migrations
                     b.ToTable("session", (string)null);
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.Status", b =>
-                {
-                    b.Property<Guid>("StatusId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("status_id");
-
-                    b.Property<string>("StatusName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("status_name");
-
-                    b.HasKey("StatusId")
-                        .HasName("status_pk");
-
-                    b.ToTable("status", (string)null);
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Tag", b =>
                 {
                     b.Property<Guid>("TagId")
@@ -524,6 +862,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("test_case_id");
 
+                    b.Property<int>("ArrangeVariableCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("arrange_variable_count");
+
                     b.Property<string>("CallFunc")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -546,6 +888,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_public");
 
+                    b.Property<bool>("OrderMatters")
+                        .HasColumnType("boolean")
+                        .HasColumnName("order_matters");
+
                     b.Property<Guid>("ProblemProblemId")
                         .HasColumnType("uuid")
                         .HasColumnName("problem_problem_id");
@@ -564,19 +910,80 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("test_case_id");
 
-                    b.Property<Guid>("UserSolutionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("solution_id");
+                    b.Property<Guid>("CodeExecutionId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsPassed")
                         .HasColumnType("boolean")
                         .HasColumnName("is_passed");
 
-                    b.HasKey("TestCaseId", "UserSolutionId");
+                    b.Property<Guid?>("UserSolutionSnapshotSnapShotId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("UserSolutionId");
+                    b.HasKey("TestCaseId", "CodeExecutionId")
+                        .HasName("PK_TestingResult");
 
-                    b.ToTable("TestingResults", (string)null);
+                    b.HasIndex("CodeExecutionId");
+
+                    b.HasIndex("UserSolutionSnapshotSnapShotId");
+
+                    b.ToTable("testing_results", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.UserAchievement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("achievement_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CurrentValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_value");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_completed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("TargetValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_value");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("user_achievement_pk");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("user_achievement", (string)null);
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
@@ -584,6 +991,17 @@ namespace AlgoDuck.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
+
+                    b.Property<int>("EditorFontSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("editor_font_size");
+
+                    b.Property<Guid>("EditorThemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_notifications_enabled");
 
                     b.Property<bool>("IsDarkMode")
                         .HasColumnType("boolean")
@@ -593,8 +1011,42 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_high_contrast");
 
+                    b.Property<int?>("ReminderFriHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_fri_hour");
+
+                    b.Property<int?>("ReminderMonHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_mon_hour");
+
+                    b.Property<int?>("ReminderSatHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_sat_hour");
+
+                    b.Property<int?>("ReminderSunHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_sun_hour");
+
+                    b.Property<int?>("ReminderThuHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_thu_hour");
+
+                    b.Property<int?>("ReminderTueHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_tue_hour");
+
+                    b.Property<int?>("ReminderWedHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("reminder_wed_hour");
+
+                    b.Property<DateTimeOffset?>("StudyReminderNextAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("study_reminder_next_at_utc");
+
                     b.HasKey("UserId")
                         .HasName("user_config_pk");
+
+                    b.HasIndex("EditorThemeId");
 
                     b.ToTable("user_config", (string)null);
                 });
@@ -609,6 +1061,10 @@ namespace AlgoDuck.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("code_runtime_submitted");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uuid")
                         .HasColumnName("problem_id");
@@ -616,10 +1072,6 @@ namespace AlgoDuck.Migrations
                     b.Property<byte>("Stars")
                         .HasColumnType("smallint")
                         .HasColumnName("stars");
-
-                    b.Property<Guid>("StatusId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("status_id");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
@@ -630,11 +1082,38 @@ namespace AlgoDuck.Migrations
 
                     b.HasIndex("ProblemId");
 
-                    b.HasIndex("StatusId");
-
                     b.HasIndex("UserId");
 
                     b.ToTable("user_solution", (string)null);
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.UserSolutionSnapshot", b =>
+                {
+                    b.Property<Guid>("SnapShotId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_solution_snapshot_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("problem_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("SnapShotId")
+                        .HasName("user_solution_snapshot_id");
+
+                    b.HasIndex("ProblemId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("user_solution_snapshots", (string)null);
                 });
 
             modelBuilder.Entity("ContestProblem", b =>
@@ -803,15 +1282,135 @@ namespace AlgoDuck.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.DuckItem", b =>
+                {
+                    b.HasBaseType("AlgoDuck.Models.Item");
+
+                    b.HasDiscriminator().HasValue("Duck");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.PlantItem", b =>
+                {
+                    b.HasBaseType("AlgoDuck.Models.Item");
+
+                    b.Property<byte>("Height")
+                        .HasColumnType("smallint")
+                        .HasColumnName("plant_height");
+
+                    b.Property<byte>("Width")
+                        .HasColumnType("smallint")
+                        .HasColumnName("plant_width");
+
+                    b.HasDiscriminator().HasValue("Plant");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.DuckOwnership", b =>
+                {
+                    b.HasBaseType("AlgoDuck.Models.ItemOwnership");
+
+                    b.Property<bool>("SelectedAsAvatar")
+                        .HasColumnType("boolean")
+                        .HasColumnName("duck_selected_as_avatar");
+
+                    b.Property<bool>("SelectedForPond")
+                        .HasColumnType("boolean")
+                        .HasColumnName("duck_selected_for_pond");
+
+                    b.HasDiscriminator().HasValue("Duck");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.PlantOwnership", b =>
+                {
+                    b.HasBaseType("AlgoDuck.Models.ItemOwnership");
+
+                    b.Property<byte?>("GridX")
+                        .HasColumnType("smallint")
+                        .HasColumnName("plant_grid_x");
+
+                    b.Property<byte?>("GridY")
+                        .HasColumnType("smallint")
+                        .HasColumnName("plant_grid_y");
+
+                    b.HasDiscriminator().HasValue("Plant");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.ApiKey", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("api_key_application_user");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Cohort", "Cohort")
                         .WithMany("ApplicationUsers")
                         .HasForeignKey("CohortId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("user_cohort_ref");
 
                     b.Navigation("Cohort");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistanceMessage", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.AssistantChat", "Chat")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chat");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistantChat", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.Problem", "Problem")
+                        .WithMany("AssistantChats")
+                        .HasForeignKey("ProblemId")
+                        .IsRequired();
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("AssistantChats")
+                        .HasForeignKey("UserId")
+                        .IsRequired();
+
+                    b.Navigation("Problem");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistantMessageFragment", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.AssistanceMessage", "Message")
+                        .WithMany("Fragments")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.CodeExecutionStatistics", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.Problem", "Problem")
+                        .WithMany("CodeExecutionStatistics")
+                        .HasForeignKey("ProblemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "ApplicationUser")
+                        .WithMany("CodeExecutionStatistics")
+                        .HasForeignKey("UserId")
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+
+                    b.Navigation("Problem");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Cohort", b =>
@@ -819,8 +1418,7 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedByUser");
                 });
@@ -837,27 +1435,13 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Item");
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.EditorLayout", b =>
-                {
-                    b.HasOne("AlgoDuck.Models.EditorTheme", "EditorTheme")
-                        .WithMany("EditorLayouts")
-                        .HasForeignKey("EditorThemeId")
-                        .IsRequired()
-                        .HasConstraintName("editor_layout_editor_theme");
-
-                    b.HasOne("AlgoDuck.Models.UserConfig", "UserConfig")
-                        .WithMany("EditorLayouts")
-                        .HasForeignKey("UserConfigId")
-                        .IsRequired()
-                        .HasConstraintName("editor_layout_user_config");
-
-                    b.Navigation("EditorTheme");
-
-                    b.Navigation("UserConfig");
-                });
-
             modelBuilder.Entity("AlgoDuck.Models.Item", b =>
                 {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedBy")
+                        .WithMany("CreatedItems")
+                        .HasForeignKey("CreatedById")
+                        .IsRequired();
+
                     b.HasOne("AlgoDuck.Models.Rarity", "Rarity")
                         .WithMany("Items")
                         .HasForeignKey("RarityId")
@@ -865,7 +1449,30 @@ namespace AlgoDuck.Migrations
                         .IsRequired()
                         .HasConstraintName("item_rarity_ref");
 
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("Rarity");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.ItemOwnership", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.Item", "Item")
+                        .WithMany("Purchases")
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("item_purchase_ref");
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("Purchases")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("purchase_user_ref");
+
+                    b.Navigation("Item");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Message", b =>
@@ -889,6 +1496,25 @@ namespace AlgoDuck.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.OwnsLayout", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.EditorLayout", "Layout")
+                        .WithMany("OwnedBy")
+                        .HasForeignKey("LayoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("EditorLayouts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Layout");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Problem", b =>
                 {
                     b.HasOne("AlgoDuck.Models.Category", "Category")
@@ -897,6 +1523,12 @@ namespace AlgoDuck.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("problem_category_ref");
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("AlgoDuck.Models.Difficulty", "Difficulty")
                         .WithMany("Problems")
@@ -907,28 +1539,9 @@ namespace AlgoDuck.Migrations
 
                     b.Navigation("Category");
 
+                    b.Navigation("CreatedByUser");
+
                     b.Navigation("Difficulty");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.Purchase", b =>
-                {
-                    b.HasOne("AlgoDuck.Models.Item", "Item")
-                        .WithMany("Purchases")
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("item_purchase_ref");
-
-                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
-                        .WithMany("Purchases")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("purchase_user_ref");
-
-                    b.Navigation("Item");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.PurchasedTestCase", b =>
@@ -944,6 +1557,35 @@ namespace AlgoDuck.Migrations
                         .IsRequired();
 
                     b.Navigation("TestCase");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.RefreshToken", "ReplacedByToken")
+                        .WithMany("InverseReplacedByToken")
+                        .HasForeignKey("ReplacedByTokenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("refresh_token_replaced_by_token");
+
+                    b.HasOne("AlgoDuck.Models.Session", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("refresh_token_session");
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("refresh_token_application_user");
+
+                    b.Navigation("ReplacedByToken");
+
+                    b.Navigation("Session");
 
                     b.Navigation("User");
                 });
@@ -973,6 +1615,7 @@ namespace AlgoDuck.Migrations
                     b.HasOne("AlgoDuck.Models.Problem", "ProblemProblem")
                         .WithMany("TestCases")
                         .HasForeignKey("ProblemProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("test_case_problem");
 
@@ -981,28 +1624,54 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.TestingResult", b =>
                 {
+                    b.HasOne("AlgoDuck.Models.CodeExecutionStatistics", "CodeExecution")
+                        .WithMany("TestingResults")
+                        .HasForeignKey("CodeExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("AlgoDuck.Models.TestCase", "TestCase")
                         .WithMany("TestingResults")
                         .HasForeignKey("TestCaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AlgoDuck.Models.UserSolution", "UserSolution")
-                        .WithMany("TestingResults")
-                        .HasForeignKey("UserSolutionId")
-                        .IsRequired();
+                    b.HasOne("AlgoDuck.Models.UserSolutionSnapshot", null)
+                        .WithMany("TestingSnapshotsResults")
+                        .HasForeignKey("UserSolutionSnapshotSnapShotId");
+
+                    b.Navigation("CodeExecution");
 
                     b.Navigation("TestCase");
+                });
 
-                    b.Navigation("UserSolution");
+            modelBuilder.Entity("AlgoDuck.Models.UserAchievement", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("UserAchievements")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("user_achievement_user_ref");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
                 {
+                    b.HasOne("AlgoDuck.Models.EditorTheme", "EditorTheme")
+                        .WithMany("UserConfigs")
+                        .HasForeignKey("EditorThemeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
                         .WithOne("UserConfig")
                         .HasForeignKey("AlgoDuck.Models.UserConfig", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("user_config_application_user");
+
+                    b.Navigation("EditorTheme");
 
                     b.Navigation("User");
                 });
@@ -1016,13 +1685,6 @@ namespace AlgoDuck.Migrations
                         .IsRequired()
                         .HasConstraintName("user_solution_problem_ref");
 
-                    b.HasOne("AlgoDuck.Models.Status", "Status")
-                        .WithMany("UserSolutions")
-                        .HasForeignKey("StatusId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("user_solution_status_ref");
-
                     b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
                         .WithMany("UserSolutions")
                         .HasForeignKey("UserId")
@@ -1032,7 +1694,24 @@ namespace AlgoDuck.Migrations
 
                     b.Navigation("Problem");
 
-                    b.Navigation("Status");
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.UserSolutionSnapshot", b =>
+                {
+                    b.HasOne("AlgoDuck.Models.Problem", "Problem")
+                        .WithMany("UserSolutionSnapshots")
+                        .HasForeignKey("ProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AlgoDuck.Models.ApplicationUser", "User")
+                        .WithMany("UserSolutionSnapshots")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Problem");
 
                     b.Navigation("User");
                 });
@@ -1124,22 +1803,53 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("ApiKeys");
+
+                    b.Navigation("AssistantChats");
+
+                    b.Navigation("CodeExecutionStatistics");
+
+                    b.Navigation("CreatedItems");
+
+                    b.Navigation("EditorLayouts");
+
                     b.Navigation("Messages");
 
                     b.Navigation("PurchasedTestCases");
 
                     b.Navigation("Purchases");
 
+                    b.Navigation("RefreshTokens");
+
                     b.Navigation("Sessions");
+
+                    b.Navigation("UserAchievements");
 
                     b.Navigation("UserConfig");
 
+                    b.Navigation("UserSolutionSnapshots");
+
                     b.Navigation("UserSolutions");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistanceMessage", b =>
+                {
+                    b.Navigation("Fragments");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.AssistantChat", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Category", b =>
                 {
                     b.Navigation("Problems");
+                });
+
+            modelBuilder.Entity("AlgoDuck.Models.CodeExecutionStatistics", b =>
+                {
+                    b.Navigation("TestingResults");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Cohort", b =>
@@ -1154,9 +1864,14 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Problems");
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.EditorLayout", b =>
+                {
+                    b.Navigation("OwnedBy");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.EditorTheme", b =>
                 {
-                    b.Navigation("EditorLayouts");
+                    b.Navigation("UserConfigs");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.Item", b =>
@@ -1168,7 +1883,13 @@ namespace AlgoDuck.Migrations
 
             modelBuilder.Entity("AlgoDuck.Models.Problem", b =>
                 {
+                    b.Navigation("AssistantChats");
+
+                    b.Navigation("CodeExecutionStatistics");
+
                     b.Navigation("TestCases");
+
+                    b.Navigation("UserSolutionSnapshots");
 
                     b.Navigation("UserSolutions");
                 });
@@ -1178,14 +1899,14 @@ namespace AlgoDuck.Migrations
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("AlgoDuck.Models.RefreshToken", b =>
+                {
+                    b.Navigation("InverseReplacedByToken");
+                });
+
             modelBuilder.Entity("AlgoDuck.Models.Session", b =>
                 {
                     b.Navigation("InverseReplacedBySession");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.Status", b =>
-                {
-                    b.Navigation("UserSolutions");
                 });
 
             modelBuilder.Entity("AlgoDuck.Models.TestCase", b =>
@@ -1195,14 +1916,9 @@ namespace AlgoDuck.Migrations
                     b.Navigation("TestingResults");
                 });
 
-            modelBuilder.Entity("AlgoDuck.Models.UserConfig", b =>
+            modelBuilder.Entity("AlgoDuck.Models.UserSolutionSnapshot", b =>
                 {
-                    b.Navigation("EditorLayouts");
-                });
-
-            modelBuilder.Entity("AlgoDuck.Models.UserSolution", b =>
-                {
-                    b.Navigation("TestingResults");
+                    b.Navigation("TestingSnapshotsResults");
                 });
 #pragma warning restore 612, 618
         }

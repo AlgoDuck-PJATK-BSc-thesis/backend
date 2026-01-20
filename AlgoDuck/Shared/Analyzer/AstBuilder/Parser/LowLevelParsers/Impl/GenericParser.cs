@@ -3,14 +3,20 @@ using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Abstr;
+using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers.Impl;
 
-public class GenericParser(List<Token> tokens, FilePosition filePosition) :
-    ParserCore(tokens, filePosition),
+public class GenericParser(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder) :
+    ParserCore(tokens, filePosition, symbolTableBuilder),
     IGenericParser
 {
-    public void ParseGenericDeclaration(IGenericSettable funcOrClass)
+    
+    private readonly List<Token> _tokens = tokens;
+    private readonly FilePosition _filePosition = filePosition;
+    private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
+    
+    public void ParseGenericDeclaration(IGenerifiable funcOrClass)
     {
         if (!CheckTokenType(TokenType.OpenChevron))
         {
@@ -43,7 +49,7 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition) :
 
     private void ParseUpperBound(GenericTypeDeclaration typeDeclaration)
     {
-        var typeParser = new TypeParser(tokens, filePosition);
+        var typeParser = new TypeParser(_tokens, _filePosition, _symbolTableBuilder);
         if (!CheckTokenType(TokenType.Extends)) return;
         
         ConsumeIfOfType("", TokenType.Extends);

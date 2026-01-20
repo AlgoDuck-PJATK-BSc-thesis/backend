@@ -7,8 +7,10 @@ public enum TokenType
     OpenCurly, CloseCurly, OpenParen, CloseParen, OpenBrace, CloseBrace, OpenChevron, CloseChevron,
 
     Assign, PlusAssign, MinusAssign, MulAssign, DivAssign, ModAssign, LBitShiftAssign, RBitShiftAssign, UrBitShiftAssign,
+    BitOrAssign, BitAndAssign, BitXorAssign,
 
     Semi,
+    Colon, 
     
     Import, Package,
     
@@ -18,24 +20,39 @@ public enum TokenType
 
     Public, Private, Protected,
 
-    Byte, Short, Int, Long, Float, Double, Char, Boolean, String /*No string in future*/, Void /*Special*/, 
+    Byte, Short, Int, Long, Float, Double, Char, Boolean, Var, String /*No string in future*/, Void /*Special*/, 
 
     FloatLit, DoubleLit, CharLit, BooleanLit, IntLit, LongLit, StringLit,
+    NullLit, 
     
     Static, Final, Abstract, Default, Transient, Synchronized, Volatile, Strictfp,
     
     Dot, Comma,
     
-    Negation, // TOOD put unaries here
+    Negation, Tilde,
     
-    Plus, Minus, Mul, Div, Mod, Increment, Decrement, LBitShift, RBitShift, UrBitShift,
+    Plus, Minus, Mul, Div, Mod, Increment, Decrement, 
     
-    BitAnd, LogAnd, BitOr, LogOr, BitXor, BitOrAssign, BitAndAssign, BitXorAssign,
+    LBitShift, RBitShift, UrBitShift,
+    
+    BitAnd, LogAnd, BitOr, LogOr, BitXor,
     
     Eq, Neq, Le, Ge,
     
     Throws,
     
-    Wildcard,
+    Wildcard, 
     
+    Arrow, 
+    DoubleColon, 
+    
+    New, 
+    This, 
+    Instanceof,
+    
+    If, Else, For, While, Do, Switch, Case, Break, Continue, Return, Try, Catch, Finally, Throw,
+    
+    Native, Assert,
+    
+    At
 }

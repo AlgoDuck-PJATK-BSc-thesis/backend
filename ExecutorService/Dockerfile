@@ -44,24 +44,32 @@ RUN apt-get update && \
     jq \
     yq \
     socat \
-    bash && \
+    bash \
+    python3 && \
     apt-get clean
   
-RUN wget https://github.com/firecracker-microvm/firecracker/releases/download/v1.2.0/firecracker-v1.2.0-x86_64.tgz && \
-    tar -xvf firecracker-v1.2.0-x86_64.tgz && \
-    mv release-v1.2.0-x86_64/firecracker-v1.2.0-x86_64 /usr/local/bin/ && \
+ 
+
+RUN wget https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/x86_64/firecracker/firecracker-v1.10.1 -O firecracker && \
+    mv firecracker /usr/local/bin/firecracker && \
+    chmod +x /usr/local/bin/firecracker && \
     mkdir -p /app/firecracker && \
-    wget https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux.bin -O /app/firecracker/vmlinux.bin && \
-    rm -rf firecracker-v1.2.0-x86_64.tgz && \
+    wget https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.10/x86_64/vmlinux-6.1.102 -O /app/firecracker/vmlinux.bin && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf release-v1.2.0-x86_64 && \
-    ln -s /usr/local/bin/firecracker-v1.2.0-x86_64 /usr/local/bin/firecracker && \
     export PATH="/usr/local/bin/firecracker:$PATH"
+
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=publish /app/publish .
 COPY ExecutorService/Executor/VmScripts firecracker
-COPY ExecutorService/VmImages firecracker
-    
-RUN find firecracker -name "*.sh" -execdir chmod u+x {} +
+#COPY ExecutorService/VmImages firecracker/images
+COPY ExecutorService/entrypoint.sh /app/entrypoint.sh
 
-ENTRYPOINT ["dotnet", "ExecutorService.dll"]
+RUN chmod +x /app/entrypoint.sh && \
+    find firecracker -name "*.sh" -execdir chmod u+x {} +
+
+ENTRYPOINT ["/app/entrypoint.sh"]
