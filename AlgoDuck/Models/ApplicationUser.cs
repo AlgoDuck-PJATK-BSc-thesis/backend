@@ -60,7 +60,7 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
     public int Experience { get; set; }
 
     public int AmountSolved { get; set; }
-
+    
     public Guid? CohortId { get; set; }
 
     public DateTime? CohortJoinedAt { get; set; }
@@ -68,9 +68,9 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
     public Cohort? Cohort { get; set; }
 
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
-
+    
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
-
+    
     public ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public ICollection<ItemOwnership> Purchases { get; set; } = new List<ItemOwnership>();
@@ -88,13 +88,9 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
     public ICollection<PurchasedTestCase> PurchasedTestCases { get; set; } = new List<PurchasedTestCase>();
 
     public ICollection<UserSolutionSnapshot> UserSolutionSnapshots { get; set; } = new List<UserSolutionSnapshot>();
-
     public ICollection<CodeExecutionStatistics> CodeExecutionStatistics { get; set; } = new List<CodeExecutionStatistics>();
-
     public ICollection<Item> CreatedItems { get; set; } = new List<Item>();
-
     public ICollection<OwnsLayout> EditorLayouts { get; set; } = new List<OwnsLayout>();
-
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.HasKey(e => e.Id).HasName("application_user_pk");

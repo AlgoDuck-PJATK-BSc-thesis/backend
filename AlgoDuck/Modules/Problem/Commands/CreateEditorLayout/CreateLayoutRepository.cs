@@ -17,14 +17,20 @@ public interface ICreateLayoutRepository
 
 }
 
-public class CreateLayoutRepository(
-    ApplicationCommandDbContext dbContext,
-    IAwsS3Client awsS3Client
-    ) : ICreateLayoutRepository
+public class CreateLayoutRepository : ICreateLayoutRepository
 {
+    private readonly ApplicationCommandDbContext _dbContext;
+    private readonly IAwsS3Client _awsS3Client;
+
+    public CreateLayoutRepository(ApplicationCommandDbContext dbContext, IAwsS3Client awsS3Client)
+    {
+        _dbContext = dbContext;
+        _awsS3Client = awsS3Client;
+    }
+
     public async Task<Result<LayoutCreateResultDto, ErrorObject<string>>> CreateLayoutAsync(LayoutCreateDto createDto, CancellationToken cancellationToken = default)
     {
-        var user = await dbContext.ApplicationUsers.Where(e => e.Id == createDto.UserId)
+        var user = await _dbContext.ApplicationUsers.Where(e => e.Id == createDto.UserId)
             .FirstOrDefaultAsync(cancellationToken: cancellationToken);
         
         if (user == null)
@@ -42,7 +48,7 @@ public class CreateLayoutRepository(
             Layout = newLayout,
         });
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         
         try
         {
@@ -50,7 +56,7 @@ public class CreateLayoutRepository(
             if (res == null)
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("Could not create layout"));
             
-            var postResult = await awsS3Client.PostJsonObjectAsync($"users/layouts/{newLayout.EditorLayoutId}.json", res, cancellationToken: cancellationToken);
+            var postResult = await _awsS3Client.PostJsonObjectAsync($"users/layouts/{newLayout.EditorLayoutId}.json", res, cancellationToken: cancellationToken);
             
             if (postResult.IsErr)
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(postResult.AsT1);
@@ -68,7 +74,7 @@ public class CreateLayoutRepository(
 
     public async Task<Result<ICollection<EditorLayoutDto>, ErrorObject<string>>> GetOwnedLayoutCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await dbContext.ApplicationUsers
+        var user = await _dbContext.ApplicationUsers
             .Include(e => e.EditorLayouts)
             .ThenInclude(e => e.Layout)
             .AsNoTracking()

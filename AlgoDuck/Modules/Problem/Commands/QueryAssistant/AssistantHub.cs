@@ -1,8 +1,7 @@
-using System.Text.Json;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
@@ -13,6 +12,7 @@ public interface IAssistantClient
 }
 
 [Authorize]
+[EnableRateLimiting("Assistant")]
 public sealed class AssistantHub : Hub<IAssistantClient>
 {
     private readonly IAssistantService _assistantService;

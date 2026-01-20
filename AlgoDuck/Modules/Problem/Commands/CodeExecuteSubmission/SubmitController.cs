@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.Problem.Shared.Types;
@@ -8,25 +7,31 @@ using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 
 [ApiController]
 [Route("/api/executor/[controller]")]
 [Authorize]
-public class SubmitController(IExecutorSubmitService executorService) : ControllerBase
+[EnableRateLimiting("CodeExecution")]
+public class SubmitController : ControllerBase
 {
+    private readonly IExecutorSubmitService _executorService;
+
+    public SubmitController(IExecutorSubmitService executorService)
+    {
+        _executorService = executorService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> ExecuteCode([FromBody] SubmitExecuteRequest executeRequest, CancellationToken cancellationToken)
     {
-        var userIdResult = User.GetUserId();
-        if (userIdResult.IsErr)
-            return userIdResult.ToActionResult();
-
-        executeRequest.UserId = userIdResult.AsT0;
-
-        var res = await executorService.SubmitUserCodeRabbitAsync(executeRequest, cancellationToken);
-        return res.ToActionResult();
+        return await User.GetUserId().BindAsync(async userId =>
+        {
+            executeRequest.UserId = userId;
+            return await _executorService.SubmitUserCodeRabbitAsync(executeRequest, cancellationToken);
+        }).ToActionResultAsync();
     }
 }
 

@@ -4,19 +4,27 @@ using StackExchange.Redis;
 
 namespace AlgoDuck.Shared.S3;
 
-public class AwsS3ClientCached(
-    IAwsS3Client awsS3Client,
-    IDatabase redis,
-    ILogger<AwsS3ClientCached> logger
-) : IAwsS3Client
+public class AwsS3ClientCached : IAwsS3Client
 {
+    private readonly IAwsS3Client _awsS3Client;
+    private readonly IDatabase _redis;
+    private readonly ILogger<AwsS3ClientCached> _logger;
+
+    public AwsS3ClientCached(IDatabase redis, IAwsS3Client awsS3Client, ILogger<AwsS3ClientCached> logger)
+    {
+        _redis = redis;
+        _awsS3Client = awsS3Client;
+        _logger = logger;
+    }
+
     private const string CacheKeyPrefix = "s3cache:";
     private const string ObjectSuffix = ":object";
     private const string ExistsSuffix = ":exists";
-    
+
     private static readonly TimeSpan DefaultExpiry = TimeSpan.FromHours(1);
 
-    public async Task<Result<string, ErrorObject<string>>> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Result<string, ErrorObject<string>>> GetDocumentStringByPathAsync(string path,
+        CancellationToken cancellationToken = default)
     {
         var cacheKey = BuildCacheKey(path, ObjectSuffix);
 
@@ -26,41 +34,42 @@ public class AwsS3ClientCached(
             return Result<string, ErrorObject<string>>.Ok(cachedValue.Value!);
         }
 
-        var result = await awsS3Client.GetDocumentStringByPathAsync(path, cancellationToken);
+        var result = await _awsS3Client.GetDocumentStringByPathAsync(path, cancellationToken);
 
         if (result.IsErr)
             return result;
-        
+
         await SetCacheAsync(cacheKey, result.AsOk);
         await SetCacheAsync(BuildCacheKey(path, ExistsSuffix), true);
 
         return result;
     }
 
-    public async Task<Result<T, ErrorObject<string>>> GetJsonObjectByPathAsync<T>(string path, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> GetJsonObjectByPathAsync<T>(string path,
+        CancellationToken cancellationToken = default) where T : class
     {
-        
         var cacheKey = BuildCacheKey(path, ObjectSuffix);
         var cachedValue = await TryGetFromCacheAsync<T>(cacheKey);
-        
+
         if (cachedValue.HasValue)
         {
             return Result<T, ErrorObject<string>>.Ok(cachedValue.Value!);
         }
 
-        var result = await awsS3Client.GetJsonObjectByPathAsync<T>(path, cancellationToken);
+        var result = await _awsS3Client.GetJsonObjectByPathAsync<T>(path, cancellationToken);
 
 
         if (result.IsErr)
             return result;
-        
+
         await SetCacheAsync(cacheKey, result.AsOk);
         await SetCacheAsync(BuildCacheKey(path, ExistsSuffix), true);
 
         return result;
     }
 
-    public async Task<Result<T, ErrorObject<string>>> GetXmlObjectByPathAsync<T>(string path, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> GetXmlObjectByPathAsync<T>(string path,
+        CancellationToken cancellationToken = default) where T : class
     {
         var cacheKey = BuildCacheKey(path, ObjectSuffix);
 
@@ -70,18 +79,19 @@ public class AwsS3ClientCached(
             return Result<T, ErrorObject<string>>.Ok(cachedValue.Value!);
         }
 
-        var result = await awsS3Client.GetXmlObjectByPathAsync<T>(path, cancellationToken);
+        var result = await _awsS3Client.GetXmlObjectByPathAsync<T>(path, cancellationToken);
 
         if (result.IsErr)
             return result;
-        
+
         await SetCacheAsync(cacheKey, result.AsOk!);
         await SetCacheAsync(BuildCacheKey(path, ExistsSuffix), true);
 
         return result;
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> ObjectExistsAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> ObjectExistsAsync(string path,
+        CancellationToken cancellationToken = default)
     {
         var cacheKey = BuildCacheKey(path, ExistsSuffix);
 
@@ -91,7 +101,7 @@ public class AwsS3ClientCached(
             return Result<bool, ErrorObject<string>>.Ok(cachedValue.Value);
         }
 
-        var result = await awsS3Client.ObjectExistsAsync(path, cancellationToken);
+        var result = await _awsS3Client.ObjectExistsAsync(path, cancellationToken);
 
         if (result.IsOk)
         {
@@ -101,13 +111,14 @@ public class AwsS3ClientCached(
         return result;
     }
 
-    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj,
+        CancellationToken cancellationToken = default) where T : class
     {
-        var result = await awsS3Client.PostXmlObjectAsync(path, obj, cancellationToken);
+        var result = await _awsS3Client.PostXmlObjectAsync(path, obj, cancellationToken);
 
         if (result.IsErr)
             return result;
-        
+
         await InvalidateCacheForPathAsync(path);
         await SetCacheAsync(BuildCacheKey(path, ObjectSuffix), obj);
         await SetCacheAsync(BuildCacheKey(path, ExistsSuffix), true);
@@ -115,13 +126,14 @@ public class AwsS3ClientCached(
         return result;
     }
 
-    public async Task<Result<T, ErrorObject<string>>> PostJsonObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostJsonObjectAsync<T>(string path, T obj,
+        CancellationToken cancellationToken = default) where T : class
     {
-        var result = await awsS3Client.PostJsonObjectAsync(path, obj, cancellationToken);
+        var result = await _awsS3Client.PostJsonObjectAsync(path, obj, cancellationToken);
 
         if (result.IsErr)
             return result;
-        
+
         await InvalidateCacheForPathAsync(path);
         await SetCacheAsync(BuildCacheKey(path, ObjectSuffix), obj);
         await SetCacheAsync(BuildCacheKey(path, ExistsSuffix), true);
@@ -129,10 +141,12 @@ public class AwsS3ClientCached(
         return result;
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents, string? contentType = null,
+    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents,
+        string? contentType = null,
         S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
-        var result = await awsS3Client.PostRawFileAsync(path, fileContents, contentType, bucketType, cancellationToken);
+        var result =
+            await _awsS3Client.PostRawFileAsync(path, fileContents, contentType, bucketType, cancellationToken);
 
         if (result.IsOk)
         {
@@ -142,27 +156,30 @@ public class AwsS3ClientCached(
         return result;
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path,
+        S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
-        var result = await awsS3Client.DeleteDocumentAsync(path, bucketType, cancellationToken);
+        var result = await _awsS3Client.DeleteDocumentAsync(path, bucketType, cancellationToken);
 
         await InvalidateCacheForPathAsync(path);
 
         return result;
     }
 
-    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix, S3BucketType bucketType = S3BucketType.Data,
+    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix,
+        S3BucketType bucketType = S3BucketType.Data,
         CancellationToken cancellationToken = default)
     {
-        var result = await awsS3Client.DeleteAllByPrefixAsync(prefix, bucketType, cancellationToken);
-        
+        var result = await _awsS3Client.DeleteAllByPrefixAsync(prefix, bucketType, cancellationToken);
+
         if (result.IsErr)
             return result;
-        
+
         foreach (var objectKey in result.AsOk!)
         {
             await InvalidateCacheForPathAsync(objectKey);
         }
+
         return result;
     }
 
@@ -178,11 +195,11 @@ public class AwsS3ClientCached(
                 new(BuildCacheKey(path, ExistsSuffix))
             };
 
-            await redis.KeyDeleteAsync(keysToDelete);
+            await _redis.KeyDeleteAsync(keysToDelete);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to invalidate cache for path {Path}", path);
+            _logger.LogWarning(ex, "Failed to invalidate cache for path {Path}", path);
         }
     }
 
@@ -190,7 +207,7 @@ public class AwsS3ClientCached(
     {
         try
         {
-            var redisValue = await redis.StringGetAsync(new RedisKey(cacheKey));
+            var redisValue = await _redis.StringGetAsync(new RedisKey(cacheKey));
 
             if (!redisValue.HasValue || redisValue.IsNullOrEmpty)
             {
@@ -210,24 +227,25 @@ public class AwsS3ClientCached(
                 {
                     return CacheResult<T>.Hit((T)(object)boolValue);
                 }
+
                 return CacheResult<T>.Miss();
             }
 
             var deserializedValue = JsonSerializer.Deserialize<T>(stringValue);
-            
+
             return deserializedValue != null
                 ? CacheResult<T>.Hit(deserializedValue)
                 : CacheResult<T>.Miss();
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Failed to deserialize cached value for key {CacheKey}", cacheKey);
-            await redis.KeyDeleteAsync(new RedisKey(cacheKey));
+            _logger.LogWarning(ex, "Failed to deserialize cached value for key {CacheKey}", cacheKey);
+            await _redis.KeyDeleteAsync(new RedisKey(cacheKey));
             return CacheResult<T>.Miss();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to retrieve from cache for key {CacheKey}", cacheKey);
+            _logger.LogWarning(ex, "Failed to retrieve from cache for key {CacheKey}", cacheKey);
             return CacheResult<T>.Miss();
         }
     }
@@ -251,7 +269,7 @@ public class AwsS3ClientCached(
                 serializedValue = JsonSerializer.Serialize(value);
             }
 
-            await redis.StringSetAsync(
+            await _redis.StringSetAsync(
                 new RedisKey(cacheKey),
                 new RedisValue(serializedValue),
                 expiry ?? DefaultExpiry
@@ -259,7 +277,7 @@ public class AwsS3ClientCached(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to set cache for key {CacheKey}", cacheKey);
+            _logger.LogWarning(ex, "Failed to set cache for key {CacheKey}", cacheKey);
         }
     }
 

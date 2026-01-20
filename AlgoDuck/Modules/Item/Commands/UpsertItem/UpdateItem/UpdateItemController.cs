@@ -53,7 +53,7 @@ public class UpdateItemService : IUpdateItemService
     {
         foreach (var formFile in updateItemRequestDto.Sprites)
         {
-            Console.WriteLine(formFile.Name);
+            Console.WriteLine(formFile.FileName);
         }
 
         return await _updateItemRepository.UpdateItemAsync(updateItemRequestDto, cancellationToken);
@@ -137,14 +137,19 @@ public class UpdateItemRepository : IUpdateItemRepository
     
     private async Task<Result<ItemUpdateResult, ErrorObject<string>>> PostSprites(Models.Item item, IFormFileCollection sprites, CancellationToken cancellationToken = default)
     {
+        
         var itemTypeName = item switch
         {
-            DuckItem => "Duck",
-            PlantItem => "Plant",
+            DuckItem => "duck",
+            PlantItem => "plant",
             _ => throw new ArgumentOutOfRangeException(nameof(item), item, null)
         };
-        
-        var objectKeyBase = $"{itemTypeName}s/{item.ItemId}";
+        Console.WriteLine(itemTypeName);
+        foreach (var valueLegalFileName in _legalFileNames.Value.LegalFileNames)
+        {
+            Console.WriteLine($"key: {valueLegalFileName.Key} | value: {JsonSerializer.Serialize(valueLegalFileName.Value)}");
+        }
+        var objectKeyBase = $"{itemTypeName}/{item.ItemId}";
 
         List<FilePostingResult> results = [];
         foreach (var sprite in sprites)
@@ -152,7 +157,7 @@ public class UpdateItemRepository : IUpdateItemRepository
             if (!_legalFileNames.Value.LegalFileNames.TryGetValue(itemTypeName, out var legalName)) continue;
             var spritePath = $"{objectKeyBase}/{sprite.FileName}";
 
-            if (!legalName.Contains(Path.GetFileNameWithoutExtension(sprite.FileName).ToLowerInvariant()))
+            if (!legalName.Contains(Path.GetFileName(sprite.FileName)))
                 return Result<ItemUpdateResult, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Illegal file name"));
 
             var result = await _s3Client.PostRawFileAsync(

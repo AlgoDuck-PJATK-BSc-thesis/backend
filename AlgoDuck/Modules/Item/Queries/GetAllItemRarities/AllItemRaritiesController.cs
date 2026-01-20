@@ -13,7 +13,7 @@ public class AllItemRaritiesController : ControllerBase
 
     public AllItemRaritiesController(IAllItemRaritiesService allItemRaritiesService)
     {
-        this._allItemRaritiesService = allItemRaritiesService;
+        _allItemRaritiesService = allItemRaritiesService;
     }
 
     [HttpGet]

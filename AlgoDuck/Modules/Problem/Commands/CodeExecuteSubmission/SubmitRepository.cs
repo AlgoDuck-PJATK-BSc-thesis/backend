@@ -20,12 +20,18 @@ public interface IExecutorSubmitRepository
     public Task<Result<RewardsDto, ErrorObject<string>>> AddCoinsAndExperienceAsync(SolutionRewardDto rewardDto, CancellationToken cancellationToken = default);
 }
 
-public class SubmitRepository(
-    ApplicationCommandDbContext commandDbContext,
-    IAwsS3Client awsS3Client,
-    IOptions<AwardsConfig> awardsConfig
-    ) : IExecutorSubmitRepository
+public class SubmitRepository : IExecutorSubmitRepository
 {
+    private readonly ApplicationCommandDbContext _commandDbContext;
+    private readonly IAwsS3Client _awsS3Client;
+    private readonly IOptions<AwardsConfig> _awardsConfig;
+
+    public SubmitRepository(IAwsS3Client awsS3Client, IOptions<AwardsConfig> awardsConfig, ApplicationCommandDbContext commandDbContext)
+    {
+        _awsS3Client = awsS3Client;
+        _awardsConfig = awardsConfig;
+        _commandDbContext = commandDbContext;
+    }
 
     public async Task<Result<bool, ErrorObject<string>>> InsertSubmissionResultAsync(SubmissionInsertDto insertDto, CancellationToken cancellationToken = default)
     {
@@ -40,8 +46,8 @@ public class SubmitRepository(
 
         try
         {
-            await commandDbContext.UserSolutions.AddAsync(solution, cancellationToken);
-            await commandDbContext.SaveChangesAsync(cancellationToken);
+            await _commandDbContext.UserSolutions.AddAsync(solution, cancellationToken);
+            await _commandDbContext.SaveChangesAsync(cancellationToken);
         }
         catch (Exception e)
         {
@@ -50,7 +56,7 @@ public class SubmitRepository(
 
         var objectPath = $"users/{solution.UserId}/problems/autosave/{solution.SolutionId}.xml";
 
-        await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
+        await _awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
         
         return await PostUserSolutionCodeToS3Async(new UserSolutionPartialS3
         {
@@ -62,7 +68,7 @@ public class SubmitRepository(
 
     public async Task<Result<RewardsDto, ErrorObject<string>>> AddCoinsAndExperienceAsync(SolutionRewardDto rewardDto, CancellationToken cancellationToken = default)
     {
-        if (await commandDbContext.UserSolutions.CountAsync(
+        if (await _commandDbContext.UserSolutions.CountAsync(
                 s => s.ProblemId == rewardDto.ProblemId && s.UserId == rewardDto.UserId,
                 cancellationToken: cancellationToken) != 0)
             return Result<RewardsDto, ErrorObject<string>>.Ok(new RewardsDto
@@ -71,7 +77,7 @@ public class SubmitRepository(
                 AwardedExperience = 0
             });
 
-        var difficultyRes = await commandDbContext.Problems
+        var difficultyRes = await _commandDbContext.Problems
             .Include(p => p.Difficulty)
             .Where(p => p.ProblemId == rewardDto.ProblemId)
             .Select(p => p.Difficulty)
@@ -80,19 +86,19 @@ public class SubmitRepository(
         if (difficultyRes == null)
             return Result<RewardsDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"difficulty for problem: {rewardDto.ProblemId} not found"));
 
-        var user = await commandDbContext.ApplicationUsers
+        var user = await _commandDbContext.ApplicationUsers
             .FirstOrDefaultAsync(u => u.Id == rewardDto.UserId, cancellationToken);
 
         if (user == null)
             return Result<RewardsDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"user {rewardDto.UserId} not found"));
 
-        var coinsAwarded = (int)(awardsConfig.Value.BaselineCoins * difficultyRes.RewardScaler);
-        var experienceAwarded = (int)(awardsConfig.Value.BaselineExperience * difficultyRes.RewardScaler);
+        var coinsAwarded = (int)(_awardsConfig.Value.BaselineCoins * difficultyRes.RewardScaler);
+        var experienceAwarded = (int)(_awardsConfig.Value.BaselineExperience * difficultyRes.RewardScaler);
         
         user.Coins += coinsAwarded;
         user.Experience += experienceAwarded;
 
-        await commandDbContext.SaveChangesAsync(cancellationToken);
+        await _commandDbContext.SaveChangesAsync(cancellationToken);
 
         return Result<RewardsDto, ErrorObject<string>>.Ok(new RewardsDto
         {
@@ -110,7 +116,7 @@ public class SubmitRepository(
 
         try
         {
-            await awsS3Client.PostXmlObjectAsync($"users/{insertDto.UserId}/solutions/{insertDto.UserSolutionId}.xml", insertDto, cancellationToken);
+            await _awsS3Client.PostXmlObjectAsync($"users/{insertDto.UserId}/solutions/{insertDto.UserSolutionId}.xml", insertDto, cancellationToken);
             return Result<bool, ErrorObject<string>>.Ok(true);   
         }
         catch (Exception e)
@@ -122,7 +128,7 @@ public class SubmitRepository(
     private async Task<Result<bool, ErrorObject<string>>> DropLastCheckpointAsync(AutoSaveDropDto dropDto, CancellationToken cancellationToken = default)
     {
         var objectPath = $"users/{dropDto.UserId}/problems/autosave/{dropDto.ProblemId}.xml";
-        return await awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
+        return await _awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
     }
 }
 public class SubmissionInsertDto

@@ -23,7 +23,7 @@ public class CreateLayoutService: ICreateLayoutService
         return await _createLayoutRepository.GetOwnedLayoutCountAsync(createDto.UserId, cancellationToken).BindAsync(async
             editorLayout =>
         {
-            if (editorLayout.Count == 10)
+            if (editorLayout.Count == 13)
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("Cannot own more than 10 layouts. Consider deleting one"));
             
             if (editorLayout.Select(l => l.Name).Contains(createDto.LayoutName))

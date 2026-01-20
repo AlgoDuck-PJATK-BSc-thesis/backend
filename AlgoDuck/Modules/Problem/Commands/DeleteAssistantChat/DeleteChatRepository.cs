@@ -10,17 +10,22 @@ public interface IDeleteChatRepository
         CancellationToken cancellationToken = default);
 }
 
-public class DeleteChatRepository(
-    ApplicationCommandDbContext dbContext
-) : IDeleteChatRepository
+public class DeleteChatRepository : IDeleteChatRepository
 {
+    private readonly ApplicationCommandDbContext _dbContext;
+
+    public DeleteChatRepository(ApplicationCommandDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto,
         CancellationToken cancellationToken = default)
     {
-        var chatsDeleted = await dbContext.AssistantChats.Where(e => e.Id == dto.ChatId)
+        var chatsDeleted = await _dbContext.AssistantChats.Where(e => e.Id == dto.ChatId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 
-        var messagesDeleted = await dbContext.AssistanceMessages
+        var messagesDeleted = await _dbContext.AssistanceMessages
             .Where(e => e.ChatId == dto.ChatId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 

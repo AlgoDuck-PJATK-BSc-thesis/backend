@@ -1,12 +1,26 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
 
 public class SymbolTableBuilder
 {
+    public int RecursionDepth { get; set; } = 0;
+    public const int MaxRecursionDepth = 100;
     internal Scope GlobalScope { get; private set; } = new();
     internal Scope CurrentScope { get; private set; }
 
+    
+    public int ParseOperations { get; set; } = 0;
+    public const int MaxParseOperations = 100000;
+
+    public void IncrementParseOps()
+    {
+        if (++ParseOperations > MaxParseOperations)
+        {
+            throw new JavaParseComplexityExceededException("Parse complexity limit exceeded");
+        }
+    }
     public static SymbolTableBuilder Create(out SymbolTableBuilder builder)
     {
         builder = new SymbolTableBuilder();
@@ -65,3 +79,5 @@ public class SymbolTableBuilder
     }
     
 }
+
+public class JavaParseComplexityExceededException(string? message = "") : Exception(message);

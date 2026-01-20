@@ -15,39 +15,54 @@ namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.LoadProblemCreateFormS
 
 public interface IFormStateLoadService
 {
-    public Task<Result<UpsertProblemDto, ErrorObject<string>>> LoadFormStateAsync(Guid problemId, CancellationToken cancellationToken = default);
+    public Task<Result<UpsertProblemDto, ErrorObject<string>>> LoadFormStateAsync(Guid problemId,
+        CancellationToken cancellationToken = default);
 }
 
-public class FormStateLoadService(
-    ISharedProblemRepository problemRepository,
-    IFormStateLoadRepository formStateLoadRepository
-    ) : IFormStateLoadService
+public class FormStateLoadService : IFormStateLoadService
 {
-    public async Task<Result<UpsertProblemDto, ErrorObject<string>>> LoadFormStateAsync(Guid problemId, CancellationToken cancellationToken = default)
+    private readonly ISharedProblemRepository _problemRepository;
+    private readonly IFormStateLoadRepository _formStateLoadRepository;
+
+    public FormStateLoadService(IFormStateLoadRepository formStateLoadRepository,
+        ISharedProblemRepository problemRepository)
     {
-        var problemTemplateResult = await problemRepository.GetTemplateAsync(problemId, cancellationToken);
+        _formStateLoadRepository = formStateLoadRepository;
+        _problemRepository = problemRepository;
+    }
+
+    public async Task<Result<UpsertProblemDto, ErrorObject<string>>> LoadFormStateAsync(Guid problemId,
+        CancellationToken cancellationToken = default)
+    {
+        var problemTemplateResult = await _problemRepository.GetTemplateAsync(problemId, cancellationToken);
         if (problemTemplateResult.IsErr)
-            return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+            return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
         var problemTemplate = problemTemplateResult.AsOk!;
-        
-        var problemInfosResult = await problemRepository.GetProblemInfoAsync(problemId, cancellationToken: cancellationToken);
+
+        var problemInfosResult =
+            await _problemRepository.GetProblemInfoAsync(problemId, cancellationToken: cancellationToken);
         if (problemInfosResult.IsErr)
-            return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+            return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
         var problemInfos = problemInfosResult.AsOk!;
-        
-        var problemTestCasesResult = await problemRepository.GetTestCasesAsync(problemId, cancellationToken);
+
+        var problemTestCasesResult = await _problemRepository.GetTestCasesAsync(problemId, cancellationToken);
         if (problemTestCasesResult.IsErr)
-            return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+            return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
         var problemTestCases = problemTestCasesResult.AsOk!;
 
-        
-        var problemDataFullResult = await formStateLoadRepository.GetFullProblemDataAsync(problemId, cancellationToken);
+
+        var problemDataFullResult =
+            await _formStateLoadRepository.GetFullProblemDataAsync(problemId, cancellationToken);
         if (problemDataFullResult.IsErr)
-            return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+            return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
         var problemDataFull = problemDataFullResult.AsOk!;
         Console.WriteLine(JsonSerializer.Serialize(problemTestCases));
 
-        
+
         /*
          * Technically the chances of this being thrown are basically 0,
          * since atp we can guarantee that the template contains valid java code.
@@ -62,12 +77,15 @@ public class FormStateLoadService(
         {
             var templateAnalyzer = new AnalyzerSimple(templateBuilder);
             analysisResult = templateAnalyzer.AnalyzeUserCode(ExecutionStyle.Execution);
-            if (analysisResult.MainMethodIndices == null) /* vague error since main is autoinjected so while the type technically says nullable it's not really */
-                return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"Could not parse template"));
+            if (analysisResult.MainMethodIndices ==
+                null) /* vague error since main is autoinjected so while the type technically says nullable it's not really */
+                return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                    ErrorObject<string>.InternalError($"Could not parse template"));
         }
-        catch (JavaSyntaxException ex) 
+        catch (JavaSyntaxException ex)
         {
-            return Result<UpsertProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"Could not parse template for problem {problemId}"));    
+            return Result<UpsertProblemDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.InternalError($"Could not parse template for problem {problemId}"));
         }
 
         List<TestCaseDto> testCases = [];
@@ -79,7 +97,7 @@ public class FormStateLoadService(
             if (buildTestCaseDtoResult.IsOk)
                 testCases.Add(buildTestCaseDtoResult.AsOk!);
         });
-        
+
         return Result<UpsertProblemDto, ErrorObject<string>>.Ok(new UpsertProblemDto
         {
             CategoryId = problemDataFull.CategoryId,
@@ -95,12 +113,14 @@ public class FormStateLoadService(
         });
     }
 
-    private Result<TestCaseDto, ErrorObject<string>> BuildTestCaseDto(TestCaseJoined testCase, int testCaseIndex, KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? callFunc, ICollection<AstNodeScopeMemberVar> callArgs, AstNodeScopeMemberVar? expected)
+    private Result<TestCaseDto, ErrorObject<string>> BuildTestCaseDto(TestCaseJoined testCase, int testCaseIndex,
+        KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? callFunc, ICollection<AstNodeScopeMemberVar> callArgs,
+        AstNodeScopeMemberVar? expected)
     {
         if (callFunc == null)
             return Result<TestCaseDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.BadRequest("call function is null"));
-        
+
         if (expected == null)
             return Result<TestCaseDto, ErrorObject<string>>.Err(
                 ErrorObject<string>.BadRequest("expected value is null"));
@@ -109,7 +129,8 @@ public class FormStateLoadService(
         return Result<TestCaseDto, ErrorObject<string>>.Ok(new TestCaseDto
         {
             TestCaseId = testCase.TestCaseId,
-            ArrangeB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(GetArrangeWrapped(testCase.Setup, testCaseIndex))),
+            ArrangeB64 =
+                Convert.ToBase64String(Encoding.UTF8.GetBytes(GetArrangeWrapped(testCase.Setup, testCaseIndex))),
             CallArgs = callArgs.Select(ca => new FunctionParam()
             {
                 Name = ca.Identifier?.Value ?? "<undefined>",
@@ -140,15 +161,15 @@ public class FormStateLoadService(
                 Name = expected.Identifier?.Value ?? "<undefined>",
                 Type = expected.Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString())
             },
-
         });
     }
 
-    private Result<TestCaseDto, ErrorObject<string>> ResolveTestCaseDtoParts(TestCaseJoined testCase, int index, CodeAnalysisResult analysisResult, string template)
+    private Result<TestCaseDto, ErrorObject<string>> ResolveTestCaseDtoParts(TestCaseJoined testCase, int index,
+        CodeAnalysisResult analysisResult, string template)
     {
         if (analysisResult.MainMethodIndices == null)
             return Result<TestCaseDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("no main method found"));
-        
+
         InterpolateTestCaseEntrypointClassname(testCase, analysisResult);
         InterpolateTestCasePlaceholders(testCase, index);
 
@@ -160,17 +181,17 @@ public class FormStateLoadService(
         var analyzer = new AnalyzerSimple(testCaseBuilder);
         var tcAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
 
-        if (tcAnalysisResult.Main.FuncScope == null) 
+        if (tcAnalysisResult.Main.FuncScope == null)
             return Result<TestCaseDto, ErrorObject<string>>.Err(ErrorObject<string>.BadRequest("no main scope found"));
-        
+
         var callMethodWithQualifiedPath = ResolveCallMethodWithQualifiedName(analyzer, tcAnalysisResult, testCase);
-        
+
         List<AstNodeScopeMemberVar> variables = [];
         analyzer.GetAllVariablesAccessibleFromScope(tcAnalysisResult.Main.FuncScope.OwnScope, variables);
         Console.WriteLine(testCaseBuilder);
-        
+
         var callVars = variables.Where(v => testCase.Call.Contains(v.Identifier?.Value)).ToList();
-        
+
         var expectedVar = variables.FirstOrDefault(v => testCase.Expected == v.Identifier?.Value);
 
         return BuildTestCaseDto(testCase, index, callMethodWithQualifiedPath, callVars, expectedVar);
@@ -180,10 +201,12 @@ public class FormStateLoadService(
         $"public class TestCase{testCaseIndex}{{\n\tpublic static void main(String[] args){{\n\t\t{content}\n\t}}\n}}";
 
 
-    private static void InterpolateTestCaseEntrypointClassname(TestCaseJoined testCase, CodeAnalysisResult analysisResult)
+    private static void InterpolateTestCaseEntrypointClassname(TestCaseJoined testCase,
+        CodeAnalysisResult analysisResult)
     {
         testCase.Setup = testCase.Setup.Replace("${ENTRYPOINT_CLASS_NAME}", analysisResult.MainClassName);
     }
+
     private static void InterpolateTestCasePlaceholders(TestCaseJoined testCase, int index)
     {
         Console.WriteLine(index);
@@ -198,8 +221,10 @@ public class FormStateLoadService(
             {
                 testCase.Call[j] = testCase.Call[j].Replace(interpolationString, $"var{i}");
             }
+
             testCase.Expected = testCase.Expected.Replace(interpolationString, $"var{i}");
         }
+
         Console.WriteLine($"New setup: {testCase.Setup}");
         Console.WriteLine();
         Console.WriteLine();
@@ -207,7 +232,8 @@ public class FormStateLoadService(
         Console.WriteLine();
     }
 
-    private static KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? ResolveCallMethodWithQualifiedName(AnalyzerSimple analyzer, CodeAnalysisResult tcAnalysisResult, TestCaseJoined testCase)
+    private static KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? ResolveCallMethodWithQualifiedName(
+        AnalyzerSimple analyzer, CodeAnalysisResult tcAnalysisResult, TestCaseJoined testCase)
     {
         if (tcAnalysisResult.Main.FuncScope == null)
             return null;
@@ -219,7 +245,8 @@ public class FormStateLoadService(
             var resolveResult = analyzer.RecursiveResolveFunctionCall(tcAnalysisResult.Main.FuncScope.OwnScope,
                 keyVal.Value.Split("."));
 
-            return resolveResult.IsOk && resolveResult.AsOk! == testCase.CallFunc.Replace("${ENTRYPOINT_CLASS_NAME}", tcAnalysisResult.MainClassName);
+            return resolveResult.IsOk && resolveResult.AsOk! ==
+                testCase.CallFunc.Replace("${ENTRYPOINT_CLASS_NAME}", tcAnalysisResult.MainClassName);
         });
     }
 }

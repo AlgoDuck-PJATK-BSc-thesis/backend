@@ -1,4 +1,3 @@
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +10,6 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 [Authorize]
 public class AllDucksController: ControllerBase
 {
-
     private readonly IAllDucksService _allDucksService;
 
     public AllDucksController(IAllDucksService allDucksService)

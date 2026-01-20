@@ -5,18 +5,20 @@ using Microsoft.AspNetCore.Mvc;
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemCategories;
 
 [ApiController]
-[Route("api/[controller]")]
-[Authorize/*("user,admin")*/]
-public class ProblemCategoriesController(
-    IProblemCategoriesService service
-    ) : ControllerBase
+[Route("api/category/all")]
+[Authorize]
+public class ProblemCategoriesController : ControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> GetAllCategoriesAsync()
+    private readonly IProblemCategoriesService _service;
+
+    public ProblemCategoriesController(IProblemCategoriesService service)
     {
-        return Ok(new StandardApiResponse<IEnumerable<CategoryDto>>()
-        {
-            Body = await service.GetAllAsync()
-        });
+        _service = service;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllCategoriesAsync(CancellationToken cancellationToken)
+    {
+        return await _service.GetAllAsync(cancellationToken).ToActionResultAsync();
     } 
 }

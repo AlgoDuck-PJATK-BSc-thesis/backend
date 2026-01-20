@@ -83,8 +83,8 @@ public class CreateItemRepository : ICreateItemRepository
     {
         var itemTypeName = item switch
         {
-            DuckItem => "Duck",
-            PlantItem => "Plant",
+            DuckItem => "duck",
+            PlantItem => "plant",
             _ => throw new ArgumentOutOfRangeException(nameof(item), item, null)
         };
         

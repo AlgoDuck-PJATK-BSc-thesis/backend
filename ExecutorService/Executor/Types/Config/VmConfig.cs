@@ -18,4 +18,17 @@ public class VmConfig
     internal Process? VmProcess { get; set; }
     internal List<Guid> ServicedJobs { get; set; } = [];
     internal Dictionary<string, string> FileHashes { get; set; } = [];
+    
+    internal DateTime LaunchedAt { get; set; } = DateTime.UtcNow;
+    internal CancellationTokenSource? LifetimeCts { get; set; }
+    internal TaskCompletionSource<VmTerminationReason> TerminationTcs { get; set; } = new();
+}
+
+public enum VmTerminationReason
+{
+    Normal,
+    Timeout,
+    ReaperKill,
+    WatchdogKill,
+    ProcessCrash
 }

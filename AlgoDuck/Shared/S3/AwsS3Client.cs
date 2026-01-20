@@ -9,22 +9,29 @@ using Microsoft.Extensions.Options;
 
 namespace AlgoDuck.Shared.S3;
 
-public class AwsS3Client(
-    IAmazonS3 s3Client,
-    IOptions<S3Settings> s3Settings
-) : IAwsS3Client
+public class AwsS3Client : IAwsS3Client
 {
-    public async Task<Result<string, ErrorObject<string>>> GetDocumentStringByPathAsync(string path, CancellationToken cancellationToken = default)
+    private readonly IAmazonS3 _s3Client;
+    private readonly IOptions<S3Settings> _s3Settings;
+
+    public AwsS3Client(IOptions<S3Settings> s3Settings, IAmazonS3 s3Client)
+    {
+        _s3Settings = s3Settings;
+        _s3Client = s3Client;
+    }
+
+    public async Task<Result<string, ErrorObject<string>>> GetDocumentStringByPathAsync(string path,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var getRequest = new GetObjectRequest
             {
-                BucketName = s3Settings.Value.DataBucketSettings.BucketName,
+                BucketName = _s3Settings.Value.DataBucketSettings.BucketName,
                 Key = path
             };
 
-            var response = await s3Client.GetObjectAsync(getRequest, cancellationToken);
+            var response = await _s3Client.GetObjectAsync(getRequest, cancellationToken);
 
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
@@ -61,7 +68,8 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<T, ErrorObject<string>>> GetJsonObjectByPathAsync<T>(string path, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> GetJsonObjectByPathAsync<T>(string path,
+        CancellationToken cancellationToken = default) where T : class
     {
         Console.WriteLine(path);
         var stringResult = await GetDocumentStringByPathAsync(path, cancellationToken);
@@ -77,6 +85,7 @@ public class AwsS3Client(
                 return Result<T, ErrorObject<string>>.Err(
                     ErrorObject<string>.InternalError($"Failed to deserialize JSON at path {path}"));
             }
+
             return Result<T, ErrorObject<string>>.Ok(result);
         }
         catch (JsonException ex)
@@ -86,7 +95,8 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<T, ErrorObject<string>>> GetXmlObjectByPathAsync<T>(string path, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> GetXmlObjectByPathAsync<T>(string path,
+        CancellationToken cancellationToken = default) where T : class
     {
         var stringResult = await GetDocumentStringByPathAsync(path, cancellationToken);
 
@@ -98,12 +108,13 @@ public class AwsS3Client(
             var serializer = new XmlSerializer(typeof(T));
             using var reader = new StringReader(stringResult.AsT0);
             var obj = serializer.Deserialize(reader) as T;
-            
+
             if (obj == null)
             {
                 return Result<T, ErrorObject<string>>.Err(
                     ErrorObject<string>.InternalError($"Failed to deserialize XML at path {path}"));
             }
+
             return Result<T, ErrorObject<string>>.Ok(obj);
         }
         catch (InvalidOperationException ex)
@@ -113,9 +124,10 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> ObjectExistsAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> ObjectExistsAsync(string path,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(s3Settings.Value.DataBucketSettings.BucketName))
+        if (string.IsNullOrEmpty(_s3Settings.Value.DataBucketSettings.BucketName))
         {
             return Result<bool, ErrorObject<string>>.Err(
                 ErrorObject<string>.InternalError("S3 BucketName is not configured"));
@@ -125,11 +137,11 @@ public class AwsS3Client(
         {
             var request = new GetObjectMetadataRequest
             {
-                BucketName = s3Settings.Value.DataBucketSettings.BucketName,
+                BucketName = _s3Settings.Value.DataBucketSettings.BucketName,
                 Key = path
             };
 
-            await s3Client.GetObjectMetadataAsync(request, cancellationToken);
+            await _s3Client.GetObjectMetadataAsync(request, cancellationToken);
             return Result<bool, ErrorObject<string>>.Ok(true);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -148,7 +160,8 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostXmlObjectAsync<T>(string path, T obj,
+        CancellationToken cancellationToken = default) where T : class
     {
         try
         {
@@ -164,13 +177,13 @@ public class AwsS3Client(
 
             var putRequest = new PutObjectRequest
             {
-                BucketName = s3Settings.Value.DataBucketSettings.BucketName,
+                BucketName = _s3Settings.Value.DataBucketSettings.BucketName,
                 Key = path,
                 InputStream = memoryStream,
                 ContentType = "application/xml"
             };
 
-            var response = await s3Client.PutObjectAsync(putRequest, cancellationToken);
+            var response = await _s3Client.PutObjectAsync(putRequest, cancellationToken);
 
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
@@ -191,16 +204,17 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<T, ErrorObject<string>>> PostJsonObjectAsync<T>(string path, T obj, CancellationToken cancellationToken = default) where T : class
+    public async Task<Result<T, ErrorObject<string>>> PostJsonObjectAsync<T>(string path, T obj,
+        CancellationToken cancellationToken = default) where T : class
     {
         try
         {
             var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj));
             using var stream = new MemoryStream(jsonBytes);
 
-            var response = await s3Client.PutObjectAsync(new PutObjectRequest
+            var response = await _s3Client.PutObjectAsync(new PutObjectRequest
             {
-                BucketName = s3Settings.Value.DataBucketSettings.BucketName,
+                BucketName = _s3Settings.Value.DataBucketSettings.BucketName,
                 Key = path,
                 InputStream = stream,
                 ContentType = "application/json"
@@ -225,7 +239,9 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents, string? contentType = null, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> PostRawFileAsync(string path, Stream fileContents,
+        string? contentType = null, S3BucketType bucketType = S3BucketType.Content,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -233,8 +249,8 @@ public class AwsS3Client(
             {
                 BucketName = bucketType switch
                 {
-                    S3BucketType.Content => s3Settings.Value.ContentBucketSettings.BucketName,
-                    S3BucketType.Data => s3Settings.Value.DataBucketSettings.BucketName,
+                    S3BucketType.Content => _s3Settings.Value.ContentBucketSettings.BucketName,
+                    S3BucketType.Data => _s3Settings.Value.DataBucketSettings.BucketName,
                     _ => throw new ArgumentOutOfRangeException(nameof(bucketType), bucketType, null)
                 },
                 Key = path,
@@ -242,7 +258,7 @@ public class AwsS3Client(
                 ContentType = contentType ?? "application/octet-stream"
             };
 
-            var response = await s3Client.PutObjectAsync(request, cancellationToken);
+            var response = await _s3Client.PutObjectAsync(request, cancellationToken);
 
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
@@ -268,13 +284,14 @@ public class AwsS3Client(
         }
     }
 
-    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path, S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
+    public async Task<Result<bool, ErrorObject<string>>> DeleteDocumentAsync(string path,
+        S3BucketType bucketType = S3BucketType.Content, CancellationToken cancellationToken = default)
     {
         try
         {
-            await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+            await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
             {
-                BucketName = s3Settings.Value.DataBucketSettings.BucketName,
+                BucketName = _s3Settings.Value.DataBucketSettings.BucketName,
                 Key = path
             }, cancellationToken);
 
@@ -296,26 +313,26 @@ public class AwsS3Client(
                 ErrorObject<string>.InternalError($"Could not delete: {ex.Message}"));
         }
     }
-    
 
 
-    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix, S3BucketType bucketType = S3BucketType.Data, CancellationToken cancellationToken = default)
+    public async Task<Result<ICollection<string>, ErrorObject<string>>> DeleteAllByPrefixAsync(string prefix,
+        S3BucketType bucketType = S3BucketType.Data, CancellationToken cancellationToken = default)
     {
-        var bucketName = s3Settings.Value.DataBucketSettings.BucketName;
-    
-        var objects = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+        var bucketName = _s3Settings.Value.DataBucketSettings.BucketName;
+
+        var objects = await _s3Client.ListObjectsV2Async(new ListObjectsV2Request
         {
             BucketName = bucketName,
             Prefix = prefix,
         }, cancellationToken);
 
         var deletedVersions = new Dictionary<string, string>();
-    
+
         try
         {
             foreach (var obj in objects.S3Objects)
             {
-                var deleteResponse = await s3Client.DeleteObjectAsync(bucketName, obj.Key, cancellationToken);
+                var deleteResponse = await _s3Client.DeleteObjectAsync(bucketName, obj.Key, cancellationToken);
                 deletedVersions[obj.Key] = deleteResponse.VersionId;
             }
 
@@ -325,24 +342,26 @@ public class AwsS3Client(
         {
             foreach (var (key, versionId) in deletedVersions)
             {
-                await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+                await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
                 {
                     BucketName = bucketName,
                     Key = key,
-                    VersionId = versionId 
+                    VersionId = versionId
                 }, cancellationToken);
             }
-            return Result<ICollection<string>, ErrorObject<string>>.Err(ErrorObject<string>.InternalError($"failed deleting {prefix}"));
+
+            return Result<ICollection<string>, ErrorObject<string>>.Err(
+                ErrorObject<string>.InternalError($"failed deleting {prefix}"));
         }
     }
-    
+
     private string ExtractBucketName(S3BucketType? bucketType = null)
     {
         return bucketType switch
         {
-            S3BucketType.Content => s3Settings.Value.ContentBucketSettings.BucketName,
-            S3BucketType.Data => s3Settings.Value.DataBucketSettings.BucketName,
-            null => s3Settings.Value.DataBucketSettings.BucketName,
+            S3BucketType.Content => _s3Settings.Value.ContentBucketSettings.BucketName,
+            S3BucketType.Data => _s3Settings.Value.DataBucketSettings.BucketName,
+            null => _s3Settings.Value.DataBucketSettings.BucketName,
             _ => throw new ArgumentOutOfRangeException(nameof(bucketType), bucketType, null)
         };
     }

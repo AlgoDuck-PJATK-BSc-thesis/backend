@@ -5,15 +5,22 @@ namespace AlgoDuck.Modules.Problem.Commands.DeleteAssistantChat;
 
 public interface IDeleteChatService
 {
-    public Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto, CancellationToken cancellationToken = default);
+    public Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto,
+        CancellationToken cancellationToken = default);
 }
 
-public class DeleteChatService(
-    IDeleteChatRepository deleteChatRepository
-    ) : IDeleteChatService
+public class DeleteChatService : IDeleteChatService
 {
-    public async Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto, CancellationToken cancellationToken = default)
+    private readonly IDeleteChatRepository _deleteChatRepository;
+
+    public DeleteChatService(IDeleteChatRepository deleteChatRepository)
     {
-        return await deleteChatRepository.Delete(dto, cancellationToken);
+        _deleteChatRepository = deleteChatRepository;
+    }
+
+    public async Task<Result<DeleteChatDtoResult, ErrorObject<string>>> Delete(DeleteChatDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        return await _deleteChatRepository.Delete(dto, cancellationToken);
     }
 }

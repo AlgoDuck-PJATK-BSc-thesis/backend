@@ -11,7 +11,6 @@ public class AutoSaveResponseDto
     public required Guid ProblemId { get; set; }
     public required string UserCodeB64 { get; init; }
     public ICollection<TestResults> TestResults { get; init; } = [];
-    
 }
 
 public class TestResults

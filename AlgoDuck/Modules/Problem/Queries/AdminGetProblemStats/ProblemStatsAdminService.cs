@@ -1,3 +1,5 @@
+using System.Text.Json;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin.Types;
 using AlgoDuck.Shared.Http;
 
@@ -45,6 +47,7 @@ public class ProblemDetailsAdminService : IProblemDetailsAdminService
                 return await _repository.GetRecentSubmissionsAsync(recentActivityRequest, cancellationToken);
             }).BindAsync(async recentSubmissions =>
             {
+                Console.WriteLine(JsonSerializer.Serialize(recentSubmissions));
                 problemStats.RecentSubmission = recentSubmissions;
                 return await _repository.GetTestCaseStatsAsync(performanceRequest.ProblemId, cancellationToken);
             }).BindAsync(async testCaseStats =>

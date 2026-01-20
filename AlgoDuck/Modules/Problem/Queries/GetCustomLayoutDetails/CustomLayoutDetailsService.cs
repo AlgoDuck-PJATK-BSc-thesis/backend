@@ -8,13 +8,18 @@ public interface ICustomLayoutDetailsService
     public Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> SetCustomLayoutDetailsASync(CustomLayoutDetailsRequestDto requestDto, CancellationToken cancellationToken = default);
 }
 
-public class CustomLayoutDetailsService(
-    ICustomLayoutDetailsRepository layoutDetailsRepository
-    ) : ICustomLayoutDetailsService
+public class CustomLayoutDetailsService : ICustomLayoutDetailsService
 {
+    private readonly ICustomLayoutDetailsRepository _layoutDetailsRepository;
+
+    public CustomLayoutDetailsService(ICustomLayoutDetailsRepository layoutDetailsRepository)
+    {
+        _layoutDetailsRepository = layoutDetailsRepository;
+    }
+
     public async Task<Result<CustomLayoutDetailsResponseDto, ErrorObject<string>>> SetCustomLayoutDetailsASync(CustomLayoutDetailsRequestDto requestDto,
         CancellationToken cancellationToken = default)
     {
-        return await layoutDetailsRepository.GetCustomLayoutDetailsAsync(requestDto, cancellationToken);
+        return await _layoutDetailsRepository.GetCustomLayoutDetailsAsync(requestDto, cancellationToken);
     }
 }

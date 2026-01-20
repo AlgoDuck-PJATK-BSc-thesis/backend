@@ -4,16 +4,22 @@ namespace AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 
 public interface ILoadAutoSaveService
 {
-    public Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> LoadAutoSaveController(AutoSaveRequestDto request, CancellationToken cancellationToken = default);
-    
+    public Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> LoadAutoSaveController(AutoSaveRequestDto request,
+        CancellationToken cancellationToken = default);
 }
 
-public class LoadAutoSaveService(
-    ILoadAutoSaveRepository autoSaveRepository
-) : ILoadAutoSaveService
+public class LoadAutoSaveService : ILoadAutoSaveService
 {
-    public async Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> LoadAutoSaveController(AutoSaveRequestDto request, CancellationToken cancellationToken = default)
+    private readonly ILoadAutoSaveRepository _autoSaveRepository;
+
+    public LoadAutoSaveService(ILoadAutoSaveRepository autoSaveRepository)
     {
-        return await autoSaveRepository.TryGetLastAutoSaveAsync(request, cancellationToken);
+        _autoSaveRepository = autoSaveRepository;
+    }
+
+    public async Task<Result<AutoSaveResponseDto?, ErrorObject<string>>> LoadAutoSaveController(
+        AutoSaveRequestDto request, CancellationToken cancellationToken = default)
+    {
+        return await _autoSaveRepository.TryGetLastAutoSaveAsync(request, cancellationToken);
     }
 }

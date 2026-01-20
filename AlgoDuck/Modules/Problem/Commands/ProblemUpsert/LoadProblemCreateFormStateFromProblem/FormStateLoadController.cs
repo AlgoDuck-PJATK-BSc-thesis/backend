@@ -7,13 +7,18 @@ namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.LoadProblemCreateFormS
 [Authorize(Roles = "admin")]
 [ApiController]
 [Route("api/[controller]")]
-public class FormStateLoadController(
-    IFormStateLoadService formStateLoadService
-    ) : ControllerBase
+public class FormStateLoadController : ControllerBase
 {
+    private readonly IFormStateLoadService _formStateLoadService;
+
+    public FormStateLoadController(IFormStateLoadService formStateLoadService)
+    {
+        _formStateLoadService = formStateLoadService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> LoadFormStateAsync([FromQuery] Guid problemId, CancellationToken cancellationToken)
     {
-        return await formStateLoadService.LoadFormStateAsync(problemId, cancellationToken).ToActionResultAsync();
+        return await _formStateLoadService.LoadFormStateAsync(problemId, cancellationToken).ToActionResultAsync();
     }
 }

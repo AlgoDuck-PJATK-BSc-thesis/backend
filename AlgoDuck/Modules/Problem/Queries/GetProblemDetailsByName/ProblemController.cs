@@ -19,6 +19,6 @@ public class ProblemController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetProblemDetailsByIdAsync([FromQuery] Guid problemId, CancellationToken cancellationToken)
     {
-        return await _problemService.GetProblemDetailsAsync(problemId).ToActionResultAsync();
+        return await _problemService.GetProblemDetailsAsync(problemId, cancellationToken).ToActionResultAsync();
     }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

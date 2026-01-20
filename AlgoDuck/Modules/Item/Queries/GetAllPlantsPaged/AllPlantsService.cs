@@ -9,12 +9,17 @@ public interface IAllPlantsService
     
 }
 
-public class AllPlantsService(
-    IAllPlantsRepository allPlantsRepository
-    ) : IAllPlantsService
+public class AllPlantsService : IAllPlantsService
 {
+    private readonly IAllPlantsRepository _allPlantsRepository;
+
+    public AllPlantsService(IAllPlantsRepository allPlantsRepository)
+    {
+        _allPlantsRepository = allPlantsRepository;
+    }
+
     public async Task<Result<PageData<PlantItemDto>, ErrorObject<string>>> GetAllPlantsPagedAsync(PagedRequestWithAttribution pagedRequest, CancellationToken cancellationToken = default)
     {
-        return await allPlantsRepository.GetAllPlantsPagedAsync(pagedRequest, cancellationToken);
+        return await _allPlantsRepository.GetAllPlantsPagedAsync(pagedRequest, cancellationToken);
     }
 }

@@ -9,12 +9,17 @@ public interface IOwnedPlantsService
 
 }
 
-public class OwnedPlantsService(
-    IOwnedPlantsRepository ownedPlantsRepository
-    ) : IOwnedPlantsService
+public class OwnedPlantsService : IOwnedPlantsService
 {
+    private readonly IOwnedPlantsRepository _ownedPlantsRepository;
+
+    public OwnedPlantsService(IOwnedPlantsRepository ownedPlantsRepository)
+    {
+        _ownedPlantsRepository = ownedPlantsRepository;
+    }
+
     public async Task<Result<PageData<OwnedPlantDto>, ErrorObject<string>>> GetOwnedPlantsAsync(OwnedItemsRequest ownedItemsRequest, CancellationToken cancellationToken = default)
     {
-        return await ownedPlantsRepository.GetOwnedPlantsAsync(ownedItemsRequest, cancellationToken);
+        return await _ownedPlantsRepository.GetOwnedPlantsAsync(ownedItemsRequest, cancellationToken);
     }
 }

@@ -19,8 +19,8 @@ public abstract class ItemOwnership : IEntityTypeConfiguration<ItemOwnership>
         builder.ToTable("purchase");
 
         builder.HasDiscriminator<string>("ownership_type")
-            .HasValue<DuckOwnership>("Duck")
-            .HasValue<PlantOwnership>("Plant");
+            .HasValue<DuckOwnership>("duck")
+            .HasValue<PlantOwnership>("plant");
 
         builder.Property(e => e.PurchasedAt)
             .HasColumnName("purchased_at");

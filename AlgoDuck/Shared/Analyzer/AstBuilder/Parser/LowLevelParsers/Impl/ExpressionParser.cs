@@ -33,6 +33,10 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
     private readonly List<Token> _tokens = tokens;
     private readonly FilePosition _filePosition = filePosition;
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
+
+    private const int MaxSwallowIterations = 10000;
+    private const int MaxLambdaLookahead = 1000;
+    private const int MaxArrayLiteralElements = 10000;
     
     private readonly Dictionary<TokenType, int> _operatorPrecedences = new()
     {
@@ -60,10 +64,16 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
     {
         var parenDepth = 0;
         var bracketDepth = 0;
+        var iterations = 0;
 
         Token? token = null;
         while (PeekToken() != null)
         {
+            if (++iterations > MaxSwallowIterations)
+            {
+                throw new JavaSyntaxException("Expression too complex or malformed");
+            }
+            
             token = PeekToken()!;
 
             if (token.Type == TokenType.OpenCurly)
@@ -120,9 +130,16 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         _filePosition.CreateCheckpoint();
         try
         {
-            int depth = 0;
+            var depth = 0;
+            var iterations = 0;
+            
             while (PeekToken() != null)
             {
+                if (++iterations > MaxLambdaLookahead)
+                {
+                    return false;
+                }
+                
                 var t = PeekToken()!;
                 
                 switch (t.Type)
@@ -155,91 +172,101 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
 
     private NodeTerm ParseTerm()
     {
-        if (PeekToken() == null) throw new JavaSyntaxException("");
-        var nodeTerm = new NodeTerm();
-        
-        if (IsComplexExpressionStart())
+        return WithRecursionLimit(() =>
         {
-            SwallowUntilExpressionEnd();
-            return new NodeTerm { Val = new NodeTermSwallowed() };
-        }
-        
-        if (PeekToken()!.Type == TokenType.OpenParen)
-        {
-            if (LooksLikeLambdaOrMethodRef())
-            {
-                SwallowUntilExpressionEnd();
-                return new NodeTerm { Val = new NodeTermSwallowed() };
-            }
+            if (PeekToken() == null) throw new JavaSyntaxException("Unexpected end of input while parsing term");
             
-            _filePosition.CreateCheckpoint();
-            if (TryParseCast(out var cast))
-            {
-                nodeTerm.Val = cast!;                
-            }
-            else
-            {
-                _filePosition.LoadCheckpoint();
-                var binaryExpression = ParseBinExpr();
-                nodeTerm.Val = binaryExpression;                
-            }
-        }
-        else if (PeekToken()!.Type == TokenType.Ident)
-        {
-            var variableIdentifier = ConsumeToken();
-            
-            if (CheckTokenType(TokenType.Arrow) || CheckTokenType(TokenType.DoubleColon) || CheckTokenType(TokenType.OpenParen) || CheckTokenType(TokenType.Dot))
+            var nodeTerm = new NodeTerm();
+
+            if (IsComplexExpressionStart())
             {
                 SwallowUntilExpressionEnd();
                 return new NodeTerm { Val = new NodeTermSwallowed() };
             }
 
-            if (CheckTokenType(TokenType.OpenBrace))
+            if (PeekToken()!.Type == TokenType.OpenParen)
             {
-                ConsumeToken(); // consume '['
-                var arrIndex = ParseExpr();
-                nodeTerm = new NodeTerm { Val = new NodeTermArrayReference { ArrReference = variableIdentifier, ArrIndex = arrIndex } };
-                ConsumeIfOfType("]", TokenType.CloseBrace); 
+                if (LooksLikeLambdaOrMethodRef())
+                {
+                    SwallowUntilExpressionEnd();
+                    return new NodeTerm { Val = new NodeTermSwallowed() };
+                }
+
+                _filePosition.CreateCheckpoint();
+                if (TryParseCast(out var cast))
+                {
+                    nodeTerm.Val = cast!;
+                }
+                else
+                {
+                    _filePosition.LoadCheckpoint();
+                    var binaryExpression = ParseBinExpr();
+                    nodeTerm.Val = binaryExpression;
+                }
+            }
+            else if (PeekToken()!.Type == TokenType.Ident)
+            {
+                var variableIdentifier = ConsumeToken();
+
+                if (CheckTokenType(TokenType.Arrow) || CheckTokenType(TokenType.DoubleColon) ||
+                    CheckTokenType(TokenType.OpenParen) || CheckTokenType(TokenType.Dot))
+                {
+                    SwallowUntilExpressionEnd();
+                    return new NodeTerm { Val = new NodeTermSwallowed() };
+                }
+
+                if (CheckTokenType(TokenType.OpenBrace))
+                {
+                    ConsumeToken(); // consume '['
+                    var arrIndex = ParseExpr();
+                    nodeTerm = new NodeTerm
+                        { Val = new NodeTermArrayReference { ArrReference = variableIdentifier, ArrIndex = arrIndex } };
+                    ConsumeIfOfType("]", TokenType.CloseBrace);
+                }
+                else
+                {
+                    nodeTerm = new NodeTerm { Val = new NodeTermIdent { Identifier = variableIdentifier } };
+                }
+
+                nodeTerm = CheckPostfix(nodeTerm);
+            }
+            else if (CheckTokenType(TokenType.OpenCurly))
+            {
+                SwallowUntilExpressionEnd();
+                return new NodeTerm { Val = new NodeTermSwallowed() };
             }
             else
             {
-                nodeTerm = new NodeTerm { Val = new NodeTermIdent { Identifier = variableIdentifier } };
+                var numericLiteral = PeekToken()!.Type switch
+                {
+                    TokenType.LongLit => ConsumeToken(),
+                    TokenType.IntLit => ConsumeToken(),
+                    TokenType.FloatLit => ConsumeToken(),
+                    TokenType.DoubleLit => ConsumeToken(),
+                    TokenType.CharLit => ConsumeToken(),
+                    TokenType.StringLit => ConsumeToken(),
+                    TokenType.BooleanLit => ConsumeToken(),
+                    _ => SwallowUntilExpressionEnd()
+                };
+                nodeTerm.Val = new NodeTermLit { TermLit = numericLiteral };
             }
-            nodeTerm = CheckPostfix(nodeTerm);
-        }
-        else if (CheckTokenType(TokenType.OpenCurly))
-        {
-            SwallowUntilExpressionEnd();
-            return new NodeTerm { Val = new NodeTermSwallowed() };
-        }
-        else
-        {
-            var numericLiteral = PeekToken()!.Type switch
-            {
-                TokenType.LongLit => ConsumeToken(),
-                TokenType.IntLit => ConsumeToken(),
-                TokenType.FloatLit => ConsumeToken(),
-                TokenType.DoubleLit => ConsumeToken(),
-                TokenType.CharLit => ConsumeToken(),
-                TokenType.StringLit => ConsumeToken(),
-                TokenType.BooleanLit => ConsumeToken(),
-                _ => SwallowUntilExpressionEnd()
-            };
-            nodeTerm.Val = new NodeTermLit { TermLit = numericLiteral };
-        }
 
-        return nodeTerm;
+            return nodeTerm;
+        });
     }
 
     private NodeTermParen ParseBinExpr()
     {
-        ConsumeIfOfType("unexpected token", TokenType.OpenParen);
-        var nodeExpr = ParseExpr();
-        ConsumeIfOfType("Unclosed (", TokenType.CloseParen);
-        return new NodeTermParen
+        return WithRecursionLimit(() =>
         {
-            Expr = nodeExpr
-        };
+            ConsumeIfOfType("unexpected token", TokenType.OpenParen);
+            var nodeExpr = ParseExpr();
+            ConsumeIfOfType("Unclosed (", TokenType.CloseParen);
+            return new NodeTermParen
+            {
+                Expr = nodeExpr
+            };
+        });
     }
     
     private bool TryParseCast(out NodeTermCast? cast)
@@ -280,37 +307,43 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
     
     public NodeExpr ParseExpr(int minPrecedence = 1)
     {
-        var lhs = new NodeExpr { Expr = CheckUnaryPreTermParse() };
-        while (true)
+        return WithRecursionLimit(() =>
         {
-            var curToken = PeekToken();
-            if (curToken == null) break;
+            symbolTableBuilder.IncrementParseOps();
+
+            var lhs = new NodeExpr { Expr = CheckUnaryPreTermParse() };
             
-            if (curToken.Type == TokenType.Wildcard)
+            while (true)
             {
-                SwallowUntilExpressionEnd();
-                return new NodeExpr { Expr = new NodeTerm { Val = new NodeTermSwallowed() } };
+                var curToken = PeekToken();
+                if (curToken == null) break;
+
+                if (curToken.Type == TokenType.Wildcard)
+                {
+                    SwallowUntilExpressionEnd();
+                    return new NodeExpr { Expr = new NodeTerm { Val = new NodeTermSwallowed() } };
+                }
+
+                var op = MapTokensToBinaryOperators(curToken);
+
+                if (op == null) return lhs;
+
+                var currentPrecedence = _operatorPrecedences[curToken.Type];
+                if (currentPrecedence < minPrecedence) break;
+                var nextMinPrecedence = currentPrecedence + 1;
+
+                ConsumeToken(); // consume operator token
+
+                var rhs = ParseExpr(nextMinPrecedence);
+                var binExpr = new NodeBinExpr
+                {
+                    Lhs = lhs, Rhs = rhs, Operator = (BinaryOperator)op
+                };
+                lhs = new NodeExpr { Expr = binExpr };
             }
-            
-            var op = MapTokensToBinaryOperators(curToken);
 
-            if (op == null) return lhs;
-
-            var currentPrecedence = _operatorPrecedences[curToken.Type];
-            if (currentPrecedence < minPrecedence) break;
-            var nextMinPrecedence = currentPrecedence + 1;
-            
-            ConsumeToken(); // consume operator token
-
-            var rhs = ParseExpr(nextMinPrecedence);
-            var binExpr = new NodeBinExpr
-            {
-                Lhs = lhs, Rhs = rhs, Operator = (BinaryOperator) op
-            };
-            lhs = new NodeExpr { Expr = binExpr };
-        }
-
-        return lhs;
+            return lhs;
+        });
     }
     
     private NodeTerm CheckPostfix(NodeTerm term)
@@ -318,7 +351,8 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         if (CheckTokenType(TokenType.Decrement, 1) && (term.Val.IsT2 || term.Val.IsT3))
         {
             term = CreateWrappedPostfixExpression(term, BinaryOperator.Minus);
-        }else if (CheckTokenType(TokenType.Increment, 1) && (term.Val.IsT2 || term.Val.IsT3))
+        }
+        else if (CheckTokenType(TokenType.Increment, 1) && (term.Val.IsT2 || term.Val.IsT3))
         {
             term = CreateWrappedPostfixExpression(term, BinaryOperator.Plus);
         }
@@ -334,10 +368,19 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
         {
             ArrayType = LiteralType.Ident
         };
+        
         if (PeekToken() == null) throw new JavaSyntaxException("expected tokens");
+        
         var inferredType = TokenType.Ident;
+        var elementCount = 0;
+        
         while (PeekToken() != null && CheckTokenType(TokenType.Comma, 1))
         {
+            if (++elementCount > MaxArrayLiteralElements)
+            {
+                throw new JavaSyntaxException($"Array literal exceeds maximum of {MaxArrayLiteralElements} elements");
+            }
+            
             var curToken = PeekToken()!;
             var tokenLiteralType = MapTokenTypeToLiteralType(curToken.Type);
             if (inferredType == TokenType.Ident && tokenLiteralType != null && tokenLiteralType != LiteralType.Ident)
@@ -347,6 +390,12 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
             arrayLiteral.ArrayMembers.Add(ConsumeIfOfType($"\nType mismatch.\n\texpected: {inferredType}\n\tgot:\t{PeekToken()!.Type}", TokenType.Ident, inferredType));
             ConsumeIfOfType("expected ','", TokenType.Comma);
         }
+        
+        if (PeekToken() == null)
+        {
+            throw new JavaSyntaxException("Unexpected end of input in array literal");
+        }
+        
         arrayLiteral.ArrayMembers.Add(ConsumeIfOfType($"\nType mismatch.\n\texpected: {inferredType}\n\tgot:\t{PeekToken()!.Type}", TokenType.Ident, inferredType));
         ConsumeIfOfType("expected '}'", TokenType.CloseCurly);
 
@@ -357,35 +406,39 @@ public class ExpressionParser(List<Token> tokens, FilePosition filePosition, Sym
 
     private NodeTerm CheckUnaryPreTermParse()
     {
-        if (CheckTokenType(TokenType.Minus))
+        return WithRecursionLimit(() =>
         {
-            ConsumeToken();
-            return CreateWrappedUnaryExpression(UnaryOperator.Minus);
-        }
-        if (CheckTokenType(TokenType.Increment))
-        {
-            ConsumeToken();
-            return CreateWrappedUnaryExpression(UnaryOperator.Increment);
-        }
+            if (CheckTokenType(TokenType.Minus))
+            {
+                ConsumeToken();
+                return CreateWrappedUnaryExpression(UnaryOperator.Minus);
+            }
 
-        if (CheckTokenType(TokenType.Decrement))
-        {
-            ConsumeToken();
-            return CreateWrappedUnaryExpression(UnaryOperator.Decrement);
-        }
+            if (CheckTokenType(TokenType.Increment))
+            {
+                ConsumeToken();
+                return CreateWrappedUnaryExpression(UnaryOperator.Increment);
+            }
 
-        if (CheckTokenType(TokenType.Negation))
-        {
-            ConsumeToken();
-            return CreateWrappedUnaryExpression(UnaryOperator.Negation);
-        }
+            if (CheckTokenType(TokenType.Decrement))
+            {
+                ConsumeToken();
+                return CreateWrappedUnaryExpression(UnaryOperator.Decrement);
+            }
 
-        if (CheckTokenType(TokenType.Plus))
-        {
-            ConsumeToken();
-        }
+            if (CheckTokenType(TokenType.Negation))
+            {
+                ConsumeToken();
+                return CreateWrappedUnaryExpression(UnaryOperator.Negation);
+            }
 
-        return ParseTerm();
+            if (CheckTokenType(TokenType.Plus))
+            {
+                ConsumeToken();
+            }
+
+            return ParseTerm();
+        });
     }
 
     private NodeTerm CreateWrappedUnaryExpression(UnaryOperator op)

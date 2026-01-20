@@ -7,12 +7,17 @@ public interface IUpdateChatNameService
     public Task<Result<UpdateChatNameResult, ErrorObject<string>>> UpdateChatName(UpdateChatNameDto dto,  CancellationToken cancellationToken = default);
 }
 
-public class UpdateChatNameService(
-    IUpdateChatNameRepository updateChatNameRepository
-) :  IUpdateChatNameService
+public class UpdateChatNameService :  IUpdateChatNameService
 {
+    private readonly IUpdateChatNameRepository _updateChatNameRepository;
+
+    public UpdateChatNameService(IUpdateChatNameRepository updateChatNameRepository)
+    {
+        _updateChatNameRepository = updateChatNameRepository;
+    }
+
     public async Task<Result<UpdateChatNameResult, ErrorObject<string>>> UpdateChatName(UpdateChatNameDto dto, CancellationToken cancellationToken = default)
     {
-        return await updateChatNameRepository.UpdateChatName(dto, cancellationToken);    
+        return await _updateChatNameRepository.UpdateChatName(dto, cancellationToken);    
     }
 }

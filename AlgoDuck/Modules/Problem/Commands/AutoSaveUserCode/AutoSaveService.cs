@@ -8,13 +8,18 @@ public interface IAutoSaveService
         CancellationToken cancellationToken);
 }
 
-public class AutoSaveService(
-    IAutoSaveRepository autoSaveRepository
-) : IAutoSaveService
+public class AutoSaveService : IAutoSaveService
 {
+    private readonly IAutoSaveRepository _autoSaveRepository;
+
+    public AutoSaveService(IAutoSaveRepository autoSaveRepository)
+    {
+        _autoSaveRepository = autoSaveRepository;
+    }
+
     public async Task<Result<AutoSaveResultDto, ErrorObject<string>>> AutoSaveCodeAsync(AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken)
     {
-        return await autoSaveRepository.UpsertSolutionSnapshotCodeAsync(autoSaveDto, cancellationToken);
+        return await _autoSaveRepository.UpsertSolutionSnapshotCodeAsync(autoSaveDto, cancellationToken);
     }
 }

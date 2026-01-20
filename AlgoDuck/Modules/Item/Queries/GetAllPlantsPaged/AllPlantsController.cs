@@ -1,5 +1,4 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +9,15 @@ namespace AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 [ApiController]
 [Route("api/item/plant")]
 [Authorize]
-public class AllPlantsController(
-    IAllPlantsService allPlantsService
-    ) : ControllerBase
+public class AllPlantsController : ControllerBase
 {
+    private readonly IAllPlantsService _allPlantsService;
+
+    public AllPlantsController(IAllPlantsService allPlantsService)
+    {
+        _allPlantsService = allPlantsService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllItemsPagedAsync(
         [FromQuery] int currentPage,
@@ -24,7 +28,7 @@ public class AllPlantsController(
         if (userIdRes.IsErr)
             return userIdRes.ToActionResult();
 
-        var res = await allPlantsService.GetAllPlantsPagedAsync(new PagedRequestWithAttribution()
+        var res = await _allPlantsService.GetAllPlantsPagedAsync(new PagedRequestWithAttribution()
         {
             PageSize = pageSize,
             CurrPage = currentPage,

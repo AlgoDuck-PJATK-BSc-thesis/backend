@@ -22,11 +22,12 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
     {
         var memberFunc = new AstNodeMemberFunc<T>();
         memberFunc.SetMemberType(typeMember.GetMemberType()!);
-        
+
         while (PeekToken()?.Type == TokenType.At)
         {
             memberFunc.AddAnnotation(ParseAnnotation());
         }
+
         
         var accessModifier = TokenIsAccessModifier(PeekToken());
         if (accessModifier is not null)
@@ -34,9 +35,9 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
             memberFunc.AccessModifier = accessModifier.Value;
             ConsumeToken();
         }
-
+        
         memberFunc.Modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final, MemberModifier.Abstract, MemberModifier.Strictfp, MemberModifier.Default]);
-
+        
         ParseGenericDeclaration(memberFunc);
         
         ParseMemberFuncReturnType(memberFunc);
@@ -50,12 +51,10 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
                 Name = memberFunc.Identifier!.Value!, 
             });  
         }
-
         ParseMemberFunctionArguments(memberFunc);
         
         ParseThrowsDirective(memberFunc);
 
-        // SkipIfOfType(TokenType.Semi);
         if (SkipIfOfType(TokenType.Semi)) return memberFunc;
 
         memberFunc.FuncScope = ParseStatementScope();
@@ -64,6 +63,7 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
 
     public void ParseMemberFuncReturnType<T>(AstNodeMemberFunc<T> memberFunc) where T:  BaseType<T>
     {
+
         if (CheckTokenType(TokenType.Ident) && PeekToken()!.Value! ==
             memberFunc.GetMemberType()!.Name!.Value)
         {
@@ -74,6 +74,8 @@ public class MemberFunctionParser(List<Token> tokens, FilePosition filePosition,
             };
             return;
         }
+
+
         memberFunc.FuncReturnType = ParseType();
     }
 

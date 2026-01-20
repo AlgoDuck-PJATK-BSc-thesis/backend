@@ -51,45 +51,6 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition, Symb
         return nodeInterface;
     }
 
-    private void SwallowUntilRecoveryPoint()
-    {
-        int braceDepth = 0;
-    
-        while (PeekToken() != null)
-        {
-            var token = PeekToken()!;
-        
-            // Track nested braces
-            if (token.Type == TokenType.OpenCurly)
-            {
-                braceDepth++;
-                ConsumeToken();
-            }
-            else if (token.Type == TokenType.CloseCurly)
-            {
-                if (braceDepth > 0)
-                {
-                    braceDepth--;
-                    ConsumeToken();
-                }
-                else
-                {
-                    // We've reached the closing brace of the interface scope - stop here
-                    break;
-                }
-            }
-            else if (braceDepth == 0 && token.Type == TokenType.Semi)
-            {
-                // End of a statement at the interface level - good recovery point
-                ConsumeToken();
-                break;
-            }
-            else
-            {
-                ConsumeToken();
-            }
-        }
-    }
     public AstNodeTypeScope<AstNodeInterface> ParseInterfaceScope(AstNodeInterface astNodeInterface)
     {
         _symbolTableBuilder.EnterScope();
@@ -102,14 +63,17 @@ public class InterfaceParser(List<Token> tokens, FilePosition filePosition, Symb
     
         while (!CheckTokenType(TokenType.CloseCurly) && PeekToken() != null)
         {
+            var prevToken =  PeekToken();
             try
             {
                 interfaceScope.TypeMembers.Add(new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder).ParseTypeMember(astNodeInterface));
             }
             catch (Exception)
             {
-                // Error recovery: swallow tokens until we find a reasonable recovery point
-                SwallowUntilRecoveryPoint();
+                if (prevToken != null && PeekToken() == prevToken)
+                {
+                    ConsumeToken();
+                }
             }
         }
     
