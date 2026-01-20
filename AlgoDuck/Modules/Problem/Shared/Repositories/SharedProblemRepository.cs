@@ -23,11 +23,17 @@ public interface ISharedProblemRepository
 
 }
 
-public class SharedProblemRepository(
-    ApplicationQueryDbContext dbContext,
-    IAwsS3Client awsS3Client
-    ) : ISharedProblemRepository
+public class SharedProblemRepository : ISharedProblemRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+    private readonly IAwsS3Client _awsS3Client;
+
+    public SharedProblemRepository(IAwsS3Client awsS3Client, ApplicationQueryDbContext dbContext)
+    {
+        _awsS3Client = awsS3Client;
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<ProblemDto, ErrorObject<string>>> GetProblemDetailsAsync(Guid problemId, CancellationToken cancellationToken = default)
     {
         var problemTemplateResult = await GetTemplateAsync(problemId, cancellationToken);
@@ -43,7 +49,7 @@ public class SharedProblemRepository(
         if (problemInfosResult.IsErr)
             return Result<ProblemDto, ErrorObject<string>>.Err(problemInfosResult.AsT1);
 
-        var problem = await dbContext.Problems
+        var problem = await _dbContext.Problems
             .Include(p => p.Category)
             .Include(p => p.Difficulty)
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken: cancellationToken);
@@ -83,7 +89,7 @@ public class SharedProblemRepository(
     public async Task<Result<ProblemS3PartialTemplate, ErrorObject<string>>> GetTemplateAsync(Guid exerciseId, CancellationToken cancellationToken = default)
     {
         var templatePath = $"problems/{exerciseId}/template.xml";
-        return await awsS3Client.GetXmlObjectByPathAsync<ProblemS3PartialTemplate>(templatePath, cancellationToken);
+        return await _awsS3Client.GetXmlObjectByPathAsync<ProblemS3PartialTemplate>(templatePath, cancellationToken);
     }
 
     public async Task<Result<ProblemS3PartialInfo, ErrorObject<string>>> GetProblemInfoAsync(
@@ -92,18 +98,18 @@ public class SharedProblemRepository(
         CancellationToken cancellationToken = default)
     {
         var objectPath = $"problems/{problemId}/infos/{lang.GetDisplayName().ToLowerInvariant()}.xml";
-        return await awsS3Client.GetXmlObjectByPathAsync<ProblemS3PartialInfo>(objectPath, cancellationToken);
+        return await _awsS3Client.GetXmlObjectByPathAsync<ProblemS3PartialInfo>(objectPath, cancellationToken);
     }
     
     public async Task<Result<ICollection<TestCaseJoined>, ErrorObject<string>>> GetTestCasesAsync(Guid exerciseId, CancellationToken cancellationToken = default)
     {
         var exerciseDbPartialTestCases =
-            await dbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
+            await _dbContext.TestCases.Where(t => t.ProblemProblemId == exerciseId)
                 .ToDictionaryAsync(t => t.TestCaseId, t => t, cancellationToken: cancellationToken);
 
         var testCasesPath = $"problems/{exerciseId}/test-cases.xml";
 
-        var testCaseRes =  await awsS3Client.GetXmlObjectByPathAsync<TestCaseS3WrapperObject>(testCasesPath, cancellationToken);
+        var testCaseRes =  await _awsS3Client.GetXmlObjectByPathAsync<TestCaseS3WrapperObject>(testCasesPath, cancellationToken);
 
         if (testCaseRes.IsErr)
             return Result<ICollection<TestCaseJoined>, ErrorObject<string>>.Err(testCaseRes.AsT1);
@@ -123,8 +129,8 @@ public class SharedProblemRepository(
             IsPublic = t.dbTestCase.IsPublic,
             ProblemProblemId = exerciseId,
             Setup = t.S3TestCase.Setup,
-            TestCaseId = t.dbTestCase.TestCaseId
+            TestCaseId = t.dbTestCase.TestCaseId,
+            OrderMatters = t.dbTestCase.OrderMatters
         }).ToList());
-
     }
 }

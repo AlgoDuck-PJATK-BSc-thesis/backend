@@ -7,14 +7,19 @@ namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 [ApiController]
 [Route("api/problem/all")]
 [Authorize]
-public class CategoryProblemsController(
-    ICategoryProblemsService categoryProblemsService
-) : ControllerBase
+public class CategoryProblemsController : ControllerBase
 {
+    private readonly ICategoryProblemsService _categoryProblemsService;
+
+    public CategoryProblemsController(ICategoryProblemsService categoryProblemsService)
+    {
+        _categoryProblemsService = categoryProblemsService;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllProblemsForCategory([FromQuery] Guid categoryId, CancellationToken cancellationToken)
     {
-        return await categoryProblemsService
+        return await _categoryProblemsService
             .GetAllProblemsForCategoryAsync(categoryId, cancellationToken)
             .ToActionResultAsync();
     }

@@ -33,7 +33,7 @@ public class AnalyzerSimple
     private readonly AstNodeProgram? _templateProgramRoot;
     private readonly StringBuilder? _userCode;
 
-    private const string BaselineMainCode = "public static void main(String[] args){}";
+    private const string BaselineMainCode = "\n\tpublic static void main(String[] args){}";
     private readonly AstNodeMemberFunc<AstNodeClass> _baselineMainSignature;
 
     public AnalyzerSimple(StringBuilder fileContents, string? templateContents = null)
@@ -228,7 +228,7 @@ public class AnalyzerSimple
             .Where(c =>
             {
                 var methods = (c.TypeScope?.TypeMembers ?? [])
-                    .Where(tm => tm.ClassMember.IsT0)
+                    .Where(tm => tm.ClassMember is { IsT0: true, AsT0: not null })
                     .Select(tm => tm.ClassMember.AsT0).ToList();
                 var constructors = methods
                     .Where(func => func.IsConstructor)
@@ -465,7 +465,7 @@ public class AnalyzerSimple
 
         if (publicClasses.Count == 0)
         {
-            throw new EntrypointNotFoundException("No public class found. Exiting.");
+            throw new EntrypointNotFoundException("Valid entrypoint not found. Exiting.");
         }
 
         return publicClasses.FirstOrDefault(

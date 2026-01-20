@@ -7,12 +7,17 @@ public interface IUserSolutionService
     public Task<Result<PageData<UserSolutionDto>, ErrorObject<string>>> GetAllUserSolutionsAsync(UserSolutionRequestDto userSolutionRequestDto, CancellationToken cancellationToken = default);
 }
 
-public class UserSolutionService(
-    IUserSolutionRepository userSolutionRepository
-    ) : IUserSolutionService
+public class UserSolutionService : IUserSolutionService
 {
+    private readonly IUserSolutionRepository _userSolutionRepository;
+
+    public UserSolutionService(IUserSolutionRepository userSolutionRepository)
+    {
+        _userSolutionRepository = userSolutionRepository;
+    }
+
     public async Task<Result<PageData<UserSolutionDto>, ErrorObject<string>>> GetAllUserSolutionsAsync(UserSolutionRequestDto userSolutionRequestDto, CancellationToken cancellationToken = default)
     {
-        return await userSolutionRepository.GetAllUserSolutionsAsync(userSolutionRequestDto, cancellationToken);
+        return await _userSolutionRepository.GetAllUserSolutionsAsync(userSolutionRequestDto, cancellationToken);
     }
 }

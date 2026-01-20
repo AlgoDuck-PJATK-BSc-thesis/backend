@@ -11,14 +11,19 @@ public interface IOwnedDucksRepository
         PagedRequestWithAttribution ownedItemsRequest, CancellationToken cancellationToken = default);
 }
 
-public class OwnedDucksRepository(
-    ApplicationQueryDbContext dbContext
-) : IOwnedDucksRepository
+public class OwnedDucksRepository : IOwnedDucksRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public OwnedDucksRepository(ApplicationQueryDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public async Task<Result<PageData<OwnedDuckDto>, ErrorObject<string>>> GetOwnedItemsByTypePagedAsync(
         PagedRequestWithAttribution ownedItemsRequest, CancellationToken cancellationToken = default)
     {
-        var totalItems = await dbContext.DuckItems.CountAsync(cancellationToken: cancellationToken);
+        var totalItems = await _dbContext.DuckItems.CountAsync(cancellationToken: cancellationToken);
 
         var actualPage = Math.Clamp(ownedItemsRequest.CurrPage, 1, totalItems);
 
@@ -29,7 +34,7 @@ public class OwnedDucksRepository(
             PrevCursor = actualPage > 1 ? actualPage - 1 : null,
             NextCursor = actualPage < totalItems ? actualPage + 1 : null,
             PageSize = ownedItemsRequest.PageSize,
-            Items = await dbContext.DuckOwnerships.Where(o => o.UserId == ownedItemsRequest.UserId)
+            Items = await _dbContext.DuckOwnerships.Where(o => o.UserId == ownedItemsRequest.UserId)
                 .Skip((actualPage - 1) * ownedItemsRequest.PageSize).Take(ownedItemsRequest.PageSize).Select(d =>
                     new OwnedDuckDto
                     {

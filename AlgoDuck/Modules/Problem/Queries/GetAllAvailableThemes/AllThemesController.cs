@@ -24,50 +24,6 @@ public class AllThemesController : ControllerBase
     }
 }
 
-public interface IAllThemesService
-{
-    public Task<Result<ICollection<ThemeDto>, ErrorObject<string>>> GetAllThemesAsync(CancellationToken cancellationToken = default);
-}
-
-public class AllThemesService : IAllThemesService
-{
-    private readonly IAllThemesRepository _allThemesRepository;
-
-    public AllThemesService(IAllThemesRepository allThemesRepository)
-    {
-        _allThemesRepository = allThemesRepository;
-    }
-
-    public Task<Result<ICollection<ThemeDto>, ErrorObject<string>>> GetAllThemesAsync(CancellationToken cancellationToken = default)
-    {
-        return _allThemesRepository.GetAllThemesAsync(cancellationToken);
-    }
-}
-
-public interface IAllThemesRepository
-{
-    public Task<Result<ICollection<ThemeDto>, ErrorObject<string>>> GetAllThemesAsync(CancellationToken cancellationToken = default);
-}
-
-public class AllThemesRepository : IAllThemesRepository
-{
-    private readonly ApplicationQueryDbContext _dbContext;
-
-    public AllThemesRepository(ApplicationQueryDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
-    public async Task<Result<ICollection<ThemeDto>, ErrorObject<string>>> GetAllThemesAsync(CancellationToken cancellationToken = default)
-    {
-        return Result<ICollection<ThemeDto>, ErrorObject<string>>.Ok(await _dbContext.EditorThemes.Select(t => new ThemeDto()
-        {
-            ThemeName = t.ThemeName,
-            ThemeId = t.EditorThemeId
-        }).ToListAsync(cancellationToken: cancellationToken));
-    }
-}
-
 
 public class ThemeDto
 {

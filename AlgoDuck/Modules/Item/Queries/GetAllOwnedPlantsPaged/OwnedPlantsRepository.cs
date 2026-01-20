@@ -11,17 +11,22 @@ public interface IOwnedPlantsRepository
         OwnedItemsRequest ownedItemsRequest, CancellationToken cancellationToken = default);
 }
 
-public class OwnedPlantsRepository(
-    ApplicationQueryDbContext dbContext
-    ) : IOwnedPlantsRepository
+public class OwnedPlantsRepository : IOwnedPlantsRepository
 {
+    private readonly ApplicationQueryDbContext _dbContext;
+
+    public OwnedPlantsRepository(ApplicationQueryDbContext dbContext)
+    {
+        this._dbContext = dbContext;
+    }
+
     public async Task<Result<PageData<OwnedPlantDto>, ErrorObject<string>>> GetOwnedPlantsAsync(OwnedItemsRequest ownedItemsRequest, CancellationToken cancellationToken = default)
     {
-        var totalItems = await dbContext.DuckItems.CountAsync(cancellationToken: cancellationToken);
+        var totalItems = await _dbContext.DuckItems.CountAsync(cancellationToken: cancellationToken);
 
         var actualPage = Math.Clamp(ownedItemsRequest.CurrPage, 1, totalItems);
 
-        var plantPage = await dbContext.PlantOwnerships.Where(o => o.UserId == ownedItemsRequest.UserId)
+        var plantPage = await _dbContext.PlantOwnerships.Where(o => o.UserId == ownedItemsRequest.UserId)
             .Include(e => e.Item)
             .Skip((actualPage - 1) * ownedItemsRequest.PageSize)
             .Take(ownedItemsRequest.PageSize)

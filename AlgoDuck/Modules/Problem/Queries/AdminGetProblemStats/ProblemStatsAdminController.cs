@@ -1,12 +1,13 @@
+using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin.Types;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/admin/problem/stats")]
 [Authorize(Roles = "admin")]
 public class ProblemStatsAdminController
 {

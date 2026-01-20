@@ -42,6 +42,8 @@ public class UpdateProblemRepository : IUpdateProblemRepository
             return Result<Guid, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Problem with id: {problemId} not found"));
 
+        Console.WriteLine(problem.CategoryId);
+        Console.WriteLine(upsertProblemDto.CategoryId);
         problem.CategoryId = upsertProblemDto.CategoryId;
         problem.ProblemTitle = upsertProblemDto.ProblemTitle;
         problem.LastUpdatedAt = DateTime.UtcNow;

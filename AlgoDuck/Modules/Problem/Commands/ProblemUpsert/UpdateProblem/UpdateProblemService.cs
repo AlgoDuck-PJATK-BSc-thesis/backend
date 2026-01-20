@@ -18,19 +18,22 @@ namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpdateProblem;
 
 public interface IUpdateProblemService
 {
-    public Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default);
+    public Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(
+        UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default);
 }
 
 public class UpdateProblemService : IUpdateProblemService
 {
     private readonly IRabbitMqChannelFactory _channelFactory;
-    private readonly     ITestCaseProcessor _testCaseProcessor;
+    private readonly ITestCaseProcessor _testCaseProcessor;
     private readonly IValidationJobPublisher _validationJobPublisher;
     private readonly IOptions<MessageQueuesConfig> _channelData;
     private readonly IDatabase _redis;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions().WithInternalFields();
 
-    public UpdateProblemService(IOptions<MessageQueuesConfig> channelData, IValidationJobPublisher validationJobPublisher, ITestCaseProcessor testCaseProcessor, IRabbitMqChannelFactory channelFactory, IDatabase redis)
+    public UpdateProblemService(IOptions<MessageQueuesConfig> channelData,
+        IValidationJobPublisher validationJobPublisher, ITestCaseProcessor testCaseProcessor,
+        IRabbitMqChannelFactory channelFactory, IDatabase redis)
     {
         _channelData = channelData;
         _validationJobPublisher = validationJobPublisher;
@@ -39,41 +42,42 @@ public class UpdateProblemService : IUpdateProblemService
         _redis = redis;
     }
 
-    public async Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default)
+    public async Task<Result<UpsertProblemResultDto, ErrorObject<string>>> UpdateProblemAsync(
+        UpsertProblemDto updateProblemDto, Guid problemId, CancellationToken cancellationToken = default)
     {
         var analysisResult = AnalyzeTemplate(updateProblemDto.TemplateB64);
         if (analysisResult.IsErr)
             return Result<UpsertProblemResultDto, ErrorObject<string>>.Err(analysisResult.AsErr!);
 
         var (solutionData, analyzer, codeAnalysis) = analysisResult.AsT0;
-        
+
         var testCaseResult = _testCaseProcessor.ProcessTestCases(
             updateProblemDto.TestCases,
             analyzer,
             codeAnalysis);
-        
+
         if (testCaseResult.IsErr)
             return Result<UpsertProblemResultDto, ErrorObject<string>>.Err(testCaseResult.AsErr!);
 
         updateProblemDto.TestCaseJoins = testCaseResult.AsT0;
 
         var helper = new ExecutorFileOperationHelper { UserSolutionData = solutionData };
-        
+
         var res = await CacheUpdateJob(updateProblemDto, solutionData, problemId, cancellationToken);
-        
+
         helper.InsertTestCases(updateProblemDto.TestCaseJoins, codeAnalysis);
-        
+
         var channel = await _channelFactory.GetChannelAsync(new ChannelDeclareDto
-        {
-            ChannelName = _channelData.Value.Validation.Read,
-            QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
-        },
-        new ChannelDeclareDto
-        {
-            ChannelName = _channelData.Value.Validation.Write,
-            QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
-        });
-        
+            {
+                ChannelName = _channelData.Value.Validation.Read,
+                QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
+            },
+            new ChannelDeclareDto
+            {
+                ChannelName = _channelData.Value.Validation.Write,
+                QueueDeclareOptions = new QueueDeclareOptions(Durable: true, Exclusive: false, AutoDelete: false)
+            });
+
         await _validationJobPublisher.PublishAsync(channel, solutionData, cancellationToken);
         return res;
     }

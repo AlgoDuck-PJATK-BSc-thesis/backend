@@ -1,6 +1,6 @@
 using AlgoDuck.Models;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin.Types;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats.Types;
 
 public class RecentSubmissionDto
 {

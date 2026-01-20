@@ -14,7 +14,7 @@ public enum TokenType
     
     Import, Package,
     
-    Class, Interface, Enum,
+    Class, Interface, Enum, Record, Annotation,
     
     Extends, Implements, Super,
 

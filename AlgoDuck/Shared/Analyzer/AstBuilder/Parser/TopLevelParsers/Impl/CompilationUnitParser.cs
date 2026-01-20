@@ -1,4 +1,5 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TopLevelNodes;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
@@ -18,21 +19,44 @@ public class CompilationUnitParser(List<Token> tokens, FilePosition filePosition
 
         if (TryConsumeTokenOfType(TokenType.Package, out var _))
         {
-            compilationUnit.Package = new AstNodePackage();
-            topLevelStatementParser.ParseImportsAndPackages(compilationUnit.Package);
+            try
+            {
+                compilationUnit.Package = new AstNodePackage();
+                topLevelStatementParser.ParseImportsAndPackages(compilationUnit.Package);
+            }
+            catch (JavaSyntaxException)
+            {
+                // ignored. If syntax error in import detected forward to actual compilation for more descriptive errors.
+            }
         }
         
         while (TryConsumeTokenOfType(TokenType.Import, out var _))
         {
-            var import = new AstNodeImport();
-            topLevelStatementParser.ParseImportsAndPackages(import);
-            compilationUnit.Imports.Add(import);
+            try
+            {
+                var import = new AstNodeImport();
+                topLevelStatementParser.ParseImportsAndPackages(import);
+                compilationUnit.Imports.Add(import);
+            }
+            catch (JavaSyntaxException)
+            {
+                // ignored. If syntax error in import detected forward to actual compilation for more descriptive errors.
+            }
         }
 
         while (PeekToken() != null)
         {
-        
-            compilationUnit.CompilationUnitTopLevelStatements.Add(topLevelStatementParser.ParseTypeDefinition());
+            var currToken = PeekToken();
+            try{
+                compilationUnit.CompilationUnitTopLevelStatements.Add(topLevelStatementParser.ParseTypeDefinition());
+            } catch (JavaSyntaxException)
+            {
+                if (currToken == PeekToken()) // prevent deadlocks on unprocessable code
+                {
+                    ConsumeToken();
+                }
+                // ignored. If syntax error in import detected forward to actual compilation for more descriptive errors.
+            }
         }
 
         return compilationUnit;

@@ -22,15 +22,16 @@ public interface IAutoSaveRepository
 public class AutoSaveRepository : IAutoSaveRepository
 {
     private readonly IAwsS3Client _awsS3Client;
-        private readonly ApplicationCommandDbContext _dbContext;
+    private readonly ApplicationCommandDbContext _dbContext;
 
-        public AutoSaveRepository(IAwsS3Client awsS3Client, ApplicationCommandDbContext dbContext)
-        {
-            _awsS3Client = awsS3Client;
-            _dbContext = dbContext;
-        }
+    public AutoSaveRepository(IAwsS3Client awsS3Client, ApplicationCommandDbContext dbContext)
+    {
+        _awsS3Client = awsS3Client;
+        _dbContext = dbContext;
+    }
 
-        public async Task<Result<AutoSaveResultDto, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(AutoSaveDto autoSaveDto,
+    public async Task<Result<AutoSaveResultDto, ErrorObject<string>>> UpsertSolutionSnapshotCodeAsync(
+        AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken = default)
     {
         var rowsChanged = await _dbContext.UserSolutionSnapshots
@@ -49,11 +50,11 @@ public class AutoSaveRepository : IAutoSaveRepository
 
         var objectPath = $"users/{autoSaveDto.UserId}/problems/autosave/{autoSaveDto.ProblemId}.xml";
 
-         return await _awsS3Client.PostXmlObjectAsync(objectPath, autoSaveDto, cancellationToken)
-             .MapToResultAsync(dto => new AutoSaveResultDto
-             {
-                 ProblemId = dto.ProblemId
-             });
+        return await _awsS3Client.PostXmlObjectAsync(objectPath, autoSaveDto, cancellationToken)
+            .MapToResultAsync(dto => new AutoSaveResultDto
+            {
+                ProblemId = dto.ProblemId
+            });
     }
 
     public async Task<Result<bool, ErrorObject<string>>> UpsertSolutionSnapshotTestingAsync(
@@ -66,20 +67,23 @@ public class AutoSaveRepository : IAutoSaveRepository
                 cancellationToken);
 
         if (snapshot == null)
-            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Execution data for {updateDto.ProblemId} {updateDto.UserId} not found"));
+            return Result<bool, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"Execution data for {updateDto.ProblemId} {updateDto.UserId} not found"));
 
         var allRestCases = await _dbContext.TestCases.Where(t => t.ProblemProblemId == updateDto.ProblemId)
             .ToDictionaryAsync(t => t.TestCaseId, t => t, cancellationToken: cancellationToken);
-        
-        if (allRestCases.Count == 0)
-            return Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Test cases not found for problem: {updateDto.ProblemId}"));
 
-        snapshot.TestingResults.AddRange(updateDto.TestingResults.Where(tr => allRestCases.ContainsKey(tr.TestId)).Select(t => new TestingResult
-        {
-            CodeExecutionId = snapshot.CodeExecutionId,
-            TestCaseId = t.TestId,
-            IsPassed = t.IsTestPassed,
-        }));
+        if (allRestCases.Count == 0)
+            return Result<bool, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"Test cases not found for problem: {updateDto.ProblemId}"));
+
+        snapshot.TestingResults.AddRange(updateDto.TestingResults.Where(tr => allRestCases.ContainsKey(tr.TestId))
+            .Select(t => new TestingResult
+            {
+                CodeExecutionId = snapshot.CodeExecutionId,
+                TestCaseId = t.TestId,
+                IsPassed = t.IsTestPassed,
+            }));
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result<bool, ErrorObject<string>>.Ok(true);
@@ -92,15 +96,15 @@ public class AutoSaveRepository : IAutoSaveRepository
         var rowsAffected = await _dbContext.UserSolutionSnapshots
             .Where(e => e.ProblemId == deleteAutoSaveDto.ProblemId && e.UserId == deleteAutoSaveDto.UserId)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
-        
+
         var objectPath = $"users/{deleteAutoSaveDto.UserId}/problems/autosave/{deleteAutoSaveDto.ProblemId}.xml";
-        
-        var result = await _awsS3Client.DeleteDocumentAsync(objectPath,cancellationToken: cancellationToken);
+
+        var result = await _awsS3Client.DeleteDocumentAsync(objectPath, cancellationToken: cancellationToken);
         if (result.IsErr)
         {
             return result;
         }
-        
+
         return rowsAffected > 0
             ? Result<bool, ErrorObject<string>>.Ok(true)
             : Result<bool, ErrorObject<string>>.Err(ErrorObject<string>.NotFound(

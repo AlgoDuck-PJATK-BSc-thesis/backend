@@ -16,7 +16,7 @@ using AlgoDuck.Modules.Item.Queries.GetAllOwnedDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllOwnedPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 using AlgoDuck.Modules.Item.Queries.GetMyIconItem;
-using AlgoDuck.Modules.Item.Queries.GetOwnedItemsByUserId;
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Modules.Item.Queries.GetUserPreviewData;
 
 namespace AlgoDuck.Modules.Item.Utils;

@@ -6,6 +6,22 @@ namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
 
 public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTableBuilder symbolTableBuilder)
 {
+    protected T WithRecursionLimit<T>(Func<T> parseFunc)
+    {
+        if (++symbolTableBuilder.RecursionDepth > SymbolTableBuilder.MaxRecursionDepth)
+        {
+            throw new JavaRecursionDepthExceededException("Maximum nesting depth exceeded");
+        }
+        try
+        {
+            return parseFunc();
+        }
+        finally
+        {
+            symbolTableBuilder.RecursionDepth--;
+        }
+    }
+    
     protected Token ConsumeIfOfType(string expectedTokenMsg, params TokenType[] tokenType)
     {
         var peekedToken = PeekToken();
@@ -54,13 +70,9 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTab
     protected bool CheckTokenType(TokenType tokenType, int offset = 0)
     {
         var peekedToken = PeekToken(offset);
-        if (peekedToken == null)
-        {
-            throw new JavaSyntaxException($"{tokenType.ToString()} expected, nothing found");
-        }
-        return peekedToken.Type == tokenType;
-        
+        return peekedToken?.Type == tokenType;
     }
+    
     protected Token TryConsume()
     {
         if (PeekToken() != null)
@@ -82,3 +94,5 @@ public class ParserCore(List<Token> tokens, FilePosition filePosition, SymbolTab
         return consumedTokens;
     }
 }
+
+public class JavaRecursionDepthExceededException(string? message = "") : Exception(message); 

@@ -1,6 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,6 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
     private readonly ApplicationQueryDbContext _dbContext;
     private readonly ISharedProblemRepository _problemRepository;
 
-
     public CategoryProblemsRepository(ApplicationQueryDbContext dbContext, IAwsS3Client awsS3Client,
         ISharedProblemRepository problemRepository)
     {
@@ -30,11 +29,13 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
     public async Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(
         Guid categoryId, CancellationToken cancellationToken = default)
     {
-        var categoryRdb = await _dbContext.Categories.FirstOrDefaultAsync(c => c.CategoryId == categoryId, cancellationToken);
-        
+        var categoryRdb =
+            await _dbContext.Categories.FirstOrDefaultAsync(c => c.CategoryId == categoryId, cancellationToken);
+
         if (categoryRdb == null)
-            return Result<CategoryDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Category {categoryId} not found"));
-        
+            return Result<CategoryDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.NotFound($"Category {categoryId} not found"));
+
         var problemsRdb = await _dbContext.Problems
             .Include(p => p.Difficulty)
             .Include(p => p.CodeExecutionStatistics)
@@ -55,19 +56,21 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
             })
             .ToDictionaryAsync(p => p.ProblemId, p => p, cancellationToken: cancellationToken);
 
-        var problemsS3 = problemsRdb.Select(async p => await _problemRepository.GetProblemInfoAsync(p.Key, cancellationToken: cancellationToken)).ToList();
-        
+        var problemsS3 = problemsRdb.Select(async p =>
+            await _problemRepository.GetProblemInfoAsync(p.Key, cancellationToken: cancellationToken)).ToList();
+
         foreach (var v in problemsRdb.Values)
         {
             v.AttemptedAtTimestamp = v.RecordedAttempts.FirstOrDefault()?.AttemptedAtTimestamp.LongToDateTime();
-            v.SolvedAtTimestamp = v.RecordedAttempts.FirstOrDefault(a => a.TestCaseResult == TestCaseResult.Accepted)?.AttemptedAtTimestamp.LongToDateTime();
+            v.SolvedAtTimestamp = v.RecordedAttempts.FirstOrDefault(a => a.TestCaseResult == TestCaseResult.Accepted)
+                ?.AttemptedAtTimestamp.LongToDateTime();
         }
-        
+
         await Task.WhenAll(problemsS3);
 
         return Result<CategoryDto, ErrorObject<string>>.Ok(new CategoryDto
         {
-            CategoryId =  categoryRdb.CategoryId,
+            CategoryId = categoryRdb.CategoryId,
             Name = categoryRdb.CategoryName,
             Problems = problemsS3
                 .Where(t => t.Result.IsOk)
@@ -82,12 +85,16 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
                     ProblemId = t.ProblemId,
                     Tags = problemsRdb[t.ProblemId].Tags,
                     Title = t.Title,
-                    AttemptedAt = problemsRdb.TryGetValue(t.ProblemId, out var attempt) ? attempt.AttemptedAtTimestamp : null,
-                    SolvedAt = problemsRdb.TryGetValue(t.ProblemId, out var solution) ? solution.SolvedAtTimestamp : null,
+                    AttemptedAt = problemsRdb.TryGetValue(t.ProblemId, out var attempt)
+                        ? attempt.AttemptedAtTimestamp
+                        : null,
+                    SolvedAt = problemsRdb.TryGetValue(t.ProblemId, out var solution)
+                        ? solution.SolvedAtTimestamp
+                        : null,
                 }).ToList()
         });
     }
-    
+
     private class ProblemDisplayDbPartial
     {
         internal required Guid ProblemId { get; set; }
@@ -104,4 +111,3 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
         internal required TestCaseResult TestCaseResult { get; set; }
     }
 }
-

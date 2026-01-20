@@ -1,14 +1,10 @@
-
 namespace AlgoDuck.Shared.S3;
-
-
 
 public sealed class S3Settings
 {
     public required S3BucketSettings ContentBucketSettings { get; init; }
     public required S3BucketSettings DataBucketSettings { get; init; }
 }
-
 
 public sealed class S3BucketSettings
 {

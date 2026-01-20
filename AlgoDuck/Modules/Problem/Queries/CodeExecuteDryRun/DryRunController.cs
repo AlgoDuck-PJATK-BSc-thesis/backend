@@ -3,14 +3,23 @@ using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 
 [ApiController]
 [Authorize]
 [Route("/api/executor/[controller]")]
-public class DryRunController(IExecutorDryRunService executorService) : ControllerBase
+[EnableRateLimiting("CodeExecution")]
+public class DryRunController : ControllerBase
 {
+    private readonly IExecutorDryRunService _executorService;
+
+    public DryRunController(IExecutorDryRunService executorService)
+    {
+        _executorService = executorService;
+    }
+
     [HttpPost]
     public async Task<IActionResult> ExecuteCode([FromBody] DryRunExecuteRequest executeRequest)
     {
@@ -19,7 +28,7 @@ public class DryRunController(IExecutorDryRunService executorService) : Controll
             return userIdResult.ToActionResult();
 
         executeRequest.UserId = userIdResult.AsT0;
-        var res = await executorService.DryRunUserCodeAsync(executeRequest);
+        var res = await _executorService.DryRunUserCodeAsync(executeRequest);
         return res.ToActionResult();
     }
 }

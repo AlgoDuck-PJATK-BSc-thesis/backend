@@ -1,6 +1,7 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Classes;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.TypeMembers;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.HighLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.TopLevelParsers.Abstr;
@@ -16,7 +17,9 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
     private readonly FilePosition _filePosition = filePosition;
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
 
-    public AstNodeClass ParseClass(List<MemberModifier> legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low-hanging fruit
+    public AstNodeClass
+        ParseClass(
+            List<MemberModifier> legalModifiers) // perhaps should not focus on grammatical correctness immediately but this is fairly low-hanging fruit
     {
         var nodeClass = new AstNodeClass();
         var accessModifier = TokenIsAccessModifier(PeekToken());
@@ -30,7 +33,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         {
             nodeClass.AddAnnotation(ParseAnnotation());
         }
-        
+
         nodeClass.ClassModifiers = ParseModifiers(legalModifiers);
 
         nodeClass.IsAbstract = nodeClass.ClassModifiers.Contains(MemberModifier.Abstract);
@@ -42,7 +45,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
         ParseGenericDeclaration(nodeClass);
 
         ParseExtendsKeyword(nodeClass);
-        
+
         ParseImplementsKeyword(nodeClass);
 
         _symbolTableBuilder.DefineSymbol(new TypeSymbol<AstNodeClass>
@@ -50,11 +53,11 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
             AssociatedType = nodeClass,
             Name = nodeClass.Name.Value!,
         });
-        
+
         nodeClass.TypeScope = ParseClassScope(nodeClass);
         return nodeClass;
     }
-    
+
     public AstNodeTypeScope<AstNodeClass> ParseClassScope(AstNodeClass clazz)
     {
         _symbolTableBuilder.EnterScope();
@@ -64,17 +67,30 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
             OwnerMember = clazz,
             ScopeBeginOffset = ConsumeIfOfType("'{'", TokenType.OpenCurly).FilePos
         };
-        
-        while (!CheckTokenType(TokenType.CloseCurly))
+
+
+        while (!CheckTokenType(TokenType.CloseCurly) && PeekToken() != null)
         {
-            var typeMemberParser = new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder);
-            classScope.TypeMembers.Add(typeMemberParser.ParseTypeMember(clazz));
+            var prevToken =  PeekToken();
+            try
+            {
+                var typeMemberParser = new TypeMemberParser(_tokens, _filePosition, _symbolTableBuilder);
+                classScope.TypeMembers.Add(typeMemberParser.ParseTypeMember(clazz));
+            }
+            catch (JavaSyntaxException)
+            {
+                if (prevToken != null && PeekToken() == prevToken)
+                {
+                    ConsumeToken();
+                }
+            }
         }
-        
+
         classScope.ScopeEndOffset = ConsumeIfOfType("'}'", TokenType.CloseCurly).FilePos;
         _symbolTableBuilder.ExitScope();
         return classScope;
     }
+    
 
     private void ParseExtendsKeyword(AstNodeClass clazz)
     {
@@ -92,6 +108,7 @@ public class ClassParser(List<Token> tokens, FilePosition filePosition, SymbolTa
             clazz.Implements.Add(ParseComplexTypDeclaration());
             ConsumeIfOfType(",", TokenType.Comma);
         }
+
         clazz.Implements.Add(ParseComplexTypDeclaration());
     }
 }

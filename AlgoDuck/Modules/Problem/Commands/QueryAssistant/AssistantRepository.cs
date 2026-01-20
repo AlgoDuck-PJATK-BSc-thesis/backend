@@ -1,13 +1,8 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
-using AlgoDuck.Modules.Problem.Queries.GetProblemDetailsByName;
-using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
-using AlgoDuck.Shared.S3;
-using AlgoDuck.Shared.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using OpenAI.Chat;
 
 namespace AlgoDuck.Modules.Problem.Commands.QueryAssistant;
 
@@ -27,7 +22,7 @@ public class AssistantRepository : IAssistantRepository
 
     public AssistantRepository(ApplicationCommandDbContext dbContext)
     {
-        this._dbContext = dbContext;
+        _dbContext = dbContext;
     }
 
     public async Task<Result<AssistantChat?, ErrorObject<string>>> GetChatDataIfExistsAsync(AssistantRequestDto request,

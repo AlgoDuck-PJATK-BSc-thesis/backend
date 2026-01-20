@@ -1,12 +1,12 @@
-using System.Text.Json;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
+using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats.Types;
 using AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin.Types;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.Problem.Queries.GetProblemStatsAdmin;
+namespace AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 
 public interface IProblemDetailsAdminRepository
 {
@@ -176,8 +176,10 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
         CancellationToken cancellationToken = default)
     {
         var recentSubmissionsWithLongTimestamp = await _dbContext
-            .CodeExecutionStatisticss.Include(s => s.ApplicationUser)
-            .Where(e => e.ExecutionType == JobType.Testing).OrderByDescending(q => q.ExecutionStartNs)
+            .CodeExecutionStatisticss
+            .Include(s => s.ApplicationUser)
+            .Where(e => e.ExecutionType == JobType.Testing && e.ProblemId == recentActivityRequest.ProblemId)
+            .OrderByDescending(q => q.ExecutionStartNs)
             .Take(recentActivityRequest.RecentCount).Select(a => new
                 {
                     a.UserId,
@@ -188,8 +190,9 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
                     SubmissionId = a.CodeExecutionId,
                 }
             ).ToListAsync(cancellationToken);
+        
         return Result<ICollection<RecentSubmissionDto>, ErrorObject<string>>.Ok(recentSubmissionsWithLongTimestamp
-            .Select(s => new RecentSubmissionDto()
+            .Select(s => new RecentSubmissionDto
             {
                 UserId = s.UserId,
                 Username = s.Username,

@@ -9,12 +9,17 @@ public interface IOwnedDucksService
     public Task<Result<PageData<OwnedDuckDto>, ErrorObject<string>>> GetOwnedItemsByTypePagedAsync(PagedRequestWithAttribution ownedItemsRequest, CancellationToken cancellationToken = default);
 }
 
-public class OwnedDucksService(
-    IOwnedDucksRepository ownedDucksRepository
-    ) : IOwnedDucksService
+public class OwnedDucksService : IOwnedDucksService
 {
+    private readonly IOwnedDucksRepository _ownedDucksRepository;
+
+    public OwnedDucksService(IOwnedDucksRepository ownedDucksRepository)
+    {
+        this._ownedDucksRepository = ownedDucksRepository;
+    }
+
     public async Task<Result<PageData<OwnedDuckDto>, ErrorObject<string>>> GetOwnedItemsByTypePagedAsync(PagedRequestWithAttribution ownedItemsRequest, CancellationToken cancellationToken = default)
     {
-        return await ownedDucksRepository.GetOwnedItemsByTypePagedAsync(ownedItemsRequest, cancellationToken);
+        return await _ownedDucksRepository.GetOwnedItemsByTypePagedAsync(ownedItemsRequest, cancellationToken);
     }
 }

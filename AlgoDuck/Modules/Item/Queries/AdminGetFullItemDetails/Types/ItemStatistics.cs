@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace AlgoDuck.Modules.Item.Queries.AdminGetFullItemDetails.Types;
 
-[JsonDerivedType(typeof(DuckOwnershipStatistics), "Duck")]
-[JsonDerivedType(typeof(PlantOwnershipStatistics), "Plant")]
+[JsonDerivedType(typeof(DuckOwnershipStatistics), "duck")]
+[JsonDerivedType(typeof(PlantOwnershipStatistics), "plant")]
 public abstract class ItemSpecificStatistics
 {
     public required long OwnedByCount { get; set; }

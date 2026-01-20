@@ -1,4 +1,5 @@
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Interfaces;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.CoreParsers;
@@ -11,11 +12,10 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition, Symbol
     ParserCore(tokens, filePosition, symbolTableBuilder),
     IGenericParser
 {
-    
     private readonly List<Token> _tokens = tokens;
     private readonly FilePosition _filePosition = filePosition;
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
-    
+
     public void ParseGenericDeclaration(IGenerifiable funcOrClass)
     {
         if (!CheckTokenType(TokenType.OpenChevron))
@@ -25,8 +25,17 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition, Symbol
 
         ConsumeToken();
         List<GenericTypeDeclaration> genericTypes = [];
-        while (!CheckTokenType(TokenType.CloseChevron, 1))
+
+        const int maxGenericParams = 20;
+        var paramCount = 0;
+
+        while (!CheckTokenType(TokenType.CloseChevron, 1) && PeekToken() != null)
         {
+            if (++paramCount > maxGenericParams)
+            {
+                throw new JavaSyntaxException($"Generic parameters exceed maximum of {maxGenericParams}");
+            }
+
             var typeDeclaration = new GenericTypeDeclaration
             {
                 GenericIdentifier = ConsumeIfOfType("Type declaration", TokenType.Ident).Value!
@@ -36,13 +45,18 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition, Symbol
             ConsumeIfOfType("comma", TokenType.Comma);
         }
 
+        if (PeekToken() == null)
+        {
+            throw new JavaSyntaxException("Unexpected end of input in generic declaration");
+        }
+
         var finalTypeDeclaration = new GenericTypeDeclaration
         {
             GenericIdentifier = ConsumeIfOfType("Type declaration", TokenType.Ident).Value!
         };
         ParseUpperBound(finalTypeDeclaration);
         genericTypes.Add(finalTypeDeclaration);
-        
+
         ConsumeIfOfType("Closing chevron", TokenType.CloseChevron);
         funcOrClass.SetGenericTypes(genericTypes);
     }
@@ -51,13 +65,22 @@ public class GenericParser(List<Token> tokens, FilePosition filePosition, Symbol
     {
         var typeParser = new TypeParser(_tokens, _filePosition, _symbolTableBuilder);
         if (!CheckTokenType(TokenType.Extends)) return;
-        
+
         ConsumeIfOfType("", TokenType.Extends);
         typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());
+
+        const int maxBounds = 100;
+        var boundCount = 1;
+
         while (CheckTokenType(TokenType.BitAnd))
         {
+            if (++boundCount > maxBounds)
+            {
+                throw new JavaSyntaxException($"Type bounds exceed maximum of {maxBounds}");
+            }
+
             ConsumeToken(); // consume &
-            typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());        
+            typeDeclaration.UpperBounds.Add(typeParser.ParseComplexTypDeclaration());
         }
     }
 }

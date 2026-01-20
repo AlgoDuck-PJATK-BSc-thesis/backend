@@ -10,6 +10,7 @@ public partial class Rarity : IEntityTypeConfiguration<Rarity>
     public Guid RarityId { get; set; }
 
     public string RarityName { get; set; } = null!;
+    public int RarityLevel { get; set; } // mainly for sorting and stuff like that
 
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
     public void Configure(EntityTypeBuilder<Rarity> builder)
@@ -17,10 +18,14 @@ public partial class Rarity : IEntityTypeConfiguration<Rarity>
         builder.HasKey(e => e.RarityId).HasName("rarity_pk");
 
         builder.ToTable("rarity");
-
+        
         builder.Property(e => e.RarityId)
             .ValueGeneratedNever()
             .HasColumnName("rarity_id");
+        
+        builder.Property(e => e.RarityLevel)
+            .HasColumnName("rarity_level");
+        
         builder.Property(e => e.RarityName)
             .HasMaxLength(256)
             .HasColumnName("rarity_name");
