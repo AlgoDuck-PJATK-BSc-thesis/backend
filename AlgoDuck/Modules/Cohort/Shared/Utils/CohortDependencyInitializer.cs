@@ -23,18 +23,20 @@ public static class CohortDependencyInitializer
         services.AddSingleton<IChatPresenceService, ChatPresenceService>();
         services.AddSingleton<IChatReadReceiptService, ChatReadReceiptService>();
 
+        services.AddSingleton<IChatMessageRateLimiter, InMemoryChatMessageRateLimiter>();
+
         services.AddCohortCommands();
         services.AddCohortQueries();
 
         services.AddSignalR(options =>
-        {
-            options.EnableDetailedErrors = environment.IsDevelopment();
-        })
-        .AddJsonProtocol(options =>
-        {
-            options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-            options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
-        });
+            {
+                options.EnableDetailedErrors = environment.IsDevelopment();
+            })
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+            });
 
         return services;
     }

@@ -1,5 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Cohort.Shared.Exceptions;
+using AlgoDuck.Modules.Cohort.Shared.Interfaces;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -11,15 +12,18 @@ public sealed class UpdateCohortHandler : IUpdateCohortHandler
     private readonly IValidator<UpdateCohortDto> _validator;
     private readonly IUserRepository _userRepository;
     private readonly ApplicationCommandDbContext _commandDbContext;
+    private readonly IChatModerationService _chatModerationService;
 
     public UpdateCohortHandler(
         IValidator<UpdateCohortDto> validator,
         IUserRepository userRepository,
-        ApplicationCommandDbContext commandDbContext)
+        ApplicationCommandDbContext commandDbContext,
+        IChatModerationService chatModerationService)
     {
         _validator = validator;
         _userRepository = userRepository;
         _commandDbContext = commandDbContext;
+        _chatModerationService = chatModerationService;
     }
 
     public async Task<UpdateCohortResultDto> HandleAsync(
@@ -58,7 +62,26 @@ public sealed class UpdateCohortHandler : IUpdateCohortHandler
             throw new CohortValidationException("Cohort is not active.");
         }
 
-        cohort.Name = dto.Name;
+        var nameToSet = (dto.Name).Trim();
+        if (string.IsNullOrWhiteSpace(nameToSet))
+        {
+            throw new CohortValidationException("Invalid cohort update payload.");
+        }
+
+        var moderationResult = await _chatModerationService.CheckMessageAsync(
+            userId,
+            cohortId,
+            nameToSet,
+            cancellationToken);
+
+        if (!moderationResult.IsAllowed)
+        {
+            throw new ChatValidationException(
+                moderationResult.BlockReason ?? "This name violates our content rules.",
+                moderationResult.Category);
+        }
+
+        cohort.Name = nameToSet;
 
         await _commandDbContext.SaveChangesAsync(cancellationToken);
 

@@ -46,7 +46,7 @@ public sealed class ApplicationUser : IdentityUser<Guid>, IEntityTypeConfigurati
             {
                 UserId = Id,
                 IsDarkMode = true,
-                IsHighContrast = true,
+                IsHighContrast = false,
                 EmailNotificationsEnabled = false,
                 EditorFontSize = 11
             };

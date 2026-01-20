@@ -5,44 +5,45 @@ namespace AlgoDuck.Tests.Unit.Modules.User.Commands.User.Account.DeleteAccount;
 
 public sealed class DeleteAccountValidatorTests
 {
+    private const string ConfirmationPhrase = "I am sure I want to delete my account";
+
+    readonly DeleteAccountValidator _validator = new();
+
     [Fact]
-    public void Validate_WhenCurrentPasswordEmpty_ThenHasValidationError()
+    public void Validate_WhenConfirmationTextEmpty_ThenHasValidationError()
     {
-        var validator = new DeleteAccountValidator();
         var dto = new DeleteAccountDto
         {
-            CurrentPassword = ""
+            ConfirmationText = ""
         };
 
-        var result = validator.TestValidate(dto);
+        var result = _validator.TestValidate(dto);
 
-        result.ShouldHaveValidationErrorFor(x => x.CurrentPassword);
+        result.ShouldHaveValidationErrorFor(x => x.ConfirmationText);
     }
 
     [Fact]
-    public void Validate_WhenCurrentPasswordTooShort_ThenHasValidationError()
+    public void Validate_WhenConfirmationTextWrong_ThenHasValidationError()
     {
-        var validator = new DeleteAccountValidator();
         var dto = new DeleteAccountDto
         {
-            CurrentPassword = "12345"
+            ConfirmationText = "I am sure"
         };
 
-        var result = validator.TestValidate(dto);
+        var result = _validator.TestValidate(dto);
 
-        result.ShouldHaveValidationErrorFor(x => x.CurrentPassword);
+        result.ShouldHaveValidationErrorFor(x => x.ConfirmationText);
     }
 
     [Fact]
     public void Validate_WhenValid_ThenHasNoValidationErrors()
     {
-        var validator = new DeleteAccountValidator();
         var dto = new DeleteAccountDto
         {
-            CurrentPassword = "123456"
+            ConfirmationText = ConfirmationPhrase
         };
 
-        var result = validator.TestValidate(dto);
+        var result = _validator.TestValidate(dto);
 
         result.ShouldNotHaveAnyValidationErrors();
     }

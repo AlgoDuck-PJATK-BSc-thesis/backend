@@ -4,7 +4,7 @@ using AlgoDuck.Modules.User.Shared.Reminders;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences.UpdatePreferences;
+namespace AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
 
 public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
 {

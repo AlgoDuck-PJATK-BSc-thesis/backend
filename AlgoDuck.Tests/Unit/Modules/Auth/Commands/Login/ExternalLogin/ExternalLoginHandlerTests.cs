@@ -34,12 +34,14 @@ public sealed class ExternalLoginHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
+        var twoFactorService = new Mock<ITwoFactorService>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
         var dbContext = CreateInMemoryDbContext();
 
         var handler = new ExternalLoginHandler(
             userManager.Object,
             tokenService.Object,
+            twoFactorService.Object,
             new ExternalLoginValidator(),
             defaultDuckService.Object,
             dbContext);
@@ -57,12 +59,14 @@ public sealed class ExternalLoginHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
+        var twoFactorService = new Mock<ITwoFactorService>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
         var dbContext = CreateInMemoryDbContext();
 
         var handler = new ExternalLoginHandler(
             userManager.Object,
             tokenService.Object,
+            twoFactorService.Object,
             new ExternalLoginValidator(),
             defaultDuckService.Object,
             dbContext);
@@ -83,6 +87,7 @@ public sealed class ExternalLoginHandlerTests
     {
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
+        var twoFactorService = new Mock<ITwoFactorService>();
         var defaultDuckService = new Mock<IDefaultDuckService>();
         var dbContext = CreateInMemoryDbContext();
 
@@ -130,17 +135,21 @@ public sealed class ExternalLoginHandlerTests
         var handler = new ExternalLoginHandler(
             userManager.Object,
             tokenService.Object,
+            twoFactorService.Object,
             new ExternalLoginValidator(),
             defaultDuckService.Object,
             dbContext);
 
-        await handler.HandleAsync(new ExternalLoginDto
+        var result = await handler.HandleAsync(new ExternalLoginDto
         {
             Provider = "google",
             ExternalUserId = "ext",
             Email = "alice@example.com",
             DisplayName = "Alice Example"
         }, CancellationToken.None);
+
+        Assert.False(result.TwoFactorRequired);
+        Assert.NotNull(result.Auth);
 
         Assert.Single(capturedUsers);
         Assert.NotNull(capturedUsers[0].UserName);

@@ -100,7 +100,7 @@ public sealed class AddCohortMemberHandlerTests
         var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(cohortId, new AddCohortMemberDto { UserId = userId }, CancellationToken.None));
 
-        Assert.Equal("User already belongs to a cohort.", ex.Message);
+        Assert.Equal("Leave current cohort to join another.", ex.Message);
     }
 
     [Fact]

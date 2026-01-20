@@ -53,7 +53,7 @@ public sealed class JoinCohortByCodeHandlerTests
         var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, new JoinCohortByCodeDto { Code = "ABC123" }, CancellationToken.None));
 
-        Assert.Equal("User already belongs to a cohort.", ex.Message);
+        Assert.Equal("Leave current cohort to join another.", ex.Message);
     }
 
     [Fact]

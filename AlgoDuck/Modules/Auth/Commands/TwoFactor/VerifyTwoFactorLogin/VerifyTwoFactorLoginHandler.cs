@@ -47,11 +47,6 @@ public sealed class VerifyTwoFactorLoginHandler : IVerifyTwoFactorLoginHandler
             throw new TwoFactorException("Two-factor authentication is not enabled for this user.");
         }
 
-        if (!user.EmailConfirmed)
-        {
-            throw new EmailVerificationException("Email address is not confirmed.");
-        }
-
         var auth = await _tokenService.GenerateAuthTokensAsync(user, cancellationToken);
         return auth;
     }

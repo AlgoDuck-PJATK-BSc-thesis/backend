@@ -4,7 +4,6 @@ using AlgoDuck.Modules.User.Commands.Admin.UpdateUser;
 using AlgoDuck.Modules.User.Commands.User.Account.ChangePassword;
 using AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
 using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
-using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences.UpdatePreferences;
 using AlgoDuck.Modules.User.Commands.User.Profile.SelectAvatar;
 using AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
 using FluentValidation;

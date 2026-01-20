@@ -14,6 +14,7 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
+    private readonly ITwoFactorService _twoFactorService;
     private readonly IValidator<ExternalLoginDto> _validator;
     private readonly IDefaultDuckService _defaultDuckService;
     private readonly ApplicationCommandDbContext _dbContext;
@@ -21,18 +22,20 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
     public ExternalLoginHandler(
         UserManager<ApplicationUser> userManager,
         ITokenService tokenService,
+        ITwoFactorService twoFactorService,
         IValidator<ExternalLoginDto> validator,
         IDefaultDuckService defaultDuckService,
         ApplicationCommandDbContext dbContext)
     {
         _userManager = userManager;
         _tokenService = tokenService;
+        _twoFactorService = twoFactorService;
         _validator = validator;
         _defaultDuckService = defaultDuckService;
         _dbContext = dbContext;
     }
 
-    public async Task<AuthResponse> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken)
+    public async Task<LoginFlowResponseDto> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(dto, cancellationToken);
 
@@ -139,9 +142,26 @@ public sealed class ExternalLoginHandler : IExternalLoginHandler
             }
         }
 
-        var authResponse = await _tokenService.GenerateAuthTokensAsync(user, cancellationToken);
+        if (user.TwoFactorEnabled)
+        {
+            var sent = await _twoFactorService.SendLoginCodeAsync(user, cancellationToken);
+            return new LoginFlowResponseDto
+            {
+                Message = "Two-factor code sent.",
+                TwoFactorRequired = true,
+                ChallengeId = sent.challengeId,
+                ExpiresAt = sent.expiresAt
+            };
+        }
 
-        return authResponse;
+        var auth = await _tokenService.GenerateAuthTokensAsync(user, cancellationToken);
+
+        return new LoginFlowResponseDto
+        {
+            Message = "External login successful.",
+            TwoFactorRequired = false,
+            Auth = auth
+        };
     }
 
     private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)

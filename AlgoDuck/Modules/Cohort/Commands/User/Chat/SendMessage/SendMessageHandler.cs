@@ -14,19 +14,22 @@ public sealed class SendMessageHandler : ISendMessageHandler
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IChatModerationService _chatModerationService;
     private readonly IProfileService _profileService;
+    private readonly IChatMessageRateLimiter _rateLimiter;
 
     public SendMessageHandler(
         IValidator<SendMessageDto> validator,
         ICohortRepository cohortRepository,
         IChatMessageRepository chatMessageRepository,
         IChatModerationService chatModerationService,
-        IProfileService profileService)
+        IProfileService profileService,
+        IChatMessageRateLimiter rateLimiter)
     {
         _validator = validator;
         _cohortRepository = cohortRepository;
         _chatMessageRepository = chatMessageRepository;
         _chatModerationService = chatModerationService;
         _profileService = profileService;
+        _rateLimiter = rateLimiter;
     }
 
     public async Task<SendMessageResultDto> HandleAsync(
@@ -45,6 +48,8 @@ public sealed class SendMessageHandler : ISendMessageHandler
         {
             throw new CohortValidationException("User does not belong to this cohort.");
         }
+
+        await _rateLimiter.CheckAsync(userId, dto.CohortId, cancellationToken);
 
         if (dto.MediaType == ChatMediaType.Text)
         {

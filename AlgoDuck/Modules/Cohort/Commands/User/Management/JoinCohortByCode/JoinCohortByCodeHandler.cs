@@ -38,7 +38,7 @@ public sealed class JoinCohortByCodeHandler : IJoinCohortByCodeHandler
 
         if (user.CohortId.HasValue)
         {
-            throw new CohortValidationException("User already belongs to a cohort.");
+            throw new CohortValidationException("Leave current cohort to join another.");
         }
 
         var code = dto.Code.Trim().ToUpperInvariant();

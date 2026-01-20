@@ -4,5 +4,5 @@ namespace AlgoDuck.Modules.Auth.Commands.Login.ExternalLogin;
 
 public interface IExternalLoginHandler
 {
-    Task<AuthResponse> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken);
+    Task<LoginFlowResponseDto> HandleAsync(ExternalLoginDto dto, CancellationToken cancellationToken);
 }

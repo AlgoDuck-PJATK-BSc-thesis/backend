@@ -11,15 +11,18 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
     private readonly IValidator<CreateCohortDto> _validator;
     private readonly IUserRepository _userRepository;
     private readonly ICohortRepository _cohortRepository;
+    private readonly IChatModerationService _chatModerationService;
 
     public CreateCohortHandler(
         IValidator<CreateCohortDto> validator,
         IUserRepository userRepository,
-        ICohortRepository cohortRepository)
+        ICohortRepository cohortRepository,
+        IChatModerationService chatModerationService)
     {
         _validator = validator;
         _userRepository = userRepository;
         _cohortRepository = cohortRepository;
+        _chatModerationService = chatModerationService;
     }
 
     public async Task<CreateCohortResultDto> HandleAsync(Guid userId, CreateCohortDto dto, CancellationToken cancellationToken)
@@ -38,7 +41,28 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
 
         if (user.CohortId.HasValue)
         {
-            throw new CohortValidationException("User already belongs to a cohort.");
+            throw new CohortValidationException("Leave current cohort to join another.");
+        }
+
+        var nameToSet = (dto.Name).Trim();
+        if (string.IsNullOrWhiteSpace(nameToSet))
+        {
+            throw new CohortValidationException("Invalid cohort data.");
+        }
+
+        var cohortId = Guid.NewGuid();
+
+        var moderationResult = await _chatModerationService.CheckMessageAsync(
+            userId,
+            cohortId,
+            nameToSet,
+            cancellationToken);
+
+        if (!moderationResult.IsAllowed)
+        {
+            throw new ChatValidationException(
+                moderationResult.BlockReason ?? "This name violates our content rules.",
+                moderationResult.Category);
         }
 
         var now = DateTime.UtcNow;
@@ -52,8 +76,8 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
 
         var cohort = new Models.Cohort
         {
-            CohortId = Guid.NewGuid(),
-            Name = dto.Name,
+            CohortId = cohortId,
+            Name = nameToSet,
             IsActive = true,
             CreatedByUserId = userId,
             CreatedByUserLabel = createdByLabel,

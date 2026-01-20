@@ -34,7 +34,7 @@ public sealed class AddCohortMemberHandler : IAddCohortMemberHandler
 
         if (user.CohortId.HasValue)
         {
-            throw new CohortValidationException("User already belongs to a cohort.");
+            throw new CohortValidationException("Leave current cohort to join another.");
         }
 
         var now = DateTime.UtcNow;

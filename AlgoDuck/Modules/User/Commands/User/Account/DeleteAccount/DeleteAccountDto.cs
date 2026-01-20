@@ -2,5 +2,5 @@ namespace AlgoDuck.Modules.User.Commands.User.Account.DeleteAccount;
 
 public sealed class DeleteAccountDto
 {
-    public string CurrentPassword { get; set; } = string.Empty;
+    public string? ConfirmationText { get; set; }
 }

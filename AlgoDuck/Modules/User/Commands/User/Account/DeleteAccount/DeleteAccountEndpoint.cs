@@ -22,8 +22,10 @@ public sealed class DeleteAccountEndpoint : ControllerBase
 
     [HttpDelete]
     [Authorize]
-    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete([FromBody] DeleteAccountDto? dto, CancellationToken cancellationToken)
     {
+        dto ??= new DeleteAccountDto();
+
         await _validator.ValidateAndThrowAsync(dto, cancellationToken);
 
         var userId = GetUserId();
@@ -34,7 +36,7 @@ public sealed class DeleteAccountEndpoint : ControllerBase
 
         await _handler.HandleAsync(userId, dto, cancellationToken);
 
-        return Ok();
+        return Ok(new { message = "Account deleted." });
     }
 
     private Guid GetUserId()

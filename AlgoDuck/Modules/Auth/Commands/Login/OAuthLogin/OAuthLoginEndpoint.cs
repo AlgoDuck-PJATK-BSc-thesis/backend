@@ -161,11 +161,22 @@ public sealed class OAuthLoginEndpoint : ControllerBase
                 DisplayName = displayName
             };
 
-            var authResponse = await _externalLoginHandler.HandleAsync(dto, cancellationToken);
-
-            AuthCookieWriter.SetAuthCookies(Response, _jwtSettings, authResponse);
+            var result = await _externalLoginHandler.HandleAsync(dto, cancellationToken);
 
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+            if (result.TwoFactorRequired)
+            {
+                return Redirect(BuildFrontendTwoFactorRedirect(result.ChallengeId ?? string.Empty, safeReturnUrl));
+            }
+
+            var authResponse = result.Auth;
+            if (authResponse is null)
+            {
+                return Redirect(BuildFrontendRedirect(errorUrl, providerKey, "login_failed"));
+            }
+
+            AuthCookieWriter.SetAuthCookies(Response, _jwtSettings, authResponse);
 
             return Redirect(BuildFrontendSuccessRedirect(safeReturnUrl));
         }
@@ -180,6 +191,14 @@ public sealed class OAuthLoginEndpoint : ControllerBase
     {
         var baseUrl = GetFrontendBaseUrl();
         return $"{baseUrl}{returnUrl}";
+    }
+
+    private string BuildFrontendTwoFactorRedirect(string challengeId, string next)
+    {
+        var baseUrl = GetFrontendBaseUrl();
+        var cid = Uri.EscapeDataString(challengeId.Trim());
+        var n = Uri.EscapeDataString(next);
+        return $"{baseUrl}/auth/twofactor?challengeId={cid}&next={n}";
     }
 
     private string BuildFrontendRedirect(string? errorUrl, string providerKey, string reason)

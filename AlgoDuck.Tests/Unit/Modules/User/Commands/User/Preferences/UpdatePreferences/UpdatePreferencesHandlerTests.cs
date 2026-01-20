@@ -2,7 +2,6 @@ using System.Reflection;
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences;
-using AlgoDuck.Modules.User.Commands.User.Preferences.UpdatePreferences.UpdatePreferences;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Reminders;
@@ -83,7 +82,7 @@ public sealed class UpdatePreferencesHandlerTests
 
         var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId);
         Assert.NotNull(cfg);
-        Assert.False(cfg!.IsDarkMode);
+        Assert.False(cfg.IsDarkMode);
         Assert.True(cfg.IsHighContrast);
         Assert.False(cfg.EmailNotificationsEnabled);
     }
@@ -142,7 +141,7 @@ public sealed class UpdatePreferencesHandlerTests
         SeedUser(dbContext, userId);
         var config = SeedUserConfig(dbContext, userId);
 
-        SetNullableDateTimeOffsetIfPresent(config, "StudyReminderNextAtUtc", DateTimeOffset.UtcNow.AddHours(1));
+        SetNullableDateTimeOffset(config, "StudyReminderNextAtUtc", DateTimeOffset.UtcNow.AddHours(1));
         dbContext.SaveChanges();
 
         var dto = new UpdatePreferencesDto
@@ -164,6 +163,46 @@ public sealed class UpdatePreferencesHandlerTests
 
         var nextAt = GetNullableDateTimeOffset(config, "StudyReminderNextAtUtc");
         Assert.Null(nextAt);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenRemindersEnabledButWeeklyRemindersEmpty_ThenClearsAllReminderColumns()
+    {
+        await using var dbContext = CreateCommandDbContext();
+
+        var userId = Guid.NewGuid();
+        SeedUser(dbContext, userId);
+        var config = SeedUserConfig(dbContext, userId);
+
+        SetNullableInt(config, "ReminderMonHour", 9);
+        SetNullableInt(config, "ReminderWedHour", 19);
+        SetNullableDateTimeOffset(config, "StudyReminderNextAtUtc", DateTimeOffset.UtcNow.AddHours(2));
+        dbContext.SaveChanges();
+
+        var dto = new UpdatePreferencesDto
+        {
+            IsDarkMode = true,
+            IsHighContrast = false,
+            EmailNotificationsEnabled = true,
+            WeeklyReminders = new List<Reminder>()
+        };
+
+        var validator = CreateValidatorMock(dto);
+        var calculator = new ReminderNextAtCalculator();
+        var handler = new UpdatePreferencesHandler(dbContext, validator.Object, calculator);
+
+        await handler.HandleAsync(userId, dto, CancellationToken.None);
+
+        Assert.Null(GetNullableInt(config, "ReminderMonHour"));
+        Assert.Null(GetNullableInt(config, "ReminderTueHour"));
+        Assert.Null(GetNullableInt(config, "ReminderWedHour"));
+        Assert.Null(GetNullableInt(config, "ReminderThuHour"));
+        Assert.Null(GetNullableInt(config, "ReminderFriHour"));
+        Assert.Null(GetNullableInt(config, "ReminderSatHour"));
+        Assert.Null(GetNullableInt(config, "ReminderSunHour"));
+
+        var nextAt = GetNullableDateTimeOffset(config, "StudyReminderNextAtUtc");
+        Assert.True(nextAt.HasValue);
     }
 
     static ApplicationCommandDbContext CreateCommandDbContext()
@@ -198,22 +237,21 @@ public sealed class UpdatePreferencesHandlerTests
     static object SeedUserConfig(ApplicationCommandDbContext dbContext, Guid userId)
     {
         var config = CreateEntity("UserConfig");
-        SetGuidIfPresent(config, "UserConfigId", userId);
         SetProperty(config, "UserId", userId);
 
-        SetBoolIfPresent(config, "IsDarkMode", false);
-        SetBoolIfPresent(config, "IsHighContrast", false);
-        SetBoolIfPresent(config, "EmailNotificationsEnabled", false);
+        SetBool(config, "IsDarkMode", false);
+        SetBool(config, "IsHighContrast", false);
+        SetBool(config, "EmailNotificationsEnabled", false);
 
-        SetNullableIntIfPresent(config, "ReminderMonHour", null);
-        SetNullableIntIfPresent(config, "ReminderTueHour", null);
-        SetNullableIntIfPresent(config, "ReminderWedHour", null);
-        SetNullableIntIfPresent(config, "ReminderThuHour", null);
-        SetNullableIntIfPresent(config, "ReminderFriHour", null);
-        SetNullableIntIfPresent(config, "ReminderSatHour", null);
-        SetNullableIntIfPresent(config, "ReminderSunHour", null);
+        SetNullableInt(config, "ReminderMonHour", null);
+        SetNullableInt(config, "ReminderTueHour", null);
+        SetNullableInt(config, "ReminderWedHour", null);
+        SetNullableInt(config, "ReminderThuHour", null);
+        SetNullableInt(config, "ReminderFriHour", null);
+        SetNullableInt(config, "ReminderSatHour", null);
+        SetNullableInt(config, "ReminderSunHour", null);
 
-        SetNullableDateTimeOffsetIfPresent(config, "StudyReminderNextAtUtc", null);
+        SetNullableDateTimeOffset(config, "StudyReminderNextAtUtc", null);
 
         dbContext.Add(config);
         dbContext.SaveChanges();
@@ -234,60 +272,25 @@ public sealed class UpdatePreferencesHandlerTests
         prop.SetValue(target, value);
     }
 
-    static void SetGuidIfPresent(object target, string propertyName, Guid value)
+    static void SetBool(object target, string propertyName, bool value)
     {
         var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null) return;
-
-        if (prop.PropertyType == typeof(Guid))
-        {
-            prop.SetValue(target, value);
-            return;
-        }
-
-        if (Nullable.GetUnderlyingType(prop.PropertyType) == typeof(Guid))
-        {
-            prop.SetValue(target, value);
-        }
+        Assert.NotNull(prop);
+        prop.SetValue(target, value);
     }
 
-    static void SetBoolIfPresent(object target, string propertyName, bool value)
+    static void SetNullableInt(object target, string propertyName, int? value)
     {
         var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null) return;
-
-        if (prop.PropertyType == typeof(bool))
-        {
-            prop.SetValue(target, value);
-            return;
-        }
-
-        if (Nullable.GetUnderlyingType(prop.PropertyType) == typeof(bool))
-        {
-            prop.SetValue(target, value);
-        }
+        Assert.NotNull(prop);
+        prop.SetValue(target, value);
     }
 
-    static void SetNullableIntIfPresent(object target, string propertyName, int? value)
+    static void SetNullableDateTimeOffset(object target, string propertyName, DateTimeOffset? value)
     {
         var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null) return;
-
-        if (prop.PropertyType == typeof(int?))
-        {
-            prop.SetValue(target, value);
-        }
-    }
-
-    static void SetNullableDateTimeOffsetIfPresent(object target, string propertyName, DateTimeOffset? value)
-    {
-        var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null) return;
-
-        if (prop.PropertyType == typeof(DateTimeOffset?))
-        {
-            prop.SetValue(target, value);
-        }
+        Assert.NotNull(prop);
+        prop.SetValue(target, value);
     }
 
     static bool GetBool(object target, string propertyName)
@@ -309,16 +312,5 @@ public sealed class UpdatePreferencesHandlerTests
         var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(prop);
         return (DateTimeOffset?)prop.GetValue(target);
-    }
-
-    static void SetNullableDateTimeOffsetIfPresent(object target, string propertyName, DateTimeOffset? value, bool force = false)
-    {
-        var prop = target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null) return;
-
-        if (prop.PropertyType == typeof(DateTimeOffset?))
-        {
-            prop.SetValue(target, value);
-        }
     }
 }

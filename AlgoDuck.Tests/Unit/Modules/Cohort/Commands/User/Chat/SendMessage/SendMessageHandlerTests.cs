@@ -21,6 +21,7 @@ public sealed class SendMessageHandlerTests
         var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
         var chatModerationServiceMock = new Mock<IChatModerationService>();
         var profileServiceMock = new Mock<IProfileService>();
+        var rateLimiterMock = new Mock<IChatMessageRateLimiter>();
 
         var userId = Guid.NewGuid();
         var dto = new SendMessageDto
@@ -41,10 +42,15 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            rateLimiterMock.Object);
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
+
+        rateLimiterMock.Verify(
+            x => x.CheckAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -55,6 +61,7 @@ public sealed class SendMessageHandlerTests
         var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
         var chatModerationServiceMock = new Mock<IChatModerationService>();
         var profileServiceMock = new Mock<IProfileService>();
+        var rateLimiterMock = new Mock<IChatMessageRateLimiter>();
 
         var userId = Guid.NewGuid();
         var dto = new SendMessageDto
@@ -77,7 +84,8 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            rateLimiterMock.Object);
 
         await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -85,6 +93,10 @@ public sealed class SendMessageHandlerTests
         cohortRepositoryMock.Verify(
             x => x.UserBelongsToCohortAsync(userId, dto.CohortId, It.IsAny<CancellationToken>()),
             Times.Once);
+
+        rateLimiterMock.Verify(
+            x => x.CheckAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
 
         chatModerationServiceMock.Verify(
             x => x.CheckMessageAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -103,6 +115,7 @@ public sealed class SendMessageHandlerTests
         var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
         var chatModerationServiceMock = new Mock<IChatModerationService>();
         var profileServiceMock = new Mock<IProfileService>();
+        var rateLimiterMock = new Mock<IChatMessageRateLimiter>();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -120,6 +133,10 @@ public sealed class SendMessageHandlerTests
         cohortRepositoryMock
             .Setup(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        rateLimiterMock
+            .Setup(x => x.CheckAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         chatModerationServiceMock
             .Setup(x => x.CheckMessageAsync(userId, cohortId, dto.Content, It.IsAny<CancellationToken>()))
@@ -155,7 +172,8 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            rateLimiterMock.Object);
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 
@@ -170,6 +188,7 @@ public sealed class SendMessageHandlerTests
 
         validatorMock.Verify(x => x.ValidateAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
         cohortRepositoryMock.Verify(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()), Times.Once);
+        rateLimiterMock.Verify(x => x.CheckAsync(userId, cohortId, It.IsAny<CancellationToken>()), Times.Once);
         chatModerationServiceMock.Verify(x => x.CheckMessageAsync(userId, cohortId, dto.Content, It.IsAny<CancellationToken>()), Times.Once);
         chatMessageRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()), Times.Once);
         profileServiceMock.Verify(x => x.GetProfileAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
@@ -183,6 +202,7 @@ public sealed class SendMessageHandlerTests
         var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
         var chatModerationServiceMock = new Mock<IChatModerationService>();
         var profileServiceMock = new Mock<IProfileService>();
+        var rateLimiterMock = new Mock<IChatMessageRateLimiter>();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -201,6 +221,10 @@ public sealed class SendMessageHandlerTests
             .Setup(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
+        rateLimiterMock
+            .Setup(x => x.CheckAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         var moderationResult = ChatModerationResult.Blocked("not allowed", "toxicity");
 
         chatModerationServiceMock
@@ -212,7 +236,8 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            rateLimiterMock.Object);
 
         await Assert.ThrowsAsync<ChatValidationException>(() =>
             handler.HandleAsync(userId, dto, CancellationToken.None));
@@ -229,6 +254,7 @@ public sealed class SendMessageHandlerTests
         var chatMessageRepositoryMock = new Mock<IChatMessageRepository>();
         var chatModerationServiceMock = new Mock<IChatModerationService>();
         var profileServiceMock = new Mock<IProfileService>();
+        var rateLimiterMock = new Mock<IChatMessageRateLimiter>();
 
         var userId = Guid.NewGuid();
         var cohortId = Guid.NewGuid();
@@ -249,6 +275,10 @@ public sealed class SendMessageHandlerTests
         cohortRepositoryMock
             .Setup(x => x.UserBelongsToCohortAsync(userId, cohortId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        rateLimiterMock
+            .Setup(x => x.CheckAsync(userId, cohortId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var saved = new Message
         {
@@ -280,7 +310,8 @@ public sealed class SendMessageHandlerTests
             cohortRepositoryMock.Object,
             chatMessageRepositoryMock.Object,
             chatModerationServiceMock.Object,
-            profileServiceMock.Object);
+            profileServiceMock.Object,
+            rateLimiterMock.Object);
 
         var result = await handler.HandleAsync(userId, dto, CancellationToken.None);
 

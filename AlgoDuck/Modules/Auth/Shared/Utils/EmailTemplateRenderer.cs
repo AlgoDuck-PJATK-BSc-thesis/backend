@@ -54,8 +54,8 @@ public static class EmailTemplateRenderer
 
     public static EmailTemplate RenderStudyReminder(string userName)
     {
-        var subject = "AlgoDuck study reminder";
-        var body = $"Hi {userName},\n\nThis is your reminder to study.\n\nOpen AlgoDuck and do a quick session today.\n\nIf you prefer not to receive these reminders, you can disable email notifications in settings.";
+        var subject = "AlgoDuck Study Reminder";
+        var body = $"Hi {userName},\n\nThis is your reminder to keep going with your training. We miss you!\n\nOpen AlgoDuck and do a quick study session today.\n\nIf you prefer not to receive these reminders, you can disable email notifications in settings.";
         return new EmailTemplate
         {
             Subject = subject,

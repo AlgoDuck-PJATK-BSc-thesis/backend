@@ -1,4 +1,3 @@
-using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Jwt;
 using AlgoDuck.Modules.Auth.Shared.Utils;
 using Microsoft.AspNetCore.Authorization;
@@ -26,13 +25,31 @@ public sealed class ExternalLoginEndpoint : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto, CancellationToken cancellationToken)
     {
-        AuthResponse authResponse = await _handler.HandleAsync(dto, cancellationToken);
+        var result = await _handler.HandleAsync(dto, cancellationToken);
+
+        if (result.TwoFactorRequired)
+        {
+            return Ok(new
+            {
+                message = result.Message,
+                twoFactorRequired = true,
+                challengeId = result.ChallengeId,
+                expiresAt = result.ExpiresAt
+            });
+        }
+
+        var authResponse = result.Auth;
+        if (authResponse is null)
+        {
+            return StatusCode(500, "Missing auth response.");
+        }
 
         AuthCookieWriter.SetAuthCookies(Response, _jwtSettings, authResponse);
 
         return Ok(new
         {
-            message = "External login successful.",
+            message = result.Message,
+            twoFactorRequired = false,
             userId = authResponse.UserId,
             sessionId = authResponse.SessionId,
             accessTokenExpiresAt = authResponse.AccessTokenExpiresAt,
