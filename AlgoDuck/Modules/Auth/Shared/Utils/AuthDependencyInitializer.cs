@@ -460,7 +460,22 @@ public static class AuthDependencyInitializer
 
                 o.Events = new OpenIdConnectEvents
                 {
-                    OnRemoteFailure = ctx => RedirectRemoteFailure(ctx, configuration, "microsoft"),
+                    OnAuthorizationCodeReceived = ctx =>
+                    {
+                        Console.WriteLine($"[MS OAUTH] Authorization code received");
+                        return Task.CompletedTask;
+                    },
+                    OnTokenResponseReceived = ctx =>
+                    {
+                        Console.WriteLine($"[MS OAUTH] Token response received");
+                        return Task.CompletedTask;
+                    },
+                    OnRemoteFailure = ctx =>
+                    {
+                        Console.WriteLine($"[MS OAUTH ERROR] {ctx.Failure?.Message}");
+                        Console.WriteLine($"[MS OAUTH ERROR] Inner: {ctx.Failure?.InnerException?.Message}");
+                        return RedirectRemoteFailure(ctx, configuration, "microsoft");
+                    },
                     OnRedirectToIdentityProvider = context =>
                     {
                         if (context.Properties.Items.TryGetValue("prompt", out var prompt))

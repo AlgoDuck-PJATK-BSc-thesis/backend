@@ -20,7 +20,12 @@ internal static class GeneralDependencyInitializer
             ? Path.Combine(builder.Environment.ContentRootPath, "keys")
             : "/var/app-keys";
 
+        Console.WriteLine($"[DATA PROTECTION] Keys path: {keysPath}");
+        Console.WriteLine($"[DATA PROTECTION] Directory exists: {Directory.Exists(keysPath)}");
+
         Directory.CreateDirectory(keysPath);
+
+        Console.WriteLine($"[DATA PROTECTION] After create, exists: {Directory.Exists(keysPath)}");
 
         builder.Services.AddDataProtection()
             .PersistKeysToFileSystem(new DirectoryInfo(keysPath))

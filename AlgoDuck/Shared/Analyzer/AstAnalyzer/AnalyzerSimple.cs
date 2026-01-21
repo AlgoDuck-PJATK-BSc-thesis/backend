@@ -380,7 +380,7 @@ public class AnalyzerSimple
     private bool DoClassScopesMatch(AstNodeClass baselineClass, AstNodeClass comparedClass)
     {
         var baselineFunctions = baselineClass.TypeScope!.TypeMembers
-            .Where(cm => cm.ClassMember.IsT0)
+            .Where(cm => cm.ClassMember is { IsT0: true, AsT0: not null })
             .Select(cm => cm.ClassMember.AsT0);
 
         if (baselineFunctions.Any(func => !FindAndCompareFunc(func, comparedClass)))
@@ -398,7 +398,7 @@ public class AnalyzerSimple
         }
 
         var baselineNestedClasses = baselineClass.TypeScope.TypeMembers
-            .Where(cm => cm.ClassMember.IsT2)
+            .Where(cm => cm.ClassMember is { IsT2: true, AsT2: not null })
             .Select(cm => cm.ClassMember.AsT2);
 
         return baselineNestedClasses.All(nested =>

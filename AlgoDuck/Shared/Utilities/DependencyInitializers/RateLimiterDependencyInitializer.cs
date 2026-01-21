@@ -39,7 +39,7 @@ public class RateLimiterDependencyInitializer
                     partitionKey: key,
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 100,
+                        PermitLimit = 300,
                         Window = TimeSpan.FromMinutes(1)
                     });
             });
