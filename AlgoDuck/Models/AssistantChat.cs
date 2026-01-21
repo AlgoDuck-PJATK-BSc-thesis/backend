@@ -42,12 +42,12 @@ public class AssistantChat : IEntityTypeConfiguration<AssistantChat>
         builder.HasOne(e => e.User)
             .WithMany(e => e.AssistantChats)
             .HasForeignKey(e => e.UserId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.HasOne(e => e.Problem)
             .WithMany(e => e.AssistantChats)
             .HasForeignKey(e => e.ProblemId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
     }
     
 }

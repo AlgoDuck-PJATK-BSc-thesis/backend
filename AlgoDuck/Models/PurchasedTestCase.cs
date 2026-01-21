@@ -20,11 +20,11 @@ public class PurchasedTestCase : IEntityTypeConfiguration<PurchasedTestCase>
         builder.HasOne(e => e.TestCase)
             .WithMany(e => e.PurchasedTestCases)
             .HasForeignKey(e => e.TestCaseId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(e => e.User)
             .WithMany(e => e.PurchasedTestCases)
             .HasForeignKey(e => e.UserId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
