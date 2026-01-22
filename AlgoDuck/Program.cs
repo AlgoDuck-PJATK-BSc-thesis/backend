@@ -157,7 +157,7 @@ app.UseStatusCodePages(async statusContext =>
 
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
-app.UseMiddleware<CsrfGuard>();
+// app.UseMiddleware<CsrfGuard>();
 app.UseRateLimiter();
 
 app.UseAuthentication();

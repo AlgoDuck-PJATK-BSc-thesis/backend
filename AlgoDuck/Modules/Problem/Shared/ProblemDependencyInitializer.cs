@@ -36,11 +36,13 @@ using AlgoDuck.Modules.Problem.Queries.GetUserEditorPreferences;
 using AlgoDuck.Modules.Problem.Queries.GetUserSolutionsForProblem;
 using AlgoDuck.Modules.Problem.Queries.LoadLastUserAutoSaveForProblem;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
+using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.S3;
 using AlgoDuckShared;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using FluentValidation;
 using Microsoft.Extensions.Options;
 using OpenAI;
 using OpenAI.Chat;
@@ -199,6 +201,8 @@ internal static class ProblemDependencyInitializer
         builder.Services.AddScoped<IDeleteLayoutRepository, DeleteLayoutRepository>();
         builder.Services.AddScoped<IDeleteLayoutService, DeleteLayoutService>();
         
+        builder.Services.AddValidatorsFromAssemblyContaining<AutoSaveValidator>();
+        
         builder.Services.AddSingleton<IConnectionFactory>(sp =>
         {
             var configuration = sp.GetRequiredService<IConfiguration>();
@@ -215,6 +219,8 @@ internal static class ProblemDependencyInitializer
         });
         builder.Services.Configure<MessageQueuesConfig>(
             builder.Configuration.GetSection("MessageQueues"));
+        builder.Services.Configure<ValidationConfig>(
+            builder.Configuration.GetSection("ProblemValidation"));
         
         builder.Services.AddSingleton<IRabbitMqConnectionService, RabbitMqConnectionService>();
         builder.Services.AddHostedService<CodeExecutionResultChannelReadWorker>();

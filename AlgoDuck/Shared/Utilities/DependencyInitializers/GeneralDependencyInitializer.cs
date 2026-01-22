@@ -16,9 +16,7 @@ internal static class GeneralDependencyInitializer
 
         var isDevLike = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 
-        var keysPath = isDevLike
-            ? Path.Combine(builder.Environment.ContentRootPath, "keys")
-            : "/var/app-keys";
+        var keysPath = "/var/app-keys";
 
         Console.WriteLine($"[DATA PROTECTION] Keys path: {keysPath}");
         Console.WriteLine($"[DATA PROTECTION] Directory exists: {Directory.Exists(keysPath)}");

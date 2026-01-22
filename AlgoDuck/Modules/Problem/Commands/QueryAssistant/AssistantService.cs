@@ -164,7 +164,7 @@ public class AssistantService : IAssistantService
             Role = $"{itemName} - a helpful programming ducky/ADS field expert",
             Instructions = "Help out the user with the exercise. generate a chat name based on the user query and exercise contents. Use markdown where possible to emphasise points. Titles do not need to be continuous strings; \"some title\" this is preferred to \"some-title\"",
             UserCode = Encoding.UTF8.GetString(Convert.FromBase64String(request.CodeB64)),
-            UserQueryToAssistant = Encoding.UTF8.GetString(Convert.FromBase64String(request.Query)),
+            UserQueryToAssistant = request.Query,
             PublicTestCases = problemData.TestCases.Select(t => new TestCaseData
             {
                 TestCaseExpectedOutput = t.DisplayRes,
