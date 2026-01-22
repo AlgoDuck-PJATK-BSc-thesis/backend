@@ -19,7 +19,7 @@ public sealed class CreateCohortHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
+    public async Task HandleAsync_WhenDtoInvalid_ThrowsCohortValidationException()
     {
         using var db = CreateDb();
 
@@ -29,12 +29,14 @@ public sealed class CreateCohortHandlerTests
 
         var handler = new CreateCohortHandler(db, repo.Object, new CreateCohortValidator());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(Guid.NewGuid(), new CreateCohortDto { Name = "" }, CancellationToken.None));
+
+        Assert.Equal("Cohort's name is required.", ex.Message);
     }
 
     [Fact]
-    public async Task HandleAsync_WhenNameWhitespace_ThrowsFluentValidationException()
+    public async Task HandleAsync_WhenNameWhitespace_ThrowsCohortValidationException()
     {
         using var db = CreateDb();
 
@@ -44,8 +46,27 @@ public sealed class CreateCohortHandlerTests
 
         var handler = new CreateCohortHandler(db, repo.Object, new CreateCohortValidator());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(Guid.NewGuid(), new CreateCohortDto { Name = "   " }, CancellationToken.None));
+
+        Assert.Equal("Cohort's name is required.", ex.Message);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNameTooShort_ThrowsCohortValidationException()
+    {
+        using var db = CreateDb();
+
+        var repo = new Mock<ICohortRepository>(MockBehavior.Strict);
+        repo.Setup(x => x.JoinCodeExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = new CreateCohortHandler(db, repo.Object, new CreateCohortValidator());
+
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
+            handler.HandleAsync(Guid.NewGuid(), new CreateCohortDto { Name = "ab" }, CancellationToken.None));
+
+        Assert.Equal("The length of Cohort's name must be at least 3 characters. You entered 2 characters.", ex.Message);
     }
 
     [Fact]
@@ -78,7 +99,10 @@ public sealed class CreateCohortHandlerTests
 
         var adminUserId = Guid.NewGuid();
 
-        var result = await handler.HandleAsync(adminUserId, new CreateCohortDto { Name = "  Cohort A  " }, CancellationToken.None);
+        var result = await handler.HandleAsync(
+            adminUserId,
+            new CreateCohortDto { Name = "  Cohort A  " },
+            CancellationToken.None);
 
         var saved = await db.Cohorts.FirstOrDefaultAsync(c => c.CohortId == result.CohortId);
         Assert.NotNull(saved);

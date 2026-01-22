@@ -17,14 +17,16 @@ public sealed class UpdateCohortHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
+    public async Task HandleAsync_WhenDtoInvalid_ThrowsCohortValidationException()
     {
         using var db = CreateDb();
 
         var handler = new UpdateCohortHandler(db, new UpdateCohortValidator());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(Guid.NewGuid(), new UpdateCohortDto { Name = "" }, CancellationToken.None));
+
+        Assert.Equal("Cohort's name is required.", ex.Message);
     }
 
     [Fact]
@@ -39,7 +41,7 @@ public sealed class UpdateCohortHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenNameWhitespace_ThrowsFluentValidationException()
+    public async Task HandleAsync_WhenNameWhitespace_ThrowsCohortValidationException()
     {
         using var db = CreateDb();
 
@@ -58,8 +60,36 @@ public sealed class UpdateCohortHandlerTests
 
         var handler = new UpdateCohortHandler(db, new UpdateCohortValidator());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
             handler.HandleAsync(cohortId, new UpdateCohortDto { Name = "   " }, CancellationToken.None));
+
+        Assert.Equal("Cohort's name is required.", ex.Message);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNameTooShort_ThrowsCohortValidationException()
+    {
+        using var db = CreateDb();
+
+        var cohortId = Guid.NewGuid();
+        db.Cohorts.Add(new Models.Cohort
+        {
+            CohortId = cohortId,
+            Name = "Old",
+            JoinCode = "ABCDEFGHJK",
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = Guid.NewGuid(),
+            IsActive = true
+        });
+
+        await db.SaveChangesAsync(CancellationToken.None);
+
+        var handler = new UpdateCohortHandler(db, new UpdateCohortValidator());
+
+        var ex = await Assert.ThrowsAsync<CohortValidationException>(() =>
+            handler.HandleAsync(cohortId, new UpdateCohortDto { Name = "ab" }, CancellationToken.None));
+
+        Assert.Equal("The length of Cohort's name must be at least 3 characters. You entered 2 characters.", ex.Message);
     }
 
     [Fact]
@@ -85,7 +115,10 @@ public sealed class UpdateCohortHandlerTests
 
         var handler = new UpdateCohortHandler(db, new UpdateCohortValidator());
 
-        var result = await handler.HandleAsync(cohortId, new UpdateCohortDto { Name = "  New Name  " }, CancellationToken.None);
+        var result = await handler.HandleAsync(
+            cohortId,
+            new UpdateCohortDto { Name = "  New Name  " },
+            CancellationToken.None);
 
         var saved = await db.Cohorts.FirstAsync(c => c.CohortId == cohortId);
         Assert.Equal("New Name", saved.Name);

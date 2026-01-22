@@ -8,6 +8,8 @@ namespace AlgoDuck.Modules.Cohort.Commands.User.Management.CreateCohort;
 
 public sealed class CreateCohortHandler : ICreateCohortHandler
 {
+    private const int MinNameLength = 3;
+
     private readonly IValidator<CreateCohortDto> _validator;
     private readonly IUserRepository _userRepository;
     private readonly ICohortRepository _cohortRepository;
@@ -30,7 +32,8 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
         var validationResult = await _validator.ValidateAsync(dto, cancellationToken);
         if (!validationResult.IsValid)
         {
-            throw new CohortValidationException("Invalid cohort data.");
+            var msg = validationResult.Errors.Count > 0 ? validationResult.Errors[0].ErrorMessage : null;
+            throw new CohortValidationException(string.IsNullOrWhiteSpace(msg) ? "Invalid cohort data." : msg);
         }
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
@@ -47,7 +50,12 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
         var nameToSet = (dto.Name).Trim();
         if (string.IsNullOrWhiteSpace(nameToSet))
         {
-            throw new CohortValidationException("Invalid cohort data.");
+            throw new CohortValidationException("Cohort name is required.");
+        }
+
+        if (nameToSet.Length < MinNameLength)
+        {
+            throw new CohortValidationException($"Cohort name must be at least {MinNameLength} characters.");
         }
 
         var cohortId = Guid.NewGuid();

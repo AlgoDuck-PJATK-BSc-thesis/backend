@@ -9,6 +9,7 @@ namespace AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.CreateCohort;
 
 public sealed class CreateCohortHandler : ICreateCohortHandler
 {
+    private const int MinNameLength = 3;
     private static readonly char[] JoinCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
     private readonly ApplicationCommandDbContext _db;
@@ -24,15 +25,25 @@ public sealed class CreateCohortHandler : ICreateCohortHandler
         _cohortRepository = cohortRepository;
         _validator = validator;
     }
-    
+
     public async Task<CohortItemDto> HandleAsync(Guid adminUserId, CreateCohortDto dto, CancellationToken cancellationToken)
     {
-        await _validator.ValidateAndThrowAsync(dto, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(dto, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            var msg = validationResult.Errors.Count > 0 ? validationResult.Errors[0].ErrorMessage : null;
+            throw new CohortValidationException(string.IsNullOrWhiteSpace(msg) ? "Invalid cohort data." : msg);
+        }
 
         var name = (dto.Name).Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new CohortValidationException("Cohort name is required.");
+        }
+
+        if (name.Length < MinNameLength)
+        {
+            throw new CohortValidationException($"Cohort name must be at least {MinNameLength} characters.");
         }
 
         var joinCode = await GenerateUniqueJoinCodeAsync(10, cancellationToken);

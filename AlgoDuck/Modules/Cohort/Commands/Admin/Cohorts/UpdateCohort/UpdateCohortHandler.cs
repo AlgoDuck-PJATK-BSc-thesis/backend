@@ -8,6 +8,8 @@ namespace AlgoDuck.Modules.Cohort.Commands.Admin.Cohorts.UpdateCohort;
 
 public sealed class UpdateCohortHandler : IUpdateCohortHandler
 {
+    private const int MinNameLength = 3;
+
     private readonly ApplicationCommandDbContext _db;
     private readonly IValidator<UpdateCohortDto> _validator;
 
@@ -19,7 +21,12 @@ public sealed class UpdateCohortHandler : IUpdateCohortHandler
 
     public async Task<CohortItemDto> HandleAsync(Guid cohortId, UpdateCohortDto dto, CancellationToken cancellationToken)
     {
-        await _validator.ValidateAndThrowAsync(dto, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(dto, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            var msg = validationResult.Errors.Count > 0 ? validationResult.Errors[0].ErrorMessage : null;
+            throw new CohortValidationException(string.IsNullOrWhiteSpace(msg) ? "Invalid cohort update payload." : msg);
+        }
 
         var cohort = await _db.Cohorts.FirstOrDefaultAsync(c => c.CohortId == cohortId, cancellationToken);
         if (cohort is null)
@@ -31,6 +38,11 @@ public sealed class UpdateCohortHandler : IUpdateCohortHandler
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new CohortValidationException("Cohort name is required.");
+        }
+
+        if (name.Length < MinNameLength)
+        {
+            throw new CohortValidationException($"Cohort name must be at least {MinNameLength} characters.");
         }
 
         cohort.Name = name;
