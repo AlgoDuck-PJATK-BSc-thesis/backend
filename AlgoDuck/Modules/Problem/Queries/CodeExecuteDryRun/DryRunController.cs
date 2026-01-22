@@ -1,6 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
+using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 using AlgoDuck.Shared.Http;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,23 +16,28 @@ namespace AlgoDuck.Modules.Problem.Queries.CodeExecuteDryRun;
 [EnableRateLimiting("CodeExecution")]
 public class DryRunController : ControllerBase
 {
+    
     private readonly IExecutorDryRunService _executorService;
+    private readonly IValidator<DryRunExecuteRequest> _validator;
 
-    public DryRunController(IExecutorDryRunService executorService)
+    public DryRunController(IExecutorDryRunService executorService, IValidator<DryRunExecuteRequest> validator)
     {
         _executorService = executorService;
+        _validator = validator;
     }
 
     [HttpPost]
-    public async Task<IActionResult> ExecuteCode([FromBody] DryRunExecuteRequest executeRequest)
+    public async Task<IActionResult> ExecuteCode([FromBody] DryRunExecuteRequest executeRequest, CancellationToken cancellationToken)
     {
-        var userIdResult = User.GetUserId();
-        if (userIdResult.IsErr)
-            return userIdResult.ToActionResult();
-
-        executeRequest.UserId = userIdResult.AsT0;
-        var res = await _executorService.DryRunUserCodeAsync(executeRequest);
-        return res.ToActionResult();
+        var validationResult = await _validator.ValidateAsync(executeRequest, cancellationToken);
+        if  (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+        return await User.GetUserId().BindAsync(async userId =>
+        {
+            executeRequest.UserId = userId;
+            return await _executorService.DryRunUserCodeAsync(executeRequest, cancellationToken);
+        }).ToActionResultAsync();
+        
     }
 }
 

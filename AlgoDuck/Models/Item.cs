@@ -55,6 +55,7 @@ public abstract class Item : IEntityTypeConfiguration<Item>
          builder.HasOne(d => d.CreatedBy)
              .WithMany(c => c.CreatedItems)
              .HasForeignKey(d => d.CreatedById)
+             .IsRequired(false)
              .OnDelete(DeleteBehavior.ClientSetNull);
 
         builder.HasOne(d => d.Rarity).WithMany(p => p.Items)

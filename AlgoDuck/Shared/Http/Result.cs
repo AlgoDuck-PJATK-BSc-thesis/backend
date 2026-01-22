@@ -76,7 +76,7 @@ public static class ResultHttpExtensions
     public static async Task<IActionResult> ToActionResultAsync<T, TE>(this Task<Result<T, ErrorObject<TE>>> resultTask, string message = "")
     {
         var result = await resultTask;
-        return result.ToActionResult();
+        return result.ToActionResult(message);
     } 
     
     public static IActionResult ToActionResult<T, TE>(
@@ -212,5 +212,6 @@ public static class ResultToolingExtensions
         );
     }
 }
+
 
 

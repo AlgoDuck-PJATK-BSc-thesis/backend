@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertTypes;
 
 public class ProblemTagDto

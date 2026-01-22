@@ -16,25 +16,25 @@ using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Shared.Utilities.DependencyInitializers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var isTesting = builder.Environment.IsEnvironment("Testing");
-var keysDir = isTesting
-    ? Path.Combine(Path.GetTempPath(), "algoduck_test_keys")
-    : "/app/keys";
 
-Directory.CreateDirectory(keysDir);
-
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
-    .SetApplicationName("AlgoDuck");
 
 builder.Services.Configure<HostOptions>(o =>
 {
     o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 builder.Services.AddHostedService<EmptyCohortCleanupService>();
@@ -88,6 +88,15 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+app.Use((context, next) =>
+{
+    if (context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto))
+    {
+        context.Request.Scheme = proto.ToString();
+    }
+    return next();
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -148,7 +157,7 @@ app.UseStatusCodePages(async statusContext =>
 
 app.UseCors(builder.Environment.IsDevelopment() ? "DevCors" : "ProdCors");
 
-app.UseMiddleware<CsrfGuard>();
+// app.UseMiddleware<CsrfGuard>();
 app.UseRateLimiter();
 
 app.UseAuthentication();
@@ -157,7 +166,7 @@ app.UseAuthorization();
 app.MapVerifyEmailEndpoint();
 app.MapControllers();
 
-app.MapHub<CohortChatHub>("/hubs/cohort-chat");
+app.MapHub<CohortChatHub>("/api/hubs/cohort-chat");
 app.MapHub<AssistantHub>("/api/hubs/assistant");
 app.MapHub<ExecutionStatusHub>("/api/hubs/execution-status");
 app.MapHub<CreateProblemUpdatesHub>("/api/hubs/validation-status");

@@ -5,6 +5,7 @@ using AlgoDuck.Modules.Problem.Shared;
 using AlgoDuck.Modules.Problem.Shared.Types;
 using AlgoDuck.Shared.Exceptions;
 using AlgoDuck.Shared.Http;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -18,15 +19,22 @@ namespace AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
 public class SubmitController : ControllerBase
 {
     private readonly IExecutorSubmitService _executorService;
+    private readonly IValidator<SubmitExecuteRequest> _validator;
 
-    public SubmitController(IExecutorSubmitService executorService)
+    public SubmitController(IExecutorSubmitService executorService, IValidator<SubmitExecuteRequest> validator)
     {
         _executorService = executorService;
+        _validator = validator;
     }
 
     [HttpPost]
     public async Task<IActionResult> ExecuteCode([FromBody] SubmitExecuteRequest executeRequest, CancellationToken cancellationToken)
     {
+            
+        var validationResult = await _validator.ValidateAsync(executeRequest,  cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+        
         return await User.GetUserId().BindAsync(async userId =>
         {
             executeRequest.UserId = userId;
@@ -67,10 +75,12 @@ public enum JobType : byte
 
 public class SubmitExecuteRequest
 {
-    private const int MaxCodeLengthBytes = 128 * 1024;
     internal Guid JobId { get; set; }
     internal Guid UserId { get; set; }
     public required Guid ProblemId { get; set; }
-    [MaxLength(MaxCodeLengthBytes)]
+    
+    private const int MaxCodeLengthBytes = 128 * 1024;
+    [Display(Name = "Code")]
+    [MaxLength(MaxCodeLengthBytes, ErrorMessage = "{0} cannot exceed {1} bytes")]
     public required string CodeB64 { get; set; }
 }

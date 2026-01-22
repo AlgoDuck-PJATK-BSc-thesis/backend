@@ -64,12 +64,12 @@ public class CodeExecutionStatistics : IEntityTypeConfiguration<CodeExecutionSta
             .WithMany(p => p.CodeExecutionStatistics)
             .HasForeignKey(x => x.ProblemId)
             .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.HasOne(x => x.ApplicationUser)
             .WithMany(p => p.CodeExecutionStatistics)
             .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.ClientSetNull);
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 

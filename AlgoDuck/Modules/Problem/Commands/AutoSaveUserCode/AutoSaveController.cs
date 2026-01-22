@@ -1,6 +1,7 @@
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 // ReSharper disable ConvertClosureToMethodGroup
@@ -13,15 +14,21 @@ public class AutoSaveController : ControllerBase
 {
     private readonly IAutoSaveService _autoSaveService;
 
-    public AutoSaveController(IAutoSaveService autoSaveService)
+    private readonly IValidator<AutoSaveDto> _validator;
+    public AutoSaveController(IAutoSaveService autoSaveService, IValidator<AutoSaveDto> validator)
     {
         _autoSaveService = autoSaveService;
+        _validator = validator;
     }
 
     [HttpPost]
     public async Task<IActionResult> AutoSaveCodeAsync([FromBody] AutoSaveDto autoSaveDto,
         CancellationToken cancellationToken)
     {
+        var validationResult = await _validator.ValidateAsync(autoSaveDto,  cancellationToken);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+        
         return await User
             .GetUserId()
             .BindAsync(async idResult =>
