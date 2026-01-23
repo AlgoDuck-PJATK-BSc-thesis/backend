@@ -45,7 +45,7 @@ public sealed class GetUserAchievementsHandler : IGetUserAchievementsHandler
                 CurrentValue = a.CurrentValue,
                 TargetValue = a.TargetValue,
                 IsCompleted = a.IsCompleted,
-                CompletedAt = null
+                CompletedAt = a.IsCompleted ? a.CompletedAt : null
             })
             .ToList()
             .AsReadOnly();

@@ -15,7 +15,6 @@ using AlgoDuck.Shared.Middleware;
 using AlgoDuck.Shared.Utilities;
 using AlgoDuck.Shared.Utilities.DependencyInitializers;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Polly;

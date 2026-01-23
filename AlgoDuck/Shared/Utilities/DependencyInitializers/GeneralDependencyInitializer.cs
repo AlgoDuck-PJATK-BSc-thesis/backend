@@ -1,6 +1,5 @@
 using System.Net;
 using AlgoDuck.Shared.Middleware;
-using AlgoDuck.Shared.S3;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
@@ -14,16 +13,60 @@ internal static class GeneralDependencyInitializer
         builder.Services.AddHttpContextAccessor();
         builder.Configuration.AddEnvironmentVariables();
 
-        var isDevLike = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+        var configuredKeysPath =
+            builder.Configuration["APP_KEYS_DIR"] ??
+            builder.Configuration["App:KeysDir"] ??
+            builder.Configuration["AppKeys:Directory"];
 
-        var keysPath = "/var/app-keys";
+        var runningInContainer = string.Equals(
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+            "true",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        string keysPath;
+
+        if (!string.IsNullOrWhiteSpace(configuredKeysPath))
+        {
+            keysPath = configuredKeysPath;
+        }
+        else if (builder.Environment.IsEnvironment("Testing") || builder.Environment.IsEnvironment("Test"))
+        {
+            keysPath = Path.Combine(Path.GetTempPath(), "algoduck", "app-keys");
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            keysPath = runningInContainer
+                ? "/var/app-keys"
+                : Path.Combine(builder.Environment.ContentRootPath, "app-keys");
+        }
+        else
+        {
+            keysPath = "/var/app-keys";
+        }
 
         Console.WriteLine($"[DATA PROTECTION] Keys path: {keysPath}");
         Console.WriteLine($"[DATA PROTECTION] Directory exists: {Directory.Exists(keysPath)}");
 
-        Directory.CreateDirectory(keysPath);
+        try
+        {
+            Directory.CreateDirectory(keysPath);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            var fallback = Path.Combine(Path.GetTempPath(), "algoduck", "app-keys");
+            Directory.CreateDirectory(fallback);
+            keysPath = fallback;
+        }
+        catch (IOException)
+        {
+            var fallback = Path.Combine(Path.GetTempPath(), "algoduck", "app-keys");
+            Directory.CreateDirectory(fallback);
+            keysPath = fallback;
+        }
 
         Console.WriteLine($"[DATA PROTECTION] After create, exists: {Directory.Exists(keysPath)}");
+        Console.WriteLine($"[DATA PROTECTION] Final keys path: {keysPath}");
 
         builder.Services.AddDataProtection()
             .PersistKeysToFileSystem(new DirectoryInfo(keysPath))

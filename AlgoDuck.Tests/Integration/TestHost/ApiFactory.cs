@@ -21,10 +21,12 @@ namespace AlgoDuck.Tests.Integration.TestHost;
 internal sealed class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _sqliteFilePath;
+    private readonly string _appKeysDir;
 
     public ApiFactory()
     {
         _sqliteFilePath = Path.Combine(Path.GetTempPath(), $"algoduck_tests_{Guid.NewGuid():N}.sqlite");
+        _appKeysDir = Path.Combine(Path.GetTempPath(), $"algoduck_test_keys_{Guid.NewGuid():N}");
 
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", $"Data Source={_sqliteFilePath}");
         Environment.SetEnvironmentVariable("ConnectionStrings__Redis", "localhost:6379");
@@ -35,6 +37,8 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
 
         Environment.SetEnvironmentVariable("APP__FRONTENDURL", "http://localhost:5173");
         Environment.SetEnvironmentVariable("APP__PUBLICAPIURL", "http://localhost:8080");
+
+        Environment.SetEnvironmentVariable("APP_KEYS_DIR", _appKeysDir);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -52,7 +56,10 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
                 ["Email:From"] = "noreply@test.local",
                 ["App:FrontendUrl"] = "http://localhost:5173",
                 ["App:PublicApiUrl"] = "http://localhost:8080",
-                ["CORS:DevOrigins:0"] = "http://localhost:5173"
+                ["CORS:DevOrigins:0"] = "http://localhost:5173",
+                ["APP_KEYS_DIR"] = _appKeysDir,
+                ["App:KeysDir"] = _appKeysDir,
+                ["AppKeys:Directory"] = _appKeysDir
             };
 
             config.AddInMemoryCollection(overrides);
@@ -146,6 +153,11 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
         if (File.Exists(_sqliteFilePath))
         {
             File.Delete(_sqliteFilePath);
+        }
+
+        if (Directory.Exists(_appKeysDir))
+        {
+            Directory.Delete(_appKeysDir, true);
         }
     }
 

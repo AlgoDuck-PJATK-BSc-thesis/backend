@@ -3,6 +3,7 @@ using System;
 using AlgoDuck.DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlgoDuck.Migrations
 {
     [DbContext(typeof(ApplicationCommandDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260123100351_UserStudyReminder")]
+    partial class UserStudyReminder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1048,9 +1051,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<int>("CurrentValue")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
-                        .HasDefaultValue(0)
                         .HasColumnName("current_value");
 
                     b.Property<string>("Description")
@@ -1060,9 +1061,7 @@ namespace AlgoDuck.Migrations
                         .HasColumnName("description");
 
                     b.Property<bool>("IsCompleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false)
                         .HasColumnName("is_completed");
 
                     b.Property<string>("Name")
@@ -1082,15 +1081,7 @@ namespace AlgoDuck.Migrations
                     b.HasKey("Id")
                         .HasName("user_achievement_pk");
 
-                    b.HasIndex("IsCompleted")
-                        .HasDatabaseName("user_achievement_is_completed_ix");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("user_achievement_user_id_ix");
-
-                    b.HasIndex("UserId", "Code")
-                        .IsUnique()
-                        .HasDatabaseName("user_achievement_user_code_uq");
+                    b.HasIndex("UserId");
 
                     b.ToTable("user_achievement", (string)null);
                 });

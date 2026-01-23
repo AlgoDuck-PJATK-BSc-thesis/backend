@@ -5,7 +5,7 @@ namespace AlgoDuck.Modules.User.Shared.Reminders;
 
 public sealed class ReminderNextAtCalculator
 {
-    public DateTimeOffset? ComputeNextAtUtc(UserConfig config, DateTimeOffset nowUtc, bool justSent)
+    public DateTimeOffset? ComputeNextAtUtc(UserConfig config, Dictionary<DayOfWeek, int> schedule, DateTimeOffset nowUtc, bool justSent)
     {
         if (!config.EmailNotificationsEnabled)
         {
@@ -15,7 +15,6 @@ public sealed class ReminderNextAtCalculator
         var tz = CetTime.GetTimeZone();
         var thresholdUtc = justSent ? nowUtc.AddMinutes(1) : nowUtc;
 
-        var schedule = GetCustomSchedule(config);
         if (schedule.Count > 0)
         {
             return ComputeNextCustomUtc(schedule, tz, thresholdUtc);
@@ -121,35 +120,5 @@ public sealed class ReminderNextAtCalculator
         }
 
         return new DateTimeOffset(adjusted, offset).ToUniversalTime();
-    }
-
-    private static Dictionary<DayOfWeek, int> GetCustomSchedule(UserConfig config)
-    {
-        var schedule = new Dictionary<DayOfWeek, int>();
-
-        AddIfEnabled(schedule, DayOfWeek.Monday, config.ReminderMonHour);
-        AddIfEnabled(schedule, DayOfWeek.Tuesday, config.ReminderTueHour);
-        AddIfEnabled(schedule, DayOfWeek.Wednesday, config.ReminderWedHour);
-        AddIfEnabled(schedule, DayOfWeek.Thursday, config.ReminderThuHour);
-        AddIfEnabled(schedule, DayOfWeek.Friday, config.ReminderFriHour);
-        AddIfEnabled(schedule, DayOfWeek.Saturday, config.ReminderSatHour);
-        AddIfEnabled(schedule, DayOfWeek.Sunday, config.ReminderSunHour);
-
-        return schedule;
-    }
-
-    private static void AddIfEnabled(Dictionary<DayOfWeek, int> schedule, DayOfWeek day, int? hour)
-    {
-        if (!hour.HasValue)
-        {
-            return;
-        }
-
-        if (hour.Value < 0 || hour.Value > 23)
-        {
-            return;
-        }
-
-        schedule[day] = hour.Value;
     }
 }

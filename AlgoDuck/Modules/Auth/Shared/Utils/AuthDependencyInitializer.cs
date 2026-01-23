@@ -460,16 +460,6 @@ public static class AuthDependencyInitializer
 
                 o.Events = new OpenIdConnectEvents
                 {
-                    OnAuthorizationCodeReceived = ctx =>
-                    {
-                        Console.WriteLine($"[MS OAUTH] Authorization code received");
-                        return Task.CompletedTask;
-                    },
-                    OnTokenResponseReceived = ctx =>
-                    {
-                        Console.WriteLine($"[MS OAUTH] Token response received");
-                        return Task.CompletedTask;
-                    },
                     OnRemoteFailure = ctx =>
                     {
                         Console.WriteLine($"[MS OAUTH ERROR] {ctx.Failure?.Message}");

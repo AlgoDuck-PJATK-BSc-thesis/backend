@@ -1,4 +1,6 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
+using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Reminders;
 using FluentValidation;
@@ -11,6 +13,17 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
     private readonly ApplicationCommandDbContext _dbContext;
     private readonly IValidator<UpdatePreferencesDto> _validator;
     private readonly ReminderNextAtCalculator _calculator;
+
+    private static readonly IReadOnlyDictionary<string, int> DayToStudyReminderId = new Dictionary<string, int>
+    {
+        ["Mon"] = 1,
+        ["Tue"] = 2,
+        ["Wed"] = 3,
+        ["Thu"] = 4,
+        ["Fri"] = 5,
+        ["Sat"] = 6,
+        ["Sun"] = 7
+    };
 
     public UpdatePreferencesHandler(
         ApplicationCommandDbContext dbContext,
@@ -45,7 +58,7 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
 
         if (config is null)
         {
-            config = new Models.UserConfig
+            config = new UserConfig
             {
                 UserId = userId,
                 EditorFontSize = 11,
@@ -65,9 +78,15 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
 
         var remindersProvided = dto.WeeklyReminders is not null;
 
+        Dictionary<DayOfWeek, int> schedule;
+
         if (remindersProvided)
         {
-            ApplyWeeklyReminders(config, dto);
+            schedule = await ApplyWeeklyRemindersAsync(userId, dto.WeeklyReminders!, cancellationToken);
+        }
+        else
+        {
+            schedule = await LoadEnabledScheduleAsync(userId, cancellationToken);
         }
 
         var nowUtc = DateTimeOffset.UtcNow;
@@ -82,13 +101,13 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
 
             if (shouldRecompute)
             {
-                config.StudyReminderNextAtUtc = _calculator.ComputeNextAtUtc(config, nowUtc, false);
+                config.StudyReminderNextAtUtc = _calculator.ComputeNextAtUtc(config, schedule, nowUtc, false);
             }
             else
             {
                 if (config.StudyReminderNextAtUtc.HasValue && config.StudyReminderNextAtUtc.Value <= nowUtc)
                 {
-                    config.StudyReminderNextAtUtc = _calculator.ComputeNextAtUtc(config, nowUtc, false);
+                    config.StudyReminderNextAtUtc = _calculator.ComputeNextAtUtc(config, schedule, nowUtc, false);
                 }
             }
         }
@@ -96,44 +115,91 @@ public sealed class UpdatePreferencesHandler : IUpdatePreferencesHandler
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static void ApplyWeeklyReminders(Models.UserConfig config, UpdatePreferencesDto dto)
+    private async Task<Dictionary<DayOfWeek, int>> ApplyWeeklyRemindersAsync(Guid userId, List<Reminder> reminders, CancellationToken cancellationToken)
     {
-        config.ReminderMonHour = null;
-        config.ReminderTueHour = null;
-        config.ReminderWedHour = null;
-        config.ReminderThuHour = null;
-        config.ReminderFriHour = null;
-        config.ReminderSatHour = null;
-        config.ReminderSunHour = null;
+        var inputByDay = reminders.ToDictionary(r => r.Day, StringComparer.Ordinal);
 
-        foreach (var r in dto.WeeklyReminders!)
+        var joinSet = _dbContext.Set<UserSetStudyReminder>();
+
+        var existingRows = await joinSet
+            .Where(e => e.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        var existingById = existingRows.ToDictionary(e => e.StudyReminderId);
+
+        var enabledSchedule = new Dictionary<DayOfWeek, int>();
+
+        foreach (var kvp in DayToStudyReminderId)
         {
-            var hour = r.Enabled ? r.Hour : (int?)null;
+            var dayKey = kvp.Key;
+            var studyReminderId = kvp.Value;
 
-            switch (r.Day)
+            int? hour = null;
+
+            if (inputByDay.TryGetValue(dayKey, out var r) && r.Enabled)
             {
-                case "Mon":
-                    config.ReminderMonHour = hour;
-                    break;
-                case "Tue":
-                    config.ReminderTueHour = hour;
-                    break;
-                case "Wed":
-                    config.ReminderWedHour = hour;
-                    break;
-                case "Thu":
-                    config.ReminderThuHour = hour;
-                    break;
-                case "Fri":
-                    config.ReminderFriHour = hour;
-                    break;
-                case "Sat":
-                    config.ReminderSatHour = hour;
-                    break;
-                case "Sun":
-                    config.ReminderSunHour = hour;
-                    break;
+                hour = r.Hour;
+                enabledSchedule[StudyReminderIdToDayOfWeek(studyReminderId)] = r.Hour;
+            }
+
+            if (existingById.TryGetValue(studyReminderId, out var row))
+            {
+                row.Hour = hour;
+            }
+            else
+            {
+                joinSet.Add(new UserSetStudyReminder
+                {
+                    UserId = userId,
+                    StudyReminderId = studyReminderId,
+                    Hour = hour
+                });
             }
         }
+
+        return enabledSchedule;
+    }
+
+    private async Task<Dictionary<DayOfWeek, int>> LoadEnabledScheduleAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var joinSet = _dbContext.Set<UserSetStudyReminder>();
+
+        var rows = await joinSet
+            .Where(e => e.UserId == userId && e.Hour != null)
+            .Select(e => new
+            {
+                e.StudyReminderId,
+                e.Hour
+            })
+            .ToListAsync(cancellationToken);
+
+        var schedule = new Dictionary<DayOfWeek, int>();
+
+        foreach (var r in rows)
+        {
+            if (!r.Hour.HasValue)
+            {
+                continue;
+            }
+
+            schedule[StudyReminderIdToDayOfWeek(r.StudyReminderId)] = r.Hour.Value;
+        }
+
+        return schedule;
+    }
+
+    private static DayOfWeek StudyReminderIdToDayOfWeek(int studyReminderId)
+    {
+        return studyReminderId switch
+        {
+            1 => DayOfWeek.Monday,
+            2 => DayOfWeek.Tuesday,
+            3 => DayOfWeek.Wednesday,
+            4 => DayOfWeek.Thursday,
+            5 => DayOfWeek.Friday,
+            6 => DayOfWeek.Saturday,
+            7 => DayOfWeek.Sunday,
+            _ => DayOfWeek.Monday
+        };
     }
 }

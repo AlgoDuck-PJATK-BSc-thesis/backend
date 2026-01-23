@@ -3,19 +3,11 @@ using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Queries.User.Leaderboard.GetCohortLeaderboard;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Xunit.Abstractions;
 
 namespace AlgoDuck.Tests.Unit.Modules.User.Queries.User.Leaderboard.GetCohortLeaderboard;
 
 public sealed class GetCohortLeaderboardHandlerTests
 {
-    private readonly ITestOutputHelper _testOutputHelper;
-
-    public GetCohortLeaderboardHandlerTests(ITestOutputHelper testOutputHelper)
-    {
-        _testOutputHelper = testOutputHelper;
-    }
-
     [Fact]
     public async Task HandleAsync_WhenCohortIdEmpty_ThenThrowsValidationException()
     {
