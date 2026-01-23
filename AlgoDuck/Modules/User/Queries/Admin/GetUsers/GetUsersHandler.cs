@@ -2,6 +2,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Queries.Admin.GetUsers;

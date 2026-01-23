@@ -1,13 +1,14 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Result;
+using AlgoDuck.Shared.Types;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Item.Queries.AdminGetAllItemsPagedFilterable;
 
 public interface IAllItemsPagedRepository
 {
-    public Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default);
+    public Task<Result<PageData<ItemDto>, NotFoundError<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default);
 }
 
 public class AllItemsPagedRepository : IAllItemsPagedRepository
@@ -19,13 +20,13 @@ public class AllItemsPagedRepository : IAllItemsPagedRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Result<PageData<ItemDto>, ErrorObject<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default)
+    public async Task<Result<PageData<ItemDto>, NotFoundError<string>>> GetAllItemsPagedAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> itemRequest, CancellationToken cancellationToken = default)
     {
         var totalItemCount = await _dbContext.Items.CountAsync(cancellationToken);
         var totalPagesCount = (int) Math.Ceiling(totalItemCount / (double)itemRequest.PageSize);
         
         if (totalPagesCount <= 0)
-            return Result<PageData<ItemDto>, ErrorObject<string>>.Err(ErrorObject<string>.NotFound("No items found"));
+            return Result<PageData<ItemDto>, NotFoundError<string>>.Err(new NotFoundError<string>("No items found"));
         
         var actualPage = Math.Clamp(itemRequest.CurrPage, 1, totalPagesCount);
         
@@ -61,7 +62,7 @@ public class AllItemsPagedRepository : IAllItemsPagedRepository
                 : null,
         });
         
-        return Result<PageData<ItemDto>, ErrorObject<string>>.Ok(new PageData<ItemDto>
+        return Result<PageData<ItemDto>, NotFoundError<string>>.Ok(new PageData<ItemDto>
         {
             CurrPage = actualPage,
             TotalItems = totalItemCount,

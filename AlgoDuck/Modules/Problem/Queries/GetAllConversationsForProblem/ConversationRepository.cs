@@ -1,5 +1,6 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetAllConversationsForProblem;

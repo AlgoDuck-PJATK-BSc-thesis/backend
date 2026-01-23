@@ -29,14 +29,14 @@ public class ExecutionStatusHub : Hub<IExecutionStatusClient>
     {
         
         var userIdResult = Context.User?.GetUserId();
-        if (userIdResult is null || userIdResult.IsErr)
+        if (userIdResult is null || userIdResult.Value.IsErr)
             return new StandardApiResponse
             {
                 Status = Status.Error,
                 Message = "User id not found"
             };
         
-        var userId = userIdResult.AsOk;
+        var userId = userIdResult.Value.AsOk;
         
         var jobDataRaw = await _redis.StringGetAsync(requestDto.JobId.ToString());
 

@@ -1,10 +1,10 @@
-using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Result;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetPreviousSolutionDataById;
 
 public interface IGetPreviousSolutionDataService
 {
-    public Task<Result<SolutionData, ErrorObject<string>>> GetPreviousSolutionDataAsync(PreviousSolutionRequestDto requestDto, CancellationToken cancellationToken = default);
+    public Task<Result<SolutionData, ErrorUnion<NotFoundError<string>, InternalError<string>>>> GetPreviousSolutionDataAsync(PreviousSolutionRequestDto requestDto, CancellationToken cancellationToken = default);
 }
 
 public class GetPreviousSolutionDataService : IGetPreviousSolutionDataService
@@ -16,7 +16,7 @@ public class GetPreviousSolutionDataService : IGetPreviousSolutionDataService
         _getPreviousSolutionDataRepository = getPreviousSolutionDataRepository;
     }
 
-    public Task<Result<SolutionData, ErrorObject<string>>> GetPreviousSolutionDataAsync(PreviousSolutionRequestDto requestDto, CancellationToken cancellationToken = default)
+    public Task<Result<SolutionData, ErrorUnion<NotFoundError<string>, InternalError<string>>>> GetPreviousSolutionDataAsync(PreviousSolutionRequestDto requestDto, CancellationToken cancellationToken = default)
     {
         return _getPreviousSolutionDataRepository.GetPreviousSolutionDataAsync(requestDto, cancellationToken);
     }

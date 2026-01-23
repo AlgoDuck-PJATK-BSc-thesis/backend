@@ -1,6 +1,7 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

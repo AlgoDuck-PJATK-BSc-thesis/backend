@@ -1,11 +1,6 @@
-using AlgoDuck.DAL;
-using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
-using AlgoDuck.Modules.Problem.Commands.CodeExecuteSubmission;
-using AlgoDuck.Shared.Http;
-using AlgoDuck.Shared.S3;
+using AlgoDuck.Shared.Result;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetPreviousSolutionDataById;
 
@@ -26,13 +21,13 @@ public class PreviousSolutionDataController : ControllerBase
     public async Task<IActionResult> GetPreviousSolutionDataAsync([FromQuery] Guid solutionId,
         CancellationToken cancellationToken = default)
     {
-        return await User.GetUserId()
+        return await User.UserIdToResult()
             .BindAsync(async userId =>
-            await _getPreviousSolutionDataService.GetPreviousSolutionDataAsync(new PreviousSolutionRequestDto
-            {
-                SolutionId = solutionId,
-                UserId = userId,
-            }, cancellationToken)).ToActionResultAsync();
+                await _getPreviousSolutionDataService.GetPreviousSolutionDataAsync(new PreviousSolutionRequestDto
+                {
+                    SolutionId = solutionId,
+                    UserId = userId,
+                }, cancellationToken)).ToActionResultAsync();
     }
 }
 

@@ -85,6 +85,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\AlgoDuckShared\AlgoDuckShared.csproj" />
+        <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

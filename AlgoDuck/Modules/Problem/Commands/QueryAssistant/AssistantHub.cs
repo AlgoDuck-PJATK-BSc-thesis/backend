@@ -38,17 +38,17 @@ public sealed class AssistantHub : Hub<IAssistantClient>
             };
         
         var userId = Context.User?.GetUserId();
-        if (userId == null || userId.IsErr)
+        if (userId == null || userId.Value.IsErr)
         {
             yield return new StandardApiResponse
             {
                 Status = Status.Error,
-                Message = userId!.AsErr!.Body,
+                Message = userId != null ? userId.Value.AsErr!.Body : "" ,
             };
             yield break;
         }
 
-        assistantRequest.UserId = userId.AsOk;
+        assistantRequest.UserId = userId.Value.AsOk;
 
         await foreach (var chatCompletionPartial in  _assistantService.GetAssistanceAsync(assistantRequest))
         {

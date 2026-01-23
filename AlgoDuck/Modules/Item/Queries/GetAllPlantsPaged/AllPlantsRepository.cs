@@ -1,6 +1,7 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
