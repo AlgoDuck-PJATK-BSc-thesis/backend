@@ -29,6 +29,38 @@ public sealed class RefreshTokenEndpoint : ControllerBase
             return Unauthorized(new { message = "Refresh token cookie is missing." });
         }
 
+        var csrfCookie = Request.Cookies[_jwtSettings.CsrfCookieName];
+
+        if (!Request.Headers.TryGetValue("X-CSRF-Token", out var csrfHeaderValues))
+        {
+            return Forbid();
+        }
+
+        var csrfHeaderRaw = csrfHeaderValues.ToString();
+        if (string.IsNullOrWhiteSpace(csrfCookie) || string.IsNullOrWhiteSpace(csrfHeaderRaw))
+        {
+            return Forbid();
+        }
+
+        var csrfHeader = csrfHeaderRaw.Trim().Trim('"');
+
+        if (csrfHeader.IndexOf('%') >= 0)
+        {
+            try
+            {
+                csrfHeader = Uri.UnescapeDataString(csrfHeader);
+            }
+            catch (UriFormatException)
+            {
+                return Forbid();
+            }
+        }
+
+        if (!string.Equals(csrfCookie, csrfHeader, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
         var dto = new RefreshTokenDto
         {
             RefreshToken = refreshToken

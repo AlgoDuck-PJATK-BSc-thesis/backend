@@ -1,17 +1,20 @@
-
+using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Exceptions;
 using AlgoDuck.Modules.User.Shared.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.User.Queries.User.Settings.GetUserConfig;
 
 public sealed class GetUserConfigHandler : IGetUserConfigHandler
 {
     private readonly IUserRepository _userRepository;
+    private readonly ApplicationCommandDbContext _dbContext;
 
-    public GetUserConfigHandler(IUserRepository userRepository)
+    public GetUserConfigHandler(IUserRepository userRepository, ApplicationCommandDbContext dbContext)
     {
         _userRepository = userRepository;
+        _dbContext = dbContext;
     }
 
     public async Task<UserConfigDto> HandleAsync(GetUserConfigRequestDto query, CancellationToken cancellationToken)
@@ -23,8 +26,7 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
         }
 
         var config = user.UserConfig;
-
-        var reminders = BuildWeeklyReminders(config);
+        var reminders = await BuildWeeklyRemindersAsync(user.Id, cancellationToken);
 
         return new UserConfigDto
         {
@@ -38,17 +40,30 @@ public sealed class GetUserConfigHandler : IGetUserConfigHandler
         };
     }
 
-    private static List<Reminder> BuildWeeklyReminders(Models.UserConfig? config)
+    private async Task<List<Reminder>> BuildWeeklyRemindersAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var defaultsHour = 8;
+        const int defaultsHour = 8;
 
-        var mon = config?.ReminderMonHour;
-        var tue = config?.ReminderTueHour;
-        var wed = config?.ReminderWedHour;
-        var thu = config?.ReminderThuHour;
-        var fri = config?.ReminderFriHour;
-        var sat = config?.ReminderSatHour;
-        var sun = config?.ReminderSunHour;
+        var joinSet = _dbContext.Set<Models.UserSetStudyReminder>();
+
+        var rows = await joinSet
+            .Where(e => e.UserId == userId)
+            .Select(e => new
+            {
+                e.StudyReminderId,
+                e.Hour
+            })
+            .ToListAsync(cancellationToken);
+
+        var byId = rows.ToDictionary(x => x.StudyReminderId, x => x.Hour);
+
+        int? mon = byId.TryGetValue(1, out var h1) ? h1 : null;
+        int? tue = byId.TryGetValue(2, out var h2) ? h2 : null;
+        int? wed = byId.TryGetValue(3, out var h3) ? h3 : null;
+        int? thu = byId.TryGetValue(4, out var h4) ? h4 : null;
+        int? fri = byId.TryGetValue(5, out var h5) ? h5 : null;
+        int? sat = byId.TryGetValue(6, out var h6) ? h6 : null;
+        int? sun = byId.TryGetValue(7, out var h7) ? h7 : null;
 
         return new List<Reminder>
         {

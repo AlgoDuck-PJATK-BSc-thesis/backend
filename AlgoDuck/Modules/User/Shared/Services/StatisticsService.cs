@@ -18,45 +18,35 @@ public sealed class StatisticsService : IStatisticsService
 
     public async Task<StatisticsSummary> GetStatisticsAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var userSolutions = _queryDbContext.CodeExecutionStatisticss
-            .Where(s => s.UserId == userId);
+        var allSubmissions = await _queryDbContext.CodeExecutionStatisticss
+            .Where(s => s.UserId == userId)
+            .ToListAsync(cancellationToken);
 
-        var totalSubmissions = await userSolutions.CountAsync(cancellationToken);
+        var totalSubmissions = allSubmissions.Count;
 
-        var acceptedSubmissions = await userSolutions
-            .CountAsync(
-                s => s.TestCaseResult == TestCaseResult.Accepted,
-                cancellationToken
-            );
+        var acceptedSubmissions = allSubmissions
+            .Count(s => s.TestCaseResult == TestCaseResult.Accepted);
 
-        var wrongAnswerSubmissions = await userSolutions
-            .CountAsync(
-                s => s.TestCaseResult == TestCaseResult.Rejected,
-                cancellationToken
-            );
+        var wrongAnswerSubmissions = allSubmissions
+            .Count(s => s.TestCaseResult == TestCaseResult.Rejected);
 
-        var timeLimitSubmissions = await userSolutions
-            .CountAsync(
-                s => s.Result == ExecutionResult.Timeout,
-                cancellationToken
-            );
+        var timeLimitSubmissions = allSubmissions
+            .Count(s => s.Result == ExecutionResult.Timeout);
 
-        var runtimeErrorSubmissions = await userSolutions
-            .CountAsync(
-                s => s.Result == ExecutionResult.RuntimeError,
-                cancellationToken
-            );
+        var runtimeErrorSubmissions = allSubmissions
+            .Count(s => s.Result == ExecutionResult.RuntimeError);
 
-        var totalSolved = await userSolutions
-            .Where(s => s.TestCaseResult == TestCaseResult.Accepted)
-            .Select(s => s.ProblemId)
+        var totalSolved = allSubmissions
+            .Where(s => s.TestCaseResult == TestCaseResult.Accepted && s.ProblemId.HasValue)
+            .Select(s => s.ProblemId!.Value)
             .Distinct()
-            .CountAsync(cancellationToken);
+            .Count();
 
-        var totalAttempted = await userSolutions
-            .Select(s => s.ProblemId)
+        var totalAttempted = allSubmissions
+            .Where(s => s.ProblemId.HasValue)
+            .Select(s => s.ProblemId!.Value)
             .Distinct()
-            .CountAsync(cancellationToken);
+            .Count();
 
         return StatisticsCalculator.Calculate(
             totalSolved,
@@ -67,7 +57,6 @@ public sealed class StatisticsService : IStatisticsService
             timeLimitSubmissions,
             runtimeErrorSubmissions
         );
-
     }
 
     public async Task<IReadOnlyList<SolvedProblemSummary>> GetSolvedProblemsAsync(
@@ -76,19 +65,15 @@ public sealed class StatisticsService : IStatisticsService
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var query = _queryDbContext.CodeExecutionStatisticss
-            .Where(
-                s =>
-                    s.UserId == userId
-                    && s.ProblemId != null /* since we track all executions we must allow a scenario where code is executed for no problem (perhaps in the algo visualizer?) hence the nullability and null check */
-                    && s.TestCaseResult == TestCaseResult.Accepted
+        var problemIds = await _queryDbContext.CodeExecutionStatisticss
+            .Where(s =>
+                s.UserId == userId
+                && s.ProblemId != null
+                && s.TestCaseResult == TestCaseResult.Accepted
             )
-            .Select(s => (Guid) s.ProblemId!)
+            .Select(s => s.ProblemId!.Value)
             .Distinct()
-            .OrderBy(id => id);
-
-        var problemIds = await query
-            .Select(id => id)
+            .OrderBy(id => id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -99,6 +84,5 @@ public sealed class StatisticsService : IStatisticsService
                 ProblemId = id
             })
             .ToList();
-
     }
 }

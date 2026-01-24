@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,7 +49,7 @@ public sealed class ReminderHostedService : BackgroundService
         foreach (var cfg in dueConfigs)
         {
             var user = cfg.User;
-            
+
             if (string.IsNullOrWhiteSpace(user.Email))
             {
                 continue;
@@ -63,8 +64,52 @@ public sealed class ReminderHostedService : BackgroundService
                 continue;
             }
 
-            cfg.StudyReminderNextAtUtc = calculator.ComputeNextAtUtc(cfg, nowUtc, true);
+            var schedule = await LoadEnabledScheduleAsync(db, user.Id, cancellationToken);
+            cfg.StudyReminderNextAtUtc = calculator.ComputeNextAtUtc(cfg, schedule, nowUtc, true);
             await db.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private static async Task<Dictionary<DayOfWeek, int>> LoadEnabledScheduleAsync(ApplicationCommandDbContext db, Guid userId, CancellationToken cancellationToken)
+    {
+        var joinSet = db.Set<UserSetStudyReminder>();
+
+        var rows = await joinSet
+            .Where(e => e.UserId == userId && e.Hour != null)
+            .Select(e => new
+            {
+                e.StudyReminderId,
+                e.Hour
+            })
+            .ToListAsync(cancellationToken);
+
+        var schedule = new Dictionary<DayOfWeek, int>();
+
+        foreach (var r in rows)
+        {
+            if (!r.Hour.HasValue)
+            {
+                continue;
+            }
+
+            schedule[StudyReminderIdToDayOfWeek(r.StudyReminderId)] = r.Hour.Value;
+        }
+
+        return schedule;
+    }
+
+    private static DayOfWeek StudyReminderIdToDayOfWeek(int studyReminderId)
+    {
+        return studyReminderId switch
+        {
+            1 => DayOfWeek.Monday,
+            2 => DayOfWeek.Tuesday,
+            3 => DayOfWeek.Wednesday,
+            4 => DayOfWeek.Thursday,
+            5 => DayOfWeek.Friday,
+            6 => DayOfWeek.Saturday,
+            7 => DayOfWeek.Sunday,
+            _ => DayOfWeek.Monday
+        };
     }
 }

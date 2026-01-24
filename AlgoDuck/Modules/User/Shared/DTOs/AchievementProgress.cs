@@ -8,4 +8,5 @@ public sealed class AchievementProgress
     public int CurrentValue { get; init; }
     public int TargetValue { get; init; }
     public bool IsCompleted { get; init; }
+    public DateTime? CompletedAt { get; init; }
 }

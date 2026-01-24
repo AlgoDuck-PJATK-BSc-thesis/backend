@@ -28,7 +28,8 @@ public sealed class AchievementService : IAchievementService
                 Description = a.Description,
                 CurrentValue = a.CurrentValue,
                 TargetValue = a.TargetValue,
-                IsCompleted = a.IsCompleted
+                IsCompleted = a.IsCompleted,
+                CompletedAt = a.CompletedAt
             })
             .ToList();
 

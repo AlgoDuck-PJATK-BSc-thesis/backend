@@ -11,6 +11,10 @@ public static class UserDependencyInitializer
 {
     public static IServiceCollection AddUserModule(this IServiceCollection services)
     {
+        services.AddScoped<IDefaultDuckService, DefaultDuckService>();
+        services.AddScoped<IUserAchievementSyncService, UserAchievementSyncService>();
+        services.AddScoped<IUserBootstrapperService, UserBootstrapperService>();
+
         services.AddScoped<IAchievementService, AchievementService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IS3AvatarUrlGenerator, S3AvatarUrlGenerator>();

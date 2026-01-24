@@ -1,14 +1,10 @@
 using AlgoDuck.DAL;
 using AlgoDuck.Models;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace AlgoDuck.Shared.Utilities;
-
-public interface IDefaultDuckService
-{
-    Task EnsureAlgoduckOwnedAndSelectedAsync(Guid userId, CancellationToken cancellationToken);
-}
+namespace AlgoDuck.Modules.User.Shared.Services;
 
 public sealed class DefaultDuckService : IDefaultDuckService
 {
