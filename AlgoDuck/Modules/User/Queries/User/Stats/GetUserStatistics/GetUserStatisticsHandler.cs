@@ -20,12 +20,12 @@ public sealed class GetUserStatisticsHandler : IGetUserStatisticsHandler
             TotalSolvedProblems = summary.TotalSolvedProblems,
             TotalAttemptedProblems = summary.TotalAttemptedProblems,
             TotalSubmissions = summary.TotalSubmissions,
-            AcceptedSubmissions = summary.AcceptedSubmissions,
-            WrongAnswerSubmissions = summary.WrongAnswerSubmissions,
-            TimeLimitSubmissions = summary.TimeLimitSubmissions,
-            RuntimeErrorSubmissions = summary.RuntimeErrorSubmissions,
+            Accepted = summary.AcceptedSubmissions,
+            WrongAnswer = summary.WrongAnswerSubmissions,
+            TimeLimitExceeded = summary.TimeLimitSubmissions,
+            RuntimeError = summary.RuntimeErrorSubmissions,
             AcceptanceRate = summary.AcceptanceRate,
-            AverageAttemptsPerSolved = summary.AverageAttemptsPerSolved
+            AvgAttemptsPerSolved = summary.AverageAttemptsPerSolved
         };
     }
 }

@@ -97,6 +97,7 @@ public class SubmitRepository : IExecutorSubmitRepository
         
         user.Coins += coinsAwarded;
         user.Experience += experienceAwarded;
+        user.AmountSolved += 1;
 
         await _commandDbContext.SaveChangesAsync(cancellationToken);
 

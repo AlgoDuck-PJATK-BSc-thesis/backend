@@ -5,14 +5,20 @@ namespace AlgoDuck.Modules.User.Queries.User.Activity.GetUserAchievements;
 public sealed class GetUserAchievementsHandler : IGetUserAchievementsHandler
 {
     private readonly IAchievementService _achievementService;
+    private readonly IUserAchievementSyncService _achievementSyncService;
 
-    public GetUserAchievementsHandler(IAchievementService achievementService)
+    public GetUserAchievementsHandler(
+        IAchievementService achievementService,
+        IUserAchievementSyncService achievementSyncService)
     {
         _achievementService = achievementService;
+        _achievementSyncService = achievementSyncService;
     }
 
     public async Task<IReadOnlyList<UserAchievementDto>> HandleAsync(Guid userId, GetUserAchievementsRequestDto requestDto, CancellationToken cancellationToken)
     {
+        await _achievementSyncService.SyncAsync(userId, cancellationToken);
+
         var achievements = await _achievementService.GetAchievementsAsync(userId, cancellationToken);
 
         if (requestDto.Completed.HasValue)

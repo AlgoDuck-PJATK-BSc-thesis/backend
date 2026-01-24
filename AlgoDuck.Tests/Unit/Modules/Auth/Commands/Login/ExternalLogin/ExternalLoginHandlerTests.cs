@@ -1,12 +1,10 @@
 using System.Text.RegularExpressions;
-using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands.Login.ExternalLogin;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
-using AlgoDuck.Shared.Utilities;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 using AuthValidationException = AlgoDuck.Modules.Auth.Shared.Exceptions.ValidationException;
 
@@ -20,37 +18,26 @@ public sealed class ExternalLoginHandlerTests
         return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
-    static ApplicationCommandDbContext CreateInMemoryDbContext()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationCommandDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new ApplicationCommandDbContext(options);
-    }
-
     [Fact]
     public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
     {
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
         var twoFactorService = new Mock<ITwoFactorService>();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
 
         var handler = new ExternalLoginHandler(
             userManager.Object,
             tokenService.Object,
             twoFactorService.Object,
             new ExternalLoginValidator(),
-            defaultDuckService.Object,
-            dbContext);
+            userBootstrapper.Object);
 
         await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
             handler.HandleAsync(new ExternalLoginDto { Provider = "", ExternalUserId = "", Email = "", DisplayName = "" }, CancellationToken.None));
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -60,16 +47,14 @@ public sealed class ExternalLoginHandlerTests
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
         var twoFactorService = new Mock<ITwoFactorService>();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
 
         var handler = new ExternalLoginHandler(
             userManager.Object,
             tokenService.Object,
             twoFactorService.Object,
             new ExternalLoginValidator(),
-            defaultDuckService.Object,
-            dbContext);
+            userBootstrapper.Object);
 
         var ex = await Assert.ThrowsAsync<AuthValidationException>(() =>
             handler.HandleAsync(new ExternalLoginDto { Provider = "unknown", ExternalUserId = "u", Email = "alice@example.com", DisplayName = "Alice" }, CancellationToken.None));
@@ -77,8 +62,8 @@ public sealed class ExternalLoginHandlerTests
         Assert.Equal("auth_validation_error", ex.Code);
         Assert.Equal("Unsupported external provider.", ex.Message);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -88,8 +73,7 @@ public sealed class ExternalLoginHandlerTests
         var userManager = CreateUserManagerMock();
         var tokenService = new Mock<ITokenService>();
         var twoFactorService = new Mock<ITwoFactorService>();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
 
         var createdUserId = Guid.NewGuid();
 
@@ -104,8 +88,6 @@ public sealed class ExternalLoginHandlerTests
             {
                 u.Id = createdUserId;
                 capturedUsers.Add(u);
-                dbContext.ApplicationUsers.Add(u);
-                dbContext.SaveChanges();
             })
             .ReturnsAsync(IdentityResult.Success);
 
@@ -115,8 +97,8 @@ public sealed class ExternalLoginHandlerTests
         userManager.Setup(x => x.GetLoginsAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<UserLoginInfo>());
         userManager.Setup(x => x.AddLoginAsync(It.IsAny<ApplicationUser>(), It.IsAny<UserLoginInfo>())).ReturnsAsync(IdentityResult.Success);
 
-        defaultDuckService
-            .Setup(x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        userBootstrapper
+            .Setup(x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         tokenService
@@ -137,8 +119,7 @@ public sealed class ExternalLoginHandlerTests
             tokenService.Object,
             twoFactorService.Object,
             new ExternalLoginValidator(),
-            defaultDuckService.Object,
-            dbContext);
+            userBootstrapper.Object);
 
         var result = await handler.HandleAsync(new ExternalLoginDto
         {
@@ -157,11 +138,8 @@ public sealed class ExternalLoginHandlerTests
         Assert.NotEqual("alice@example.com", capturedUsers[0].UserName);
         Assert.Matches(new Regex("^[a-z]+_[a-z]+_[0-9]{4,6}$"), capturedUsers[0].UserName!);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(createdUserId, It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(createdUserId, It.IsAny<CancellationToken>()),
             Times.Once);
-
-        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUserId);
-        Assert.NotNull(cfg);
     }
 }

@@ -1,10 +1,8 @@
-using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Commands.Admin.CreateUser;
-using AlgoDuck.Shared.Utilities;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace AlgoDuck.Tests.Unit.Modules.User.Commands.Admin.CreateUser;
@@ -17,22 +15,12 @@ public sealed class CreateUserHandlerTests
         return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
-    static ApplicationCommandDbContext CreateInMemoryDbContext()
-    {
-        var options = new DbContextOptionsBuilder<ApplicationCommandDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new ApplicationCommandDbContext(options);
-    }
-
     [Fact]
     public async Task HandleAsync_WhenDtoInvalid_ThrowsFluentValidationException()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -44,8 +32,8 @@ public sealed class CreateUserHandlerTests
         await Assert.ThrowsAsync<ValidationException>(() =>
             handler.HandleAsync(dto, CancellationToken.None));
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -53,9 +41,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenEmailAlreadyExists_ThrowsValidationException()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -73,8 +60,8 @@ public sealed class CreateUserHandlerTests
 
         Assert.Equal("Email already exists.", ex.Message);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -82,9 +69,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenUsernameAlreadyExists_ThrowsValidationException()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -103,8 +89,8 @@ public sealed class CreateUserHandlerTests
 
         Assert.Equal("Username already exists.", ex.Message);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -112,9 +98,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenCreateFails_ThrowsValidationExceptionWithIdentityErrorDescription()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -136,8 +121,8 @@ public sealed class CreateUserHandlerTests
 
         Assert.Equal("Create failed.", ex.Message);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -145,9 +130,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenAddRoleFails_ThrowsValidationExceptionWithIdentityErrorDescription()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -170,8 +154,8 @@ public sealed class CreateUserHandlerTests
 
         Assert.Equal("Role failed.", ex.Message);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -179,9 +163,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenSuccessful_AssignsRoleAndReturnsResult()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -200,16 +183,15 @@ public sealed class CreateUserHandlerTests
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, string>((u, _) =>
-            {
-                createdUser = u;
-                dbContext.ApplicationUsers.Add(u);
-                dbContext.SaveChanges();
-            });
+            .Callback<ApplicationUser, string>((u, _) => { createdUser = u; });
 
         userManager
             .Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "admin"))
             .ReturnsAsync(IdentityResult.Success);
+
+        userBootstrapper
+            .Setup(x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var result = await handler.HandleAsync(dto, CancellationToken.None);
 
@@ -224,21 +206,17 @@ public sealed class CreateUserHandlerTests
         Assert.Equal("admin", result.Role);
         Assert.False(result.EmailVerified);
 
-        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser.Id);
-        Assert.NotNull(cfg);
-
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(createdUser.Id, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task HandleAsync_WhenRoleIsNotAdmin_AssignsUserRole_AndEnsuresDefaultDuck()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -257,17 +235,12 @@ public sealed class CreateUserHandlerTests
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, string>((u, _) =>
-            {
-                createdUser = u;
-                dbContext.ApplicationUsers.Add(u);
-                dbContext.SaveChanges();
-            });
+            .Callback<ApplicationUser, string>((u, _) => { createdUser = u; });
 
         userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "user")).ReturnsAsync(IdentityResult.Success);
 
-        defaultDuckService
-            .Setup(x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        userBootstrapper
+            .Setup(x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var result = await handler.HandleAsync(dto, CancellationToken.None);
@@ -275,11 +248,9 @@ public sealed class CreateUserHandlerTests
         Assert.Equal("user", result.Role);
 
         Assert.NotNull(createdUser);
-        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser!.Id);
-        Assert.NotNull(cfg);
 
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(createdUser!.Id, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -287,9 +258,8 @@ public sealed class CreateUserHandlerTests
     public async Task HandleAsync_WhenUsernameNotProvided_GeneratesAndUsesSomeUsername_AndEnsuresDefaultDuck()
     {
         var userManager = CreateUserManagerMock();
-        var defaultDuckService = new Mock<IDefaultDuckService>();
-        var dbContext = CreateInMemoryDbContext();
-        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), defaultDuckService.Object, dbContext);
+        var userBootstrapper = new Mock<IUserBootstrapperService>();
+        var handler = new CreateUserHandler(userManager.Object, new CreateUserValidator(), userBootstrapper.Object);
 
         var dto = new CreateUserDto
         {
@@ -308,17 +278,12 @@ public sealed class CreateUserHandlerTests
         userManager
             .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "Password123"))
             .ReturnsAsync(IdentityResult.Success)
-            .Callback<ApplicationUser, string>((u, _) =>
-            {
-                createdUser = u;
-                dbContext.ApplicationUsers.Add(u);
-                dbContext.SaveChanges();
-            });
+            .Callback<ApplicationUser, string>((u, _) => { createdUser = u; });
 
         userManager.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), "user")).ReturnsAsync(IdentityResult.Success);
 
-        defaultDuckService
-            .Setup(x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        userBootstrapper
+            .Setup(x => x.EnsureUserInitializedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var result = await handler.HandleAsync(dto, CancellationToken.None);
@@ -327,11 +292,8 @@ public sealed class CreateUserHandlerTests
         Assert.False(string.IsNullOrWhiteSpace(createdUser!.UserName));
         Assert.Equal(createdUser.UserName, result.Username);
 
-        var cfg = await dbContext.UserConfigs.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == createdUser.Id);
-        Assert.NotNull(cfg);
-
-        defaultDuckService.Verify(
-            x => x.EnsureAlgoduckOwnedAndSelectedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+        userBootstrapper.Verify(
+            x => x.EnsureUserInitializedAsync(createdUser.Id, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

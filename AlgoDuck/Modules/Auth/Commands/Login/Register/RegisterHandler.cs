@@ -1,11 +1,9 @@
-using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Shared.DTOs;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
-using AlgoDuck.Shared.Utilities;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Auth.Commands.Login.Register;
 
@@ -15,23 +13,20 @@ public sealed class RegisterHandler : IRegisterHandler
     private readonly IEmailSender _emailSender;
     private readonly IValidator<RegisterDto> _validator;
     private readonly IConfiguration _configuration;
-    private readonly IDefaultDuckService _defaultDuckService;
-    private readonly ApplicationCommandDbContext _dbContext;
+    private readonly IUserBootstrapperService _userBootstrapper;
 
     public RegisterHandler(
         UserManager<ApplicationUser> userManager,
         IEmailSender emailSender,
         IValidator<RegisterDto> validator,
         IConfiguration configuration,
-        IDefaultDuckService defaultDuckService,
-        ApplicationCommandDbContext dbContext)
+        IUserBootstrapperService userBootstrapper)
     {
         _userManager = userManager;
         _emailSender = emailSender;
         _validator = validator;
         _configuration = configuration;
-        _defaultDuckService = defaultDuckService;
-        _dbContext = dbContext;
+        _userBootstrapper = userBootstrapper;
     }
 
     public async Task<AuthUserDto> HandleAsync(RegisterDto dto, CancellationToken cancellationToken)
@@ -66,8 +61,7 @@ public sealed class RegisterHandler : IRegisterHandler
 
         try
         {
-            await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(user.Id, cancellationToken);
-            await EnsureUserConfigExistsAsync(user.Id, cancellationToken);
+            await _userBootstrapper.EnsureUserInitializedAsync(user.Id, cancellationToken);
 
             var addRoleResult = await _userManager.AddToRoleAsync(user, "user");
             if (!addRoleResult.Succeeded)
@@ -94,29 +88,6 @@ public sealed class RegisterHandler : IRegisterHandler
             await _userManager.DeleteAsync(user);
             throw;
         }
-    }
-
-    private async Task EnsureUserConfigExistsAsync(Guid userId, CancellationToken cancellationToken)
-    {
-        var exists = await _dbContext.UserConfigs
-            .AsNoTracking()
-            .AnyAsync(c => c.UserId == userId, cancellationToken);
-
-        if (exists)
-        {
-            return;
-        }
-
-        _dbContext.UserConfigs.Add(new UserConfig
-        {
-            UserId = userId,
-            EditorFontSize = 11,
-            EmailNotificationsEnabled = false,
-            IsDarkMode = true,
-            IsHighContrast = false
-        });
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private string BuildEmailConfirmationLink(Guid userId, string token)

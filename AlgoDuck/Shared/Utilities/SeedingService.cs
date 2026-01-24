@@ -3,6 +3,7 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.ModelsExternal;
 using AlgoDuck.Modules.Problem.Commands.CreateEditorLayout;
+using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
@@ -41,6 +42,7 @@ public class DataSeedingService
         await EnsureDefaultsForSeededUsersAsync();
         await SeedProblems();
         await SeedTestCases();
+        await new DemoDataSeeder(_context, _userManager).SeedAsync();
         await SeedUserConfigsAsync();
     }
 
@@ -127,6 +129,10 @@ public class DataSeedingService
     {
         await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(
             Guid.Parse("b3c38fed-69c5-4063-9d54-7cb4199dfdab"),
+            CancellationToken.None);
+        
+        await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(
+            Guid.Parse("a88e81ec-9a43-480c-8568-e9e3ceb3ba45"),
             CancellationToken.None);
     }
 

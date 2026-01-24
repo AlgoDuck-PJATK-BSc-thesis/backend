@@ -36,11 +36,11 @@ public sealed class GetUserStatisticsHandlerTests
         Assert.Equal(10, result.TotalSolvedProblems);
         Assert.Equal(20, result.TotalAttemptedProblems);
         Assert.Equal(30, result.TotalSubmissions);
-        Assert.Equal(11, result.AcceptedSubmissions);
-        Assert.Equal(12, result.WrongAnswerSubmissions);
-        Assert.Equal(3, result.TimeLimitSubmissions);
-        Assert.Equal(4, result.RuntimeErrorSubmissions);
+        Assert.Equal(11, result.Accepted);
+        Assert.Equal(12, result.WrongAnswer);
+        Assert.Equal(3, result.TimeLimitExceeded);
+        Assert.Equal(4, result.RuntimeError);
         Assert.Equal(55.5, result.AcceptanceRate);
-        Assert.Equal(2.2, result.AverageAttemptsPerSolved);
+        Assert.Equal(2.2, result.AvgAttemptsPerSolved);
     }
 }

@@ -31,13 +31,17 @@ public sealed class GetUserAchievementsHandlerTests
         achievementService.Setup(x => x.GetAchievementsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(achievements);
 
-        var handler = new GetUserAchievementsHandler(achievementService.Object);
+        var achievementSyncService = new Mock<IUserAchievementSyncService>();
+
+        var handler = new GetUserAchievementsHandler(achievementService.Object, achievementSyncService.Object);
 
         var result = await handler.HandleAsync(userId, new GetUserAchievementsRequestDto
         {
             Page = 2,
             PageSize = 3
         }, CancellationToken.None);
+
+        achievementSyncService.Verify(x => x.SyncAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
 
         Assert.Equal(3, result.Count);
         Assert.Equal("ACH_04", result[0].Code);
@@ -73,7 +77,9 @@ public sealed class GetUserAchievementsHandlerTests
         achievementService.Setup(x => x.GetAchievementsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(achievements);
 
-        var handler = new GetUserAchievementsHandler(achievementService.Object);
+        var achievementSyncService = new Mock<IUserAchievementSyncService>();
+
+        var handler = new GetUserAchievementsHandler(achievementService.Object, achievementSyncService.Object);
 
         var result = await handler.HandleAsync(userId, new GetUserAchievementsRequestDto
         {
@@ -81,6 +87,8 @@ public sealed class GetUserAchievementsHandlerTests
             PageSize = 20,
             Completed = true
         }, CancellationToken.None);
+
+        achievementSyncService.Verify(x => x.SyncAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
 
         Assert.Equal(2, result.Count);
         Assert.All(result, x => Assert.True(x.IsCompleted));
@@ -106,7 +114,9 @@ public sealed class GetUserAchievementsHandlerTests
         achievementService.Setup(x => x.GetAchievementsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(achievements);
 
-        var handler = new GetUserAchievementsHandler(achievementService.Object);
+        var achievementSyncService = new Mock<IUserAchievementSyncService>();
+
+        var handler = new GetUserAchievementsHandler(achievementService.Object, achievementSyncService.Object);
 
         var result = await handler.HandleAsync(userId, new GetUserAchievementsRequestDto
         {
@@ -114,6 +124,8 @@ public sealed class GetUserAchievementsHandlerTests
             PageSize = 20,
             CodeFilter = "RuN"
         }, CancellationToken.None);
+
+        achievementSyncService.Verify(x => x.SyncAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, x => x.Code == "run_10");
