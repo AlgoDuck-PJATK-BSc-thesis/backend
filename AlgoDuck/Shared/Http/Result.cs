@@ -1,3 +1,4 @@
+using AlgoDuck.Shared.Result;
 using Microsoft.AspNetCore.Mvc;
 using OneOf;
 
@@ -36,10 +37,11 @@ public readonly struct Result<T, TE>
         => _inner.Switch(onOk, onErr);
 }
 
-public class ErrorObject<TE>
+public readonly struct ErrorObject<TE> : IResultError<ErrorObject<TE>, TE>
 {
-    public required ErrorType Type { get; set; }
-    public required TE Body { get; set; }
+    public required ErrorType Type { get; init; }
+    public static int StatusCode { get; }
+    public required TE Body { get; init ; }
     
     public static ErrorObject<TE> NotFound(TE body) => new() { Type = ErrorType.NotFound, Body = body };
     public static ErrorObject<TE> BadRequest(TE body) => new() { Type = ErrorType.BadRequest, Body = body };

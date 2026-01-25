@@ -21,7 +21,8 @@ public class PreviousSolutionDataController : ControllerBase
     public async Task<IActionResult> GetPreviousSolutionDataAsync([FromQuery] Guid solutionId,
         CancellationToken cancellationToken = default)
     {
-        return await User.UserIdToResult()
+        return await User
+            .UserIdToResult()
             .BindAsync(async userId =>
                 await _getPreviousSolutionDataService.GetPreviousSolutionDataAsync(new PreviousSolutionRequestDto
                 {
