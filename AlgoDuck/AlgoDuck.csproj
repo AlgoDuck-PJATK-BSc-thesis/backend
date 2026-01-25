@@ -14,8 +14,10 @@
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="8.0.21" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.21" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OAuth" Version="2.3.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.21" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.Json" Version="10.0.0-preview.4.25258.110" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
@@ -99,31 +101,4 @@
     <ItemGroup>
         <InternalsVisibleTo Include="AlgoDuck.Tests" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="Modules\User\Shared\Reminders\StudyReminderDue.cs" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Remove="rg_auth_20260124_163106\22_config_sources.txt" />
-      <None Remove="rg_auth_20260124_163106\21_auth_errors.txt" />
-      <None Remove="rg_auth_20260124_163106\20_security_headers.txt" />
-      <None Remove="rg_auth_20260124_163106\19_rate_limiting.txt" />
-      <None Remove="rg_auth_20260124_163106\18_https_hsts.txt" />
-      <None Remove="rg_auth_20260124_163106\17_forwarded_headers.txt" />
-      <None Remove="rg_auth_20260124_163106\16_swagger_security.txt" />
-      <None Remove="rg_auth_20260124_163106\15_redirects_validation.txt" />
-      <None Remove="rg_auth_20260124_163106\14_external_login.txt" />
-      <None Remove="rg_auth_20260124_163106\13_identity_tokens.txt" />
-      <None Remove="rg_auth_20260124_163106\11_apikeys.txt" />
-      <None Remove="rg_auth_20260124_163106\10_refresh_sessions.txt" />
-      <None Remove="rg_auth_20260124_163106\09_csrf_antiforgery.txt" />
-      <None Remove="rg_auth_20260124_163106\08_cors.txt" />
-      <None Remove="rg_auth_20260124_163106\07_cookies.txt" />
-      <None Remove="rg_auth_20260124_163106\06_claims_sessionid.txt" />
-      <None Remove="rg_auth_20260124_163106\05_jwt_validation.txt" />
-      <None Remove="rg_auth_20260124_163106\04_auth_schemes.txt" />
-      <None Remove="rg_auth_20260124_163106\02_attributes.txt" />
-    </ItemGroup>
-
 </Project>
