@@ -10,15 +10,18 @@ public sealed class UserBootstrapperService : IUserBootstrapperService
     private readonly ApplicationCommandDbContext _context;
     private readonly IUserAchievementSyncService _achievementSyncService;
     private readonly IDefaultDuckService _defaultDuckService;
+    private readonly IAchievementService _achievementService;
 
     public UserBootstrapperService(
         ApplicationCommandDbContext context,
         IUserAchievementSyncService achievementSyncService,
-        IDefaultDuckService defaultDuckService)
+        IDefaultDuckService defaultDuckService,
+        IAchievementService achievementService)
     {
         _context = context;
         _achievementSyncService = achievementSyncService;
         _defaultDuckService = defaultDuckService;
+        _achievementService = achievementService;
     }
 
     public async Task EnsureUserInitializedAsync(Guid userId, CancellationToken cancellationToken)
@@ -45,5 +48,7 @@ public sealed class UserBootstrapperService : IUserBootstrapperService
 
         await _achievementSyncService.EnsureInitializedAsync(userId, cancellationToken);
         await _defaultDuckService.EnsureAlgoduckOwnedAndSelectedAsync(userId, cancellationToken);
+        await _achievementService.AwardAchievement(userId, "AccountCreated", cancellationToken);
+        await _achievementService.AwardAchievement(userId, "FirstLogin", cancellationToken);
     }
 }
