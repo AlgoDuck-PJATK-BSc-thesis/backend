@@ -1,55 +1,47 @@
-using System.Data;
+using AlgoDuck.Shared.Result;
 using Microsoft.AspNetCore.Mvc;
 using OneOf;
 
 namespace AlgoDuck.Shared.Http;
 
-public class Result<T, TE> : OneOfBase<T, TE>
+public readonly struct Result<T, TE>
 {
-    private Result(OneOf<T, TE> input) : base(input)
+    private readonly OneOf<T, TE> _inner;
+
+    private Result(OneOf<T, TE> input)
     {
+        _inner = input;
     }
 
     public static Result<T, TE> Ok(T value) => new(value);
     public static Result<T, TE> Err(TE error) => new(error);
 
+    public bool IsOk => _inner.IsT0;
+    public bool IsT0 => _inner.IsT0;
+    public bool IsErr => _inner.IsT1;
+    public bool IsT1 => _inner.IsT1;
     
-    public bool IsOk => IsT0;
-    public bool IsErr => IsT1;
-    public T? AsOk
-    {
-        get
-        {
-            try
-            {
-                return AsT0;
-            }
-            catch (Exception e)
-            {
-                return default;
-            }
-        }
-    }
-    public TE? AsErr
-    {
-        get
-        {
-            try
-            {
-                return AsT1;
-            }
-            catch (Exception e)
-            {
-                return default;
-            }
-        }
-    }
+    public T? AsOk => IsOk ? _inner.AsT0 : default;
+    public T AsT0 => _inner.AsT0;
+    public TE? AsErr => IsErr ? _inner.AsT1 : default;
+    public TE AsT1 => _inner.AsT1;
+    
+
+    public TResult Match<TResult>(Func<T, TResult> onOk, Func<TE, TResult> onErr)
+        => _inner.Match(onOk, onErr);
+
+    public async Task<TResult> Match<TResult>(Func<T, Task<TResult>> onOk, Func<TE, Task<TResult>> onErr)
+        => await _inner.Match(onOk, onErr);
+
+    public void Switch(Action<T> onOk, Action<TE> onErr)
+        => _inner.Switch(onOk, onErr);
 }
 
-public class ErrorObject<TE>
+public readonly struct ErrorObject<TE> : IResultError<ErrorObject<TE>, TE>
 {
-    public required ErrorType Type { get; set; }
-    public required TE Body { get; set; }
+    public required ErrorType Type { get; init; }
+    public static int StatusCode { get; }
+    public required TE Body { get; init ; }
     
     public static ErrorObject<TE> NotFound(TE body) => new() { Type = ErrorType.NotFound, Body = body };
     public static ErrorObject<TE> BadRequest(TE body) => new() { Type = ErrorType.BadRequest, Body = body };
@@ -73,14 +65,17 @@ public enum ErrorType
 
 public static class ResultHttpExtensions
 {
-    public static async Task<IActionResult> ToActionResultAsync<T, TE>(this Task<Result<T, ErrorObject<TE>>> resultTask, string message = "")
+    public static async Task<IActionResult> ToActionResultAsync<T, TE>(
+        this Task<Result<T, ErrorObject<TE>>> resultTask, 
+        string message = "")
     {
         var result = await resultTask;
         return result.ToActionResult(message);
     } 
     
     public static IActionResult ToActionResult<T, TE>(
-        this Result<T, ErrorObject<TE>> result, string message = "")
+        this Result<T, ErrorObject<TE>> result, 
+        string message = "")
     {
         return result.Match(
             ok => new OkObjectResult(new StandardApiResponse<T>
@@ -143,10 +138,6 @@ public static class ResultToolingExtensions
         );
     }
 
-    /*
-     * binds to result if IsOk and executes a mapping function
-     * short circuits and returns if result IsErr
-     */
     public static async Task<Result<TNew, TE>> BindAsync<T, TNew, TE>(
         this Result<T, TE> result, 
         Func<T, Task<Result<TNew, TE>>> mapper)
@@ -167,8 +158,6 @@ public static class ResultToolingExtensions
             err => Result<TNew, TE>.Err(err)
         );
     }
-    
-    
 
     public static async Task<Result<TNew, TE>> MapAsync<T, TNew, TE>(
         this Task<Result<T, TE>> resultTask,
@@ -179,7 +168,6 @@ public static class ResultToolingExtensions
             ok => mapper(ok),
             err => Result<TNew, TE>.Err(err));
     }
-
 
     public static Result<TNew, TE> Map<T, TNew, TE>(
         this Result<T, TE> result,
@@ -199,7 +187,6 @@ public static class ResultToolingExtensions
             ok => Result<TNew, TE>.Ok(mapper(ok)),
             err => Result<TNew, TE>.Err(err));
     }
-        
 
     public static async Task<Result<TNew, TE>> BindAsync<T, TNew, TE>(
         this Task<Result<T, TE>> resultTask, 
@@ -212,6 +199,3 @@ public static class ResultToolingExtensions
         );
     }
 }
-
-
-

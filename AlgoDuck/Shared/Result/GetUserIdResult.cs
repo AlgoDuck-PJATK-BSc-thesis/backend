@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using AlgoDuck.Shared.Result;
+using AlgoDuck.Shared.Types;
 
-namespace AlgoDuck.Shared.Http.Result2;
+namespace AlgoDuck.Shared.Result;
 
 public static class ClaimsPrincipalExtension
 {

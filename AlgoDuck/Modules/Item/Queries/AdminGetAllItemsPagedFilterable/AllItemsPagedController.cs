@@ -1,6 +1,7 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
-using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Result;
+using AlgoDuck.Shared.Types;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,7 +19,7 @@ public class AllItemsPagedController(IAllItemsPagedService allItemsPagedService)
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        return await User.GetUserId()
+        return await User.UserIdToResult()
             .BindAsync(async userId => await allItemsPagedService.GetAllItemsPagedAsync(new PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>>
             {
                 UserId = userId,

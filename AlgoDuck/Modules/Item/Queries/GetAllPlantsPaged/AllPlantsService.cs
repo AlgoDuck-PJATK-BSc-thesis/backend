@@ -1,5 +1,6 @@
 using AlgoDuck.Modules.Item.Queries.GetAllDucksPaged;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 
 namespace AlgoDuck.Modules.Item.Queries.GetAllPlantsPaged;
 

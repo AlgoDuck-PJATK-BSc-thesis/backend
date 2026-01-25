@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace AlgoDuck.Shared.Http;
+namespace AlgoDuck.Shared.Types;
 
 public class ColumnFilterRequest<TEnum> where TEnum : struct, Enum
 {

@@ -8,6 +8,8 @@ using AlgoDuck.Modules.Item.Commands.UpsertItem.CreateItem;
 using AlgoDuck.Shared.Attributes;
 using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.S3;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,23 +23,33 @@ namespace AlgoDuck.Modules.Item.Commands.UpsertItem.UpdateItem;
 public class UpdateItemController : ControllerBase
 {
     private readonly IUpdateItemService _updateItemService;
-
-    public UpdateItemController(IUpdateItemService updateItemService)
+    private readonly IValidator<ItemUpdateRequestDto> _validator;
+    public UpdateItemController(IUpdateItemService updateItemService, IValidator<ItemUpdateRequestDto> validator)
     {
         _updateItemService = updateItemService;
+        _validator = validator;
     }
     
     [HttpPut]
-    public async Task<IActionResult> UpdateItemAsync([FromForm] CreateItemRequestDto updateItemRequestDto, CancellationToken cancellation)
+    public async Task<IActionResult> UpdateItemAsync([FromForm] ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellation)
     {
-        return await _updateItemService.UpdateItemAsync(updateItemRequestDto, cancellation).ToActionResultAsync();
+        
+        var validationResult = await _validator.ValidateAsync(updateItemUpdateRequestDto, cancellation);
+        if (!validationResult.IsValid)
+            return new ObjectResult(new StandardApiResponse<IEnumerable<ValidationFailure>>
+            {
+                Status = Status.Error,
+                Body = validationResult.Errors
+            }){ StatusCode = 422 };
+
+        return await _updateItemService.UpdateItemAsync(updateItemUpdateRequestDto, cancellation).ToActionResultAsync();
     }   
 }
 
 
 public interface IUpdateItemService
 {
-    public Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(CreateItemRequestDto updateItemRequestDto, CancellationToken cancellationToken = default);
+    public Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellationToken = default);
 }
 
 public class UpdateItemService : IUpdateItemService
@@ -49,20 +61,20 @@ public class UpdateItemService : IUpdateItemService
         _updateItemRepository = updateItemRepository;
     }
 
-    public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(CreateItemRequestDto updateItemRequestDto, CancellationToken cancellationToken = default)
+    public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellationToken = default)
     {
-        foreach (var formFile in updateItemRequestDto.Sprites)
+        foreach (var formFile in updateItemUpdateRequestDto.Sprites)
         {
             Console.WriteLine(formFile.FileName);
         }
 
-        return await _updateItemRepository.UpdateItemAsync(updateItemRequestDto, cancellationToken);
+        return await _updateItemRepository.UpdateItemAsync(updateItemUpdateRequestDto, cancellationToken);
     }
 }
 
 public interface IUpdateItemRepository
 {
-    public Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(CreateItemRequestDto updateItemRequestDto, CancellationToken cancellationToken = default);
+    public Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellationToken = default);
 }
 
 public class UpdateItemRepository : IUpdateItemRepository
@@ -78,33 +90,33 @@ public class UpdateItemRepository : IUpdateItemRepository
         _legalFileNames = legalFileNames;
     }
 
-    public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(CreateItemRequestDto updateItemRequestDto, CancellationToken cancellationToken = default)
+    public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellationToken = default)
     {
-        return updateItemRequestDto.ItemData switch
+        return updateItemUpdateRequestDto.ItemData switch
         {
-            DuckData duckData => await UpdateDuckItemAsync(updateItemRequestDto, duckData, cancellationToken)
-                .BindAsync(async duck => await PostSprites(duck, updateItemRequestDto.Sprites, cancellationToken)),
-            PlantData plantData => await UpdatePlantItemAsync(updateItemRequestDto, plantData, cancellationToken)
-                .BindAsync(async plant => await PostSprites(plant, updateItemRequestDto.Sprites, cancellationToken)),
+            DuckData duckData => await UpdateDuckItemAsync(updateItemUpdateRequestDto, duckData, cancellationToken)
+                .BindAsync(async duck => await PostSprites(duck, updateItemUpdateRequestDto.Sprites, cancellationToken)),
+            PlantData plantData => await UpdatePlantItemAsync(updateItemUpdateRequestDto, plantData, cancellationToken)
+                .BindAsync(async plant => await PostSprites(plant, updateItemUpdateRequestDto.Sprites, cancellationToken)),
             _ => Result<ItemUpdateResult, ErrorObject<string>>.Err(ErrorObject<string>.InternalError("Could not create item"))
         };
     }
 
-    private async Task<Result<DuckItem, ErrorObject<string>>> UpdateDuckItemAsync(CreateItemRequestDto requestDto,
+    private async Task<Result<DuckItem, ErrorObject<string>>> UpdateDuckItemAsync(ItemUpdateRequestDto updateRequestDto,
         DuckData duckData, CancellationToken cancellationToken = default)
     {
-        var duckItem = await _dbContext.DuckItems.FirstOrDefaultAsync(i => i.ItemId == requestDto.ItemId, cancellationToken: cancellationToken);
+        var duckItem = await _dbContext.DuckItems.FirstOrDefaultAsync(i => i.ItemId == updateRequestDto.ItemId, cancellationToken: cancellationToken);
         
         if (duckItem == null)
-            return Result<DuckItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"No duck type item found for id:  {requestDto.ItemId}"));
+            return Result<DuckItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"No duck type item found for id:  {updateRequestDto.ItemId}"));
         
-        if (!_dbContext.Rarities.Any(r => r.RarityId == requestDto.RarityId))
+        if (!_dbContext.Rarities.Any(r => r.RarityId == updateRequestDto.RarityId))
             return Result<DuckItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Invalid item rarity"));
         
-        duckItem.Description = requestDto.Description;
-        duckItem.Name = requestDto.ItemName;
-        duckItem.Price = requestDto.ItemCost;
-        duckItem.RarityId = requestDto.RarityId;
+        duckItem.Description = updateRequestDto.Description;
+        duckItem.Name = updateRequestDto.ItemName;
+        duckItem.Price = updateRequestDto.ItemCost;
+        duckItem.RarityId = updateRequestDto.RarityId;
         
         await _dbContext.SaveChangesAsync(cancellationToken);
         
@@ -112,21 +124,21 @@ public class UpdateItemRepository : IUpdateItemRepository
     }
 
 
-    private async Task<Result<PlantItem, ErrorObject<string>>> UpdatePlantItemAsync(CreateItemRequestDto requestDto,
+    private async Task<Result<PlantItem, ErrorObject<string>>> UpdatePlantItemAsync(ItemUpdateRequestDto updateRequestDto,
         PlantData duckData, CancellationToken cancellationToken = default)
     {
-        var plantItem = await _dbContext.PlantItems.FirstOrDefaultAsync(i => i.ItemId == requestDto.ItemId, cancellationToken: cancellationToken);
+        var plantItem = await _dbContext.PlantItems.FirstOrDefaultAsync(i => i.ItemId == updateRequestDto.ItemId, cancellationToken: cancellationToken);
         
         if (plantItem == null)
-            return Result<PlantItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"No plant type item found for id:  {requestDto.ItemId}"));
+            return Result<PlantItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"No plant type item found for id:  {updateRequestDto.ItemId}"));
         
-        if (!_dbContext.Rarities.Any(r => r.RarityId == requestDto.RarityId))
+        if (!_dbContext.Rarities.Any(r => r.RarityId == updateRequestDto.RarityId))
             return Result<PlantItem, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Invalid item rarity"));
         
-        plantItem.Description = requestDto.Description;
-        plantItem.Name = requestDto.ItemName;
-        plantItem.Price = requestDto.ItemCost;
-        plantItem.RarityId = requestDto.RarityId;
+        plantItem.Description = updateRequestDto.Description;
+        plantItem.Name = updateRequestDto.ItemName;
+        plantItem.Price = updateRequestDto.ItemCost;
+        plantItem.RarityId = updateRequestDto.RarityId;
         plantItem.Width = duckData.Width;
         plantItem.Height = duckData.Height;
         
@@ -195,7 +207,7 @@ public class ItemUpdateResult
 }
 
 
-public class CreateItemRequestDto
+public class ItemUpdateRequestDto
 {
     public required Guid ItemId { get; set; }
     [MaxLength(128)]

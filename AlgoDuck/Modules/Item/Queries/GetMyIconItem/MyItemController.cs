@@ -1,9 +1,6 @@
-using AlgoDuck.DAL;
-using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
-using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Result;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 
@@ -12,19 +9,18 @@ namespace AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 [Route("api/item/avatar")]
 public class MyItemController : ControllerBase
 {
-    private readonly IGetMySelectedIconService _getMySelectedIconService;
+    private readonly IGetMySelectedIconService _userAvatarService;
 
-    public MyItemController(IGetMySelectedIconService getMySelectedIconService)
+    public MyItemController(IGetMySelectedIconService userAvatarService)
     {
-        _getMySelectedIconService = getMySelectedIconService;
+        _userAvatarService = userAvatarService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetMySelectedIconAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetUserAvatarAsync(CancellationToken cancellationToken)
     {
-        return await User.GetUserId()
-            .BindAsync(async userId =>
-                await _getMySelectedIconService.GetMySelectedIconAsync(userId, cancellationToken))
+        return await User.UserIdToResult()
+            .BindAsync(async userId => await _userAvatarService.GetUserAvatarAsync(userId, cancellationToken))
             .ToActionResultAsync();
     }
 }

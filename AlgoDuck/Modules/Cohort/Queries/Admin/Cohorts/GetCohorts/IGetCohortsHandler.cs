@@ -1,5 +1,6 @@
 using AlgoDuck.Modules.Cohort.Shared.DTOs;
 using AlgoDuck.Shared.Http;
+using AlgoDuck.Shared.Types;
 
 namespace AlgoDuck.Modules.Cohort.Queries.Admin.Cohorts.GetCohorts;
 

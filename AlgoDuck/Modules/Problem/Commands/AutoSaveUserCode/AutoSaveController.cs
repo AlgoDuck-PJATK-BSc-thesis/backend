@@ -1,6 +1,5 @@
 using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
-using AlgoDuck.Shared.S3;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 

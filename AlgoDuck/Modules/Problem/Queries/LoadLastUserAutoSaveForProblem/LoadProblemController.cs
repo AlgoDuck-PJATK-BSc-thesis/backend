@@ -26,7 +26,6 @@ public class LoadAutoSaveController : ControllerBase
             {
                 ProblemId = problemId,
                 UserId = userId
-            }, cancellationToken))
-            .ToActionResultAsync();
+            }, cancellationToken)).ToActionResultAsync();
     }
 }

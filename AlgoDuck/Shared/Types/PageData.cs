@@ -1,4 +1,4 @@
-namespace AlgoDuck.Shared.Http;
+namespace AlgoDuck.Shared.Types;
 
 public class PageData<T>
 {

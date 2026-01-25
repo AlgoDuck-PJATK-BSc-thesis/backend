@@ -1,10 +1,11 @@
-using AlgoDuck.Shared.Http;
+
+using AlgoDuck.Shared.Result;
 
 namespace AlgoDuck.Modules.Item.Queries.GetMyIconItem;
 
 public interface IGetMySelectedIconService
 {
-    public Task<Result<MySelectedIconDto, ErrorObject<string>>> GetMySelectedIconAsync(Guid userId, CancellationToken cancellationToken = default);
+    public Task<Result<MySelectedIconDto, NotFoundError<string>>> GetUserAvatarAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class GetMySelectedIconService : IGetMySelectedIconService
@@ -16,7 +17,7 @@ public class GetMySelectedIconService : IGetMySelectedIconService
         _getMySelectedIconRepository = getMySelectedIconRepository;
     }
 
-    public async Task<Result<MySelectedIconDto, ErrorObject<string>>> GetMySelectedIconAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<Result<MySelectedIconDto, NotFoundError<string>>> GetUserAvatarAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await _getMySelectedIconRepository.GetMySelectedIconAsync(userId, cancellationToken);
     }
