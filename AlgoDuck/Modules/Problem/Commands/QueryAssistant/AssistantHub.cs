@@ -57,7 +57,7 @@ public sealed class AssistantHub : Hub<IAssistantClient>
                 yield return new StandardApiResponse
                 {
                     Status = Status.Error,
-                    Message = chatCompletionPartial.AsErr!.Body,
+                    Message = chatCompletionPartial.AsErr.Body,
                 };
                 yield break;
             }

@@ -8,8 +8,10 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["AlgoDuck/AlgoDuck.csproj", "AlgoDuck/"]
 COPY ["AlgoDuckShared/AlgoDuckShared.csproj", "AlgoDuckShared/"]
+COPY ["SourceGenerator/SourceGenerator.csproj", "SourceGenerator/"]
 RUN dotnet restore "AlgoDuck/AlgoDuck.csproj"
 COPY AlgoDuckShared/ AlgoDuckShared/
+COPY SourceGenerator/ SourceGenerator/
 COPY AlgoDuck/ AlgoDuck/
 WORKDIR "/src/AlgoDuck"
 RUN dotnet build "AlgoDuck.csproj" -c $BUILD_CONFIGURATION -o /app/build

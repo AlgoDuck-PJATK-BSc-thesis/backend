@@ -41,6 +41,8 @@ public class AssistantRepository : IAssistantRepository
     public async Task<Result<int, ErrorObject<string>>> CreateNewChatMessagesAsync(
         CancellationToken cancellationToken = default, params ChatMessageInsertDto[] request)
     {
+        const int maxFragmentLength = 2048;
+
         var chatMessagesGrouped = request.GroupBy(e => e.ChatId).ToList();
         var messageCounter = 0;
         foreach (var chatMessageInsertDto in chatMessagesGrouped)
@@ -51,7 +53,7 @@ public class AssistantRepository : IAssistantRepository
 
             if (assistantChat == null)
             {
-                var firstMessage = chatMessageInsertDto.ToList().First(); 
+                var firstMessage = chatMessageInsertDto.ToList().First();
                 assistantChat = new AssistantChat
                 {
                     Id = firstMessage.ChatId,
@@ -66,22 +68,52 @@ public class AssistantRepository : IAssistantRepository
             {
                 assistantChat.Name = chatMessageInsertDto.ToList()[0].ChatName;
             }
+
             foreach (var chatMessage in chatMessageInsertDto.ToList())
             {
                 messageCounter++;
+                var fragments = new List<AssistantMessageFragment>();
+
+                foreach (var chf in chatMessage.ChatFragments)
+                {
+                    var content = chf.MessageContents.ToString();
+
+                    if (content.Length <= maxFragmentLength)
+                    {
+                        fragments.Add(new AssistantMessageFragment
+                        {
+                            Content = content,
+                            FragmentType = chf.FragmentType
+                        });
+                    }
+                    else
+                    {
+                        var chunks = SplitIntoChunks(content, maxFragmentLength);
+                        fragments.AddRange(chunks.Select(chunk => new AssistantMessageFragment
+                        {
+                            Content = chunk,
+                            FragmentType = chf.FragmentType
+                        }));
+                    }
+                }
+
                 assistantChat.Messages.Add(new AssistanceMessage
                 {
-                    Fragments = chatMessage.ChatFragments.Select(chf => new AssistantMessageFragment
-                    {
-                        Content = chf.MessageContents.ToString(),
-                        FragmentType = chf.FragmentType
-                    }).ToList(),
+                    Fragments = fragments,
                     IsUserMessage = chatMessage.Author == MessageAuthor.User
                 });
             }
         }
-        
+
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<int, ErrorObject<string>>.Ok(messageCounter);
+    }
+
+    private static IEnumerable<string> SplitIntoChunks(string content, int chunkSize)
+    {
+        for (var i = 0; i < content.Length; i += chunkSize)
+        {
+            yield return content.Substring(i, Math.Min(chunkSize, content.Length - i));
+        }
     }
 }
