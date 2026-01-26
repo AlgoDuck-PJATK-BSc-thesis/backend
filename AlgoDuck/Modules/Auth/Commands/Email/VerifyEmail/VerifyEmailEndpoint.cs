@@ -97,6 +97,9 @@ public static class VerifyEmailEndpoint
 
     private static string GetFrontendBaseUrl(IConfiguration configuration)
     {
+        if (configuration["ASPNETCORE_ENVIRONMENT"]?.Equals("Production", StringComparison.OrdinalIgnoreCase) == true)
+            return "https://algoduck.pl";
+    
         var v =
             configuration["App:FrontendUrl"] ??
             configuration["CORS:DevOrigins:0"] ??
