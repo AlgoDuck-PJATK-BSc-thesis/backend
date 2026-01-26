@@ -8,13 +8,13 @@ public static class VerifyEmailEndpoint
 {
     public static IEndpointRouteBuilder MapVerifyEmailEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/auth/email-verification", VerifyEmail)
+        app.MapPost("/api/auth/email-verification", VerifyEmail)
             .WithTags("Auth");
 
-        app.MapGet("/auth/email-verification", VerifyEmailFromQuery)
+        app.MapGet("/api/auth/email-verification", VerifyEmailFromQuery)
             .WithTags("Auth");
 
-        app.MapGet("/auth/email-verification/success.js", SuccessJs)
+        app.MapGet("/api/auth/email-verification/success.js", SuccessJs)
             .WithTags("Auth");
 
         return app;
@@ -197,7 +197,7 @@ public static class VerifyEmailEndpoint
                   <p>You will be automatically re-directed now.</p>
                   <p><a href="{safeRedirect}">Continue to AlgoDuck</a></p>
                   <p>If nothing happens automatically, click the link above.</p>
-                  <script src="/auth/email-verification/success.js?returnUrl={encodedRedirect}"></script>
+                  <script src="/api/auth/email-verification/success.js?returnUrl={encodedRedirect}"></script>
                 </body>
                 </html>
                 """;

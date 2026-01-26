@@ -21,12 +21,7 @@ public sealed class SendEmailConfirmationHandler : IRequestHandler<SendEmailConf
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailSender _emailSender;
-
-#if DEBUG
-    private const string BaseUrl = "http://localhost:8080";
-#else
     private const string BaseUrl = "https://algoduck.pl";
-#endif
 
     public SendEmailConfirmationHandler(
         UserManager<ApplicationUser> userManager,
@@ -48,7 +43,8 @@ public sealed class SendEmailConfirmationHandler : IRequestHandler<SendEmailConf
         var encodedTokenBytes = Encoding.UTF8.GetBytes(token);
         var encodedToken = WebEncoders.Base64UrlEncode(encodedTokenBytes);
 
-        var confirmationUrl = $"{BaseUrl}/auth/email-verification?userId={user.Id}&token={encodedToken}";
+        var returnUrl = Uri.EscapeDataString($"{BaseUrl}/auth/email-confirmed?userId={user.Id}&token={encodedToken}");
+        var confirmationUrl = $"{BaseUrl}/api/auth/email-verification?userId={user.Id}&token={encodedToken}&returnUrl={returnUrl}";
 
         await _emailSender.SendEmailConfirmationAsync(user.Id, user.Email, confirmationUrl, cancellationToken);
     }
