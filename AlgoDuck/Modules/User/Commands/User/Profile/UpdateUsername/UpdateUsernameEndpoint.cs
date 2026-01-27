@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AlgoDuck.Shared.Exceptions;
 
 namespace AlgoDuck.Modules.User.Commands.User.Profile.UpdateUsername;
 
@@ -22,20 +23,31 @@ public sealed class UpdateUsernameEndpoint : ControllerBase
 
     [HttpPut]
     [Authorize]
-    public async Task<IActionResult> UpdateUsername(UpdateUsernameDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameDto dto, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(dto, cancellationToken);
 
         var userId = GetUserId();
         if (userId == Guid.Empty)
         {
-            return Unauthorized();
+            return Unauthorized(new { message = "Unauthorized" });
         }
 
-        await _handler.HandleAsync(userId, dto, cancellationToken);
-
-        return Ok();
+        try
+        {
+            await _handler.HandleAsync(userId, dto, cancellationToken);
+            return Ok(new { message = "Username updated successfully" });
+        }
+        catch (Shared.Exceptions.ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (UserNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
+
 
     private Guid GetUserId()
     {
