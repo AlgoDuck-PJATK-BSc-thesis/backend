@@ -43,9 +43,10 @@ public sealed class RequestPasswordResetHandler : IRequestPasswordResetHandler
     private string BuildPasswordResetLink(Guid userId, string token)
     {
         var frontendBaseUrl =
+            _configuration["App:FrontendUrl"] ??
             _configuration["CORS:DevOrigins:0"] ??
             _configuration["CORS__DEVORIGINS__0"] ??
-            "http://localhost:5173";
+            "https://algoduck.pl";
 
         var encodedToken = Uri.EscapeDataString(token);
         var encodedUserId = Uri.EscapeDataString(userId.ToString());

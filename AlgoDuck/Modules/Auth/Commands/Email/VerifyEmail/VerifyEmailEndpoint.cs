@@ -184,23 +184,27 @@ public static class VerifyEmailEndpoint
         var safeRedirect = WebUtility.HtmlEncode(redirectUrl ?? frontendBaseUrl);
         var encodedRedirect = Uri.EscapeDataString(redirectUrl ?? frontendBaseUrl);
 
-        return $"""
-                <!doctype html>
-                <html lang="en">
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width,initial-scale=1">
-                  <title>Email confirmed</title>
-                </head>
-                <body>
-                  <h1>Your email address has been confirmed</h1>
-                  <p>You will be automatically re-directed now.</p>
-                  <p><a href="{safeRedirect}">Continue to AlgoDuck</a></p>
-                  <p>If nothing happens automatically, click the link above.</p>
-                  <script src="/api/auth/email-verification/success.js?returnUrl={encodedRedirect}"></script>
-                </body>
-                </html>
-                """;
+        return $$"""
+                 <!doctype html>
+                 <html lang="en">
+                 <head>
+                     <meta charset="utf-8">
+                     <meta name="viewport" content="width=device-width,initial-scale=1">
+                     <title>Email confirmed - AlgoDuck</title>
+                     <script>
+                         setTimeout(() => {
+                             window.location.href = '{{safeRedirect}}';
+                         }, 100);
+                     </script>
+                 </head>
+                 <body>
+                     <h1>Your email address has been confirmed!</h1>
+                     <p>Redirecting to AlgoDuck...</p>
+                     <p><a href="{{safeRedirect}}">Continue manually</a></p>
+                     <script src="/api/auth/email-verification/success.js?returnUrl={{encodedRedirect}}"></script>
+                 </body>
+                 </html>
+                 """;
     }
 
     private static string BuildFailureHtml(string errorMessage)

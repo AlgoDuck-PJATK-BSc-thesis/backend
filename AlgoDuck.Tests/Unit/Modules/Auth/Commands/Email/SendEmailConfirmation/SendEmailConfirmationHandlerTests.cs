@@ -65,8 +65,9 @@ public sealed class SendEmailConfirmationHandlerTests
 
         var token = "token-value-123";
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        var expectedUrl = $"http://localhost:8080/auth/email-verification?userId={userId}&token={encodedToken}";
-
+        var expectedReturnUrl = Uri.EscapeDataString($"https://algoduck.pl/auth/email-confirmed?userId={userId}&token=dG9rZW4tdmFsdWUtMTIz");
+        var expectedUrl = $"https://algoduck.pl/api/auth/email-verification?userId={userId}&token=dG9rZW4tdmFsdWUtMTIz&returnUrl={expectedReturnUrl}";
+        
         userManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
         userManager.Setup(x => x.GenerateEmailConfirmationTokenAsync(user)).ReturnsAsync(token);
 
