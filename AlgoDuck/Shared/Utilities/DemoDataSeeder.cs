@@ -523,7 +523,7 @@ public sealed class DemoDataSeeder
 
         await _context.SaveChangesAsync();
     }
-    
+
     private async Task EnsureUserSubmissionStatsAsync()
     {
         var allUsers = await _context.ApplicationUsers
@@ -639,8 +639,6 @@ public sealed class DemoDataSeeder
         await _context.SaveChangesAsync();
     }
 
-
-    
     private async Task EnsureCohortMessagesAsync(IReadOnlyList<Cohort> cohorts, IReadOnlyList<ApplicationUser> users)
     {
         var desiredMinimum = 16;
@@ -904,8 +902,47 @@ public sealed class DemoDataSeeder
         return list;
     }
 
+    private async Task EnsureAchievementsAsync()
+    {
+        var existingCodes = await _context.Achievements
+            .Select(a => a.Code)
+            .ToListAsync();
+
+        var existingSet = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var now = DateTime.UtcNow;
+
+        foreach (var def in AchievementDefinitions)
+        {
+            if (existingSet.Contains(def.Code))
+            {
+                var existing = await _context.Achievements.FindAsync(def.Code);
+                if (existing != null)
+                {
+                    existing.Name = def.Name;
+                    existing.Description = def.Description;
+                    existing.TargetValue = def.TargetValue;
+                }
+            }
+            else
+            {
+                _context.Achievements.Add(new Achievement
+                {
+                    Code = def.Code,
+                    Name = def.Name,
+                    Description = def.Description,
+                    TargetValue = def.TargetValue,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
     private async Task EnsureUserAchievementsAsync()
     {
+        await EnsureAchievementsAsync();
+
         var dbUsers = await _context.ApplicationUsers.AsNoTracking()
             .Where(u => u.NormalizedUserName != null && u.NormalizedUserName != "ADMIN")
             .Select(u => new
@@ -928,7 +965,7 @@ public sealed class DemoDataSeeder
             .Where(a => userIds.Contains(a.UserId))
             .ToListAsync();
 
-        var map = existing.ToDictionary(a => (a.UserId, a.Code), a => a);
+        var map = existing.ToDictionary(a => (a.UserId, a.AchievementCode), a => a);
 
         var now = DateTime.UtcNow;
 
@@ -946,11 +983,8 @@ public sealed class DemoDataSeeder
                     {
                         Id = Guid.NewGuid(),
                         UserId = user.Id,
-                        Code = def.Code,
-                        Name = def.Name,
-                        Description = def.Description,
+                        AchievementCode = def.Code,
                         CurrentValue = completed ? def.TargetValue : current,
-                        TargetValue = def.TargetValue,
                         IsCompleted = completed,
                         CreatedAt = now,
                         CompletedAt = completed ? now : null
@@ -959,21 +993,6 @@ public sealed class DemoDataSeeder
                     _context.UserAchievements.Add(entity);
                     map[key] = entity;
                     continue;
-                }
-
-                if (!string.Equals(entity.Name, def.Name, StringComparison.Ordinal))
-                {
-                    entity.Name = def.Name;
-                }
-
-                if (!string.Equals(entity.Description, def.Description, StringComparison.Ordinal))
-                {
-                    entity.Description = def.Description;
-                }
-
-                if (entity.TargetValue != def.TargetValue)
-                {
-                    entity.TargetValue = def.TargetValue;
                 }
 
                 entity.IsCompleted = completed;

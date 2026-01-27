@@ -7,15 +7,14 @@ public class UserAchievement : IEntityTypeConfiguration<UserAchievement>
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
-    public string Code { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string AchievementCode { get; set; } = string.Empty;
     public int CurrentValue { get; set; }
-    public int TargetValue { get; set; }
     public bool IsCompleted { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
+    
     public virtual ApplicationUser User { get; set; } = null!;
+    public virtual Achievement Achievement { get; set; } = null!;
 
     public void Configure(EntityTypeBuilder<UserAchievement> builder)
     {
@@ -32,28 +31,14 @@ public class UserAchievement : IEntityTypeConfiguration<UserAchievement>
             .HasColumnName("user_id")
             .IsRequired();
 
-        builder.Property(e => e.Code)
+        builder.Property(e => e.AchievementCode)
             .HasMaxLength(64)
-            .HasColumnName("code")
-            .IsRequired();
-
-        builder.Property(e => e.Name)
-            .HasMaxLength(128)
-            .HasColumnName("name")
-            .IsRequired();
-
-        builder.Property(e => e.Description)
-            .HasMaxLength(512)
-            .HasColumnName("description")
+            .HasColumnName("achievement_code")
             .IsRequired();
 
         builder.Property(e => e.CurrentValue)
             .HasColumnName("current_value")
             .HasDefaultValue(0)
-            .IsRequired();
-
-        builder.Property(e => e.TargetValue)
-            .HasColumnName("target_value")
             .IsRequired();
 
         builder.Property(e => e.IsCompleted)
@@ -74,7 +59,13 @@ public class UserAchievement : IEntityTypeConfiguration<UserAchievement>
             .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("user_achievement_user_ref");
 
-        builder.HasIndex(e => new { e.UserId, e.Code })
+        builder.HasOne(e => e.Achievement)
+            .WithMany(a => a.UserAchievements)
+            .HasForeignKey(e => e.AchievementCode)
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("user_achievement_achievement_ref");
+
+        builder.HasIndex(e => new { e.UserId, e.AchievementCode })
             .IsUnique()
             .HasDatabaseName("user_achievement_user_code_uq");
 

@@ -55,6 +55,8 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
 
     private async Task EnsureInitializedAndSyncInternalAsync(Guid userId, bool createMissing, CancellationToken cancellationToken)
     {
+        await EnsureAchievementCatalogAsync(cancellationToken);
+
         var userMetrics = await _db.Set<ApplicationUser>()
             .AsNoTracking()
             .Where(u => u.Id == userId)
@@ -88,7 +90,7 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
         if (createMissing)
         {
             var existingCodes = achievements
-                .Select(a => a.Code)
+                .Select(a => a.AchievementCode)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             foreach (var def in Catalog)
@@ -104,10 +106,7 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
                 var newAchievement = new UserAchievement
                 {
                     UserId = userId,
-                    Code = def.Code,
-                    Name = def.Name,
-                    Description = def.Description,
-                    TargetValue = def.TargetValue,
+                    AchievementCode = def.Code,
                     CurrentValue = current,
                     IsCompleted = completed,
                     CompletedAt = completed ? now : null,
@@ -121,14 +120,10 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
 
         foreach (var a in achievements)
         {
-            if (!defsByCode.TryGetValue(a.Code, out var def))
+            if (!defsByCode.TryGetValue(a.AchievementCode, out var def))
             {
                 continue;
             }
-
-            if (!string.Equals(a.Name, def.Name, StringComparison.Ordinal)) a.Name = def.Name;
-            if (!string.Equals(a.Description, def.Description, StringComparison.Ordinal)) a.Description = def.Description;
-            if (a.TargetValue != def.TargetValue) a.TargetValue = def.TargetValue;
 
             var metricValue = ResolveMetricValue(def.Metric, coins, xp, solved, emailVerified);
 
@@ -137,7 +132,8 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
                 a.CurrentValue = metricValue;
             }
 
-            if (!a.IsCompleted && a.CurrentValue >= a.TargetValue)
+            var targetValue = def.TargetValue;
+            if (!a.IsCompleted && a.CurrentValue >= targetValue)
             {
                 a.IsCompleted = true;
                 a.CompletedAt ??= now;
@@ -152,17 +148,55 @@ public sealed class UserAchievementSyncService : IUserAchievementSyncService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task EnsureAchievementCatalogAsync(CancellationToken cancellationToken)
+    {
+        var existingCodes = await _db.Achievements
+            .Select(a => a.Code)
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var now = DateTime.UtcNow;
+
+        foreach (var def in Catalog)
+        {
+            if (existingSet.Contains(def.Code))
+            {
+                var existing = await _db.Achievements.FindAsync(new object[] { def.Code }, cancellationToken);
+                if (existing != null)
+                {
+                    existing.Name = def.Name;
+                    existing.Description = def.Description;
+                    existing.TargetValue = def.TargetValue;
+                }
+            }
+            else
+            {
+                _db.Achievements.Add(new Achievement
+                {
+                    Code = def.Code,
+                    Name = def.Name,
+                    Description = def.Description,
+                    TargetValue = def.TargetValue,
+                    CreatedAt = now
+                });
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
     private static int ResolveMetricValue(string metric, int coins, int experience, int amountSolved, bool emailVerified)
     {
         if (string.Equals(metric, "coins", StringComparison.OrdinalIgnoreCase)) return coins;
         if (string.Equals(metric, "experience", StringComparison.OrdinalIgnoreCase)) return experience;
         if (string.Equals(metric, "amount_solved", StringComparison.OrdinalIgnoreCase)) return amountSolved;
-
+    
         if (string.Equals(metric, "onboarding", StringComparison.OrdinalIgnoreCase))
         {
-            return 1;
+            return emailVerified ? 1 : 0;
         }
 
         return 0;
     }
+
 }

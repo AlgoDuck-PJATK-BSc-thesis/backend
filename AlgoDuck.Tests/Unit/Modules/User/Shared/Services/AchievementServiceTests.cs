@@ -1,4 +1,5 @@
 using AlgoDuck.DAL;
+using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Shared.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -40,18 +41,27 @@ public sealed class AchievementServiceTests
         var (queryContext, commandContext) = CreateContexts();
         var service = new AchievementService(queryContext, commandContext);
         var userId = Guid.NewGuid();
-        var achievementCode = "TestAchievement";
+        var achievementCode = "TEST_001";
+
+        await commandContext.Achievements.AddAsync(new Achievement
+        {
+            Code = achievementCode,
+            Name = "Test Achievement",
+            Description = "A test achievement",
+            TargetValue = 1,
+            CreatedAt = DateTime.UtcNow
+        });
+        await commandContext.SaveChangesAsync();
 
         await service.AwardAchievement(userId, achievementCode);
 
         var awarded = await queryContext.UserAchievements
-            .SingleOrDefaultAsync(a => a.UserId == userId && a.Code == achievementCode);
+            .SingleOrDefaultAsync(a => a.UserId == userId && a.AchievementCode == achievementCode);
 
         awarded.Should().NotBeNull();
         awarded.IsCompleted.Should().BeTrue();
-        awarded.Name.Should().Contain("Testachievement");
         awarded.CurrentValue.Should().Be(1);
-        awarded.TargetValue.Should().Be(1);
+        awarded.AchievementCode.Should().Be(achievementCode);
     }
 
     [Fact]
@@ -60,16 +70,24 @@ public sealed class AchievementServiceTests
         var (queryContext, commandContext) = CreateContexts();
         var service = new AchievementService(queryContext, commandContext);
         var userId = Guid.NewGuid();
-        var achievementCode = "TestAchievement";
+        var achievementCode = "TEST_001";
 
-        await commandContext.UserAchievements.AddAsync(new Models.UserAchievement
+        await commandContext.Achievements.AddAsync(new Achievement
+        {
+            Code = achievementCode,
+            Name = "Test Achievement",
+            Description = "A test achievement",
+            TargetValue = 1,
+            CreatedAt = DateTime.UtcNow
+        });
+        await commandContext.SaveChangesAsync();
+
+        await commandContext.UserAchievements.AddAsync(new UserAchievement
         {
             UserId = userId,
-            Code = achievementCode,
-            Name = "Existing",
+            AchievementCode = achievementCode,
             IsCompleted = true,
-            CurrentValue = 1,
-            TargetValue = 1
+            CurrentValue = 1
         });
         await commandContext.SaveChangesAsync();
 
@@ -79,5 +97,56 @@ public sealed class AchievementServiceTests
 
         var countAfter = await queryContext.UserAchievements.CountAsync(a => a.UserId == userId);
         countAfter.Should().Be(countBefore);
+    }
+
+    [Fact]
+    public async Task AwardAchievement_AchievementNotInCatalog_ThrowsException()
+    {
+        var (queryContext, commandContext) = CreateContexts();
+        var service = new AchievementService(queryContext, commandContext);
+        var userId = Guid.NewGuid();
+        var achievementCode = "NONEXISTENT";
+
+        var act = async () => await service.AwardAchievement(userId, achievementCode);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage($"Achievement with code '{achievementCode}' not found in catalog.");
+    }
+
+    [Fact]
+    public async Task GetAchievementsAsync_WithAchievements_ReturnsCorrectData()
+    {
+        var (queryContext, commandContext) = CreateContexts();
+        var service = new AchievementService(queryContext, commandContext);
+        var userId = Guid.NewGuid();
+        var achievementCode = "TEST_001";
+
+        await commandContext.Achievements.AddAsync(new Achievement
+        {
+            Code = achievementCode,
+            Name = "Test Achievement",
+            Description = "A test achievement",
+            TargetValue = 10,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await commandContext.UserAchievements.AddAsync(new UserAchievement
+        {
+            UserId = userId,
+            AchievementCode = achievementCode,
+            CurrentValue = 5,
+            IsCompleted = false
+        });
+        await commandContext.SaveChangesAsync();
+
+        var result = await service.GetAchievementsAsync(userId, CancellationToken.None);
+
+        result.Should().HaveCount(1);
+        result[0].Code.Should().Be(achievementCode);
+        result[0].Name.Should().Be("Test Achievement");
+        result[0].Description.Should().Be("A test achievement");
+        result[0].CurrentValue.Should().Be(5);
+        result[0].TargetValue.Should().Be(10);
+        result[0].IsCompleted.Should().BeFalse();
     }
 }

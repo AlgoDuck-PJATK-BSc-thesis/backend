@@ -2,7 +2,6 @@ using AlgoDuck.DAL;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace AlgoDuck.Modules.User.Shared.Services;
 
@@ -20,17 +19,18 @@ public sealed class AchievementService : IAchievementService
     public async Task<IReadOnlyList<AchievementProgress>> GetAchievementsAsync(Guid userId, CancellationToken cancellationToken)
     {
         var achievements = await _queryDbContext.UserAchievements
+            .Include(ua => ua.Achievement)
             .Where(a => a.UserId == userId)
             .ToListAsync(cancellationToken);
 
         var result = achievements
             .Select(a => new AchievementProgress
             {
-                Code = a.Code,
-                Name = a.Name,
-                Description = a.Description,
+                Code = a.AchievementCode,
+                Name = a.Achievement.Name,
+                Description = a.Achievement.Description,
                 CurrentValue = a.CurrentValue,
-                TargetValue = a.TargetValue,
+                TargetValue = a.Achievement.TargetValue,
                 IsCompleted = a.IsCompleted,
                 CompletedAt = a.CompletedAt
             })
@@ -42,21 +42,27 @@ public sealed class AchievementService : IAchievementService
     public async Task AwardAchievement(Guid userId, string achievementCode, CancellationToken cancellationToken = default)
     {
         var exists = await _queryDbContext.UserAchievements
-            .AnyAsync(a => a.UserId == userId && a.Code == achievementCode, cancellationToken);
+            .AnyAsync(a => a.UserId == userId && a.AchievementCode == achievementCode, cancellationToken);
 
         if (!exists)
         {
-            var name = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(achievementCode.Replace("-", " "));
+            var achievement = await _commandDbContext.Achievements
+                .FirstOrDefaultAsync(a => a.Code == achievementCode, cancellationToken);
+
+            if (achievement == null)
+            {
+                throw new InvalidOperationException($"Achievement with code '{achievementCode}' not found in catalog.");
+            }
+
             _commandDbContext.UserAchievements.Add(new Models.UserAchievement
             {
                 UserId = userId,
-                Code = achievementCode,
-                Name = name,
+                AchievementCode = achievementCode,
                 IsCompleted = true,
                 CompletedAt = DateTime.UtcNow,
-                CurrentValue = 1,
-                TargetValue = 1
+                CurrentValue = achievement.TargetValue,
             });
+
             await _commandDbContext.SaveChangesAsync(cancellationToken);
         }
     }

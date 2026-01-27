@@ -2,7 +2,6 @@ using AlgoDuck.DAL;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.User.Shared.DTOs;
 using AlgoDuck.Modules.User.Shared.Interfaces;
-using AlgoDuck.Shared.Http;
 using AlgoDuck.Shared.Types;
 using Microsoft.EntityFrameworkCore;
 

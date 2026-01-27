@@ -1,9 +1,7 @@
-using System.Text;
 using AlgoDuck.Models;
 using AlgoDuck.Modules.Auth.Commands.Email.SendEmailConfirmation;
 using AlgoDuck.Modules.Auth.Shared.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Moq;
 
 namespace AlgoDuck.Tests.Unit.Modules.Auth.Commands.Email.SendEmailConfirmation;
@@ -64,7 +62,6 @@ public sealed class SendEmailConfirmationHandlerTests
         var user = new ApplicationUser { Id = userId, Email = email };
 
         var token = "token-value-123";
-        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var expectedReturnUrl = Uri.EscapeDataString($"https://algoduck.pl/auth/email-confirmed?userId={userId}&token=dG9rZW4tdmFsdWUtMTIz");
         var expectedUrl = $"https://algoduck.pl/api/auth/email-verification?userId={userId}&token=dG9rZW4tdmFsdWUtMTIz&returnUrl={expectedReturnUrl}";
         
