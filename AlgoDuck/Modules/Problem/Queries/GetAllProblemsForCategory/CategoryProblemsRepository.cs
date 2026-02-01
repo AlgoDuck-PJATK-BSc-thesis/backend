@@ -4,14 +4,13 @@ using AlgoDuck.Modules.Problem.Queries.AdminGetProblemStats;
 using AlgoDuck.Modules.Problem.Shared.Repositories;
 using AlgoDuck.Shared.Http;
 using Microsoft.EntityFrameworkCore;
-using IAwsS3Client = AlgoDuck.Shared.S3.IAwsS3Client;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 
 public interface ICategoryProblemsRepository
 {
     public Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(
-        Guid categoryId, CancellationToken cancellationToken = default);
+        Guid categoryId, Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class CategoryProblemsRepository : ICategoryProblemsRepository
@@ -19,7 +18,7 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
     private readonly ApplicationQueryDbContext _dbContext;
     private readonly ISharedProblemRepository _problemRepository;
 
-    public CategoryProblemsRepository(ApplicationQueryDbContext dbContext, IAwsS3Client awsS3Client,
+    public CategoryProblemsRepository(ApplicationQueryDbContext dbContext,
         ISharedProblemRepository problemRepository)
     {
         _dbContext = dbContext;
@@ -27,7 +26,7 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
     }
 
     public async Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(
-        Guid categoryId, CancellationToken cancellationToken = default)
+        Guid categoryId, Guid userId, CancellationToken cancellationToken = default)
     {
         var categoryRdb =
             await _dbContext.Categories.FirstOrDefaultAsync(c => c.CategoryId == categoryId, cancellationToken);
@@ -48,11 +47,13 @@ public class CategoryProblemsRepository : ICategoryProblemsRepository
                 {
                     Name = t.TagName
                 }).ToList(),
-                RecordedAttempts = p.CodeExecutionStatistics.Select(s => new RecordedAttempt
-                {
-                    AttemptedAtTimestamp = s.ExecutionStartNs,
-                    TestCaseResult = s.TestCaseResult
-                }).OrderByDescending(s => s.AttemptedAtTimestamp).ToList()
+                RecordedAttempts = p.CodeExecutionStatistics
+                    .Where(ces => ces.UserId == userId) 
+                    .Select(s => new RecordedAttempt
+                    {
+                        AttemptedAtTimestamp = s.ExecutionStartNs,
+                        TestCaseResult = s.TestCaseResult
+                    }).OrderByDescending(s => s.AttemptedAtTimestamp).ToList()
             })
             .ToDictionaryAsync(p => p.ProblemId, p => p, cancellationToken: cancellationToken);
 

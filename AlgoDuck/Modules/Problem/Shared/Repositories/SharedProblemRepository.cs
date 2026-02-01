@@ -53,7 +53,6 @@ public class SharedProblemRepository : ISharedProblemRepository
             .Include(p => p.Category)
             .Include(p => p.Difficulty)
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken: cancellationToken);
-    
 
         if (problem == null)
             return Result<ProblemDto, ErrorObject<string>>.Err(ErrorObject<string>.NotFound($"Problem {problemId} not found"));
@@ -113,7 +112,7 @@ public class SharedProblemRepository : ISharedProblemRepository
 
         if (testCaseRes.IsErr)
             return Result<ICollection<TestCaseJoined>, ErrorObject<string>>.Err(testCaseRes.AsT1);
-
+        
         return Result<ICollection<TestCaseJoined>, ErrorObject<string>>.Ok(testCaseRes.AsT0.TestCases.Select(t => new
         {
             dbTestCase = exerciseDbPartialTestCases[t.TestCaseId],
@@ -130,7 +129,8 @@ public class SharedProblemRepository : ISharedProblemRepository
             ProblemProblemId = exerciseId,
             Setup = t.S3TestCase.Setup,
             TestCaseId = t.dbTestCase.TestCaseId,
-            OrderMatters = t.dbTestCase.OrderMatters
+            OrderMatters = t.dbTestCase.OrderMatters,
+            InPlace = t.dbTestCase.InPlace,
         }).ToList());
     }
 }

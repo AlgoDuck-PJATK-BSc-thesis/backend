@@ -22,6 +22,9 @@ public abstract class ItemOwnership : IEntityTypeConfiguration<ItemOwnership>
             .HasValue<DuckOwnership>("duck")
             .HasValue<PlantOwnership>("plant");
 
+        builder.Property<string>("ownership_type")
+            .HasMaxLength(16);
+        
         builder.Property(e => e.PurchasedAt)
             .HasColumnName("purchased_at");
         

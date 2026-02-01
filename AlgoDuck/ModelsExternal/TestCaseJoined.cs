@@ -10,7 +10,8 @@ public class TestCaseJoined
     public required string DisplayRes { get; set; }
     public required int VariableCount { get; set; } /* Technically not necessary but helps us create more deterministic variable substitution keys */
     public required string Setup { get; set; } = string.Empty; // Arrange
-    public required string[] Call { get; set; } = []; // Act
+    public required List<TestCaseCallArg> Call { get; set; } = []; // Act
     public required string Expected { get; set; } = string.Empty; // Assert
     public bool OrderMatters { get; set; }
+    public bool InPlace { get; set; }
 }

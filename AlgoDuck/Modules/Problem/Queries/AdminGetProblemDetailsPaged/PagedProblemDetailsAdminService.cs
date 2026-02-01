@@ -22,12 +22,7 @@ public class PagedProblemDetailsAdminService : IPagedProblemDetailsAdminService
     public async Task<Result<PageData<ProblemDetailsDto>, ErrorObject<string>>> GetProblemDetailsAsync(PagedRequestWithAttribution<ColumnFilterRequest<FetchableColumn>> columnFilterRequest,
         CancellationToken cancellationToken = default)
     {
-        var res = await _pagedProblemDetailsAdminRepository.GetProblemDetailsAsync(columnFilterRequest,
+        return await _pagedProblemDetailsAdminRepository.GetProblemDetailsAsync(columnFilterRequest,
             cancellationToken);
-        if (res.IsOk)
-        {
-            Console.WriteLine(JsonSerializer.Serialize(res.AsOk!));
-        }
-        return res;
     }
 }

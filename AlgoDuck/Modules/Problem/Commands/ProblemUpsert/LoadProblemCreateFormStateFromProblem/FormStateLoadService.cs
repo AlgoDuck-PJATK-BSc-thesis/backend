@@ -44,13 +44,14 @@ public class FormStateLoadService : IFormStateLoadService
             await _problemRepository.GetProblemInfoAsync(problemId, cancellationToken: cancellationToken);
         if (problemInfosResult.IsErr)
             return Result<UpsertProblemDto, ErrorObject<string>>.Err(
-                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+                ErrorObject<string>.NotFound($"problem info {problemId} not found"));
         var problemInfos = problemInfosResult.AsOk!;
 
         var problemTestCasesResult = await _problemRepository.GetTestCasesAsync(problemId, cancellationToken);
         if (problemTestCasesResult.IsErr)
             return Result<UpsertProblemDto, ErrorObject<string>>.Err(
-                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+                ErrorObject<string>.NotFound($"test cases for problem {problemId} not found"));
+        
         var problemTestCases = problemTestCasesResult.AsOk!;
 
 
@@ -58,9 +59,9 @@ public class FormStateLoadService : IFormStateLoadService
             await _formStateLoadRepository.GetFullProblemDataAsync(problemId, cancellationToken);
         if (problemDataFullResult.IsErr)
             return Result<UpsertProblemDto, ErrorObject<string>>.Err(
-                ErrorObject<string>.NotFound($"template for problem {problemId} not found"));
+                ErrorObject<string>.NotFound($"full problem data {problemId} not found"));
+        
         var problemDataFull = problemDataFullResult.AsOk!;
-        Console.WriteLine(JsonSerializer.Serialize(problemTestCases));
 
 
         /*
@@ -70,7 +71,6 @@ public class FormStateLoadService : IFormStateLoadService
          * (not that it's let me down before but better safe than sorry)
          */
 
-        Console.WriteLine(problemTemplate.Template);
         var templateBuilder = new StringBuilder(problemTemplate.Template);
         CodeAnalysisResult analysisResult;
         try
@@ -80,7 +80,7 @@ public class FormStateLoadService : IFormStateLoadService
             if (analysisResult.MainMethodIndices ==
                 null) /* vague error since main is autoinjected so while the type technically says nullable it's not really */
                 return Result<UpsertProblemDto, ErrorObject<string>>.Err(
-                    ErrorObject<string>.InternalError($"Could not parse template"));
+                    ErrorObject<string>.InternalError("Could not parse template"));
         }
         catch (JavaSyntaxException ex)
         {
@@ -114,7 +114,7 @@ public class FormStateLoadService : IFormStateLoadService
     }
 
     private Result<TestCaseDto, ErrorObject<string>> BuildTestCaseDto(TestCaseJoined testCase, int testCaseIndex,
-        KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? callFunc, ICollection<AstNodeScopeMemberVar> callArgs,
+        KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? callFunc, IEnumerable<FunctionParam> callArgs,
         AstNodeScopeMemberVar? expected)
     {
         if (callFunc == null)
@@ -131,18 +131,14 @@ public class FormStateLoadService : IFormStateLoadService
             TestCaseId = testCase.TestCaseId,
             ArrangeB64 =
                 Convert.ToBase64String(Encoding.UTF8.GetBytes(GetArrangeWrapped(testCase.Setup, testCaseIndex))),
-            CallArgs = callArgs.Select(ca => new FunctionParam()
-            {
-                Name = ca.Identifier?.Value ?? "<undefined>",
-                Type = ca.Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString())
-            }).ToList(),
+            CallArgs = callArgs.ToList(),
             CallMethod = new MethodRecommendation
             {
                 AccessModifier = callFunc.Value.Key.AccessModifier.ToString(),
-                FunctionParams = callFunc.Value.Key.FuncArgs.Select(fa => new FunctionParam()
+                FunctionParams = callFunc.Value.Key.FuncArgs.Select(fa => new FunctionParam
                 {
                     Name = fa.Identifier?.Value ?? "<undefined>",
-                    Type = fa.Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString())
+                    Type = fa.Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString()),
                 }).ToList(),
                 Generics = callFunc.Value.Key.GenericTypes.Select(g => g.ToString()).ToList(),
                 MethodName = callFunc.Value.Key.Identifier?.Value ?? "<undefined>",
@@ -161,6 +157,7 @@ public class FormStateLoadService : IFormStateLoadService
                 Name = expected.Identifier?.Value ?? "<undefined>",
                 Type = expected.Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString())
             },
+            InPlace = testCase.InPlace
         });
     }
 
@@ -173,11 +170,9 @@ public class FormStateLoadService : IFormStateLoadService
         InterpolateTestCaseEntrypointClassname(testCase, analysisResult);
         InterpolateTestCasePlaceholders(testCase, index);
 
-        Console.WriteLine(JsonSerializer.Serialize(testCase));
         var testCaseBuilder = new StringBuilder(template);
         testCaseBuilder.Insert(analysisResult.MainMethodIndices.MethodFileEndIndex, testCase.Setup);
 
-        Console.WriteLine(testCaseBuilder);
         var analyzer = new AnalyzerSimple(testCaseBuilder);
         var tcAnalysisResult = analyzer.AnalyzeUserCode(ExecutionStyle.Execution);
 
@@ -188,13 +183,19 @@ public class FormStateLoadService : IFormStateLoadService
 
         List<AstNodeScopeMemberVar> variables = [];
         analyzer.GetAllVariablesAccessibleFromScope(tcAnalysisResult.Main.FuncScope.OwnScope, variables);
-        Console.WriteLine(testCaseBuilder);
 
-        var callVars = variables.Where(v => testCase.Call.Contains(v.Identifier?.Value)).ToList();
+        var variableDict = variables.ToDictionary(x => x.Identifier!.Value!, x => x);
+
+        var functionParams = testCase.Call.Where(tc => variableDict.ContainsKey(tc.VarName)).Select(tc => new FunctionParam
+        {
+            Name = tc.VarName,
+            IsMutated = tc.IsMutated,
+            Type = variableDict[tc.VarName].Type.Match(t1 => t1.ToString(), t2 => t2.ToString(), t3 => t3.ToString()),
+        });
 
         var expectedVar = variables.FirstOrDefault(v => testCase.Expected == v.Identifier?.Value);
 
-        return BuildTestCaseDto(testCase, index, callMethodWithQualifiedPath, callVars, expectedVar);
+        return BuildTestCaseDto(testCase, index, callMethodWithQualifiedPath, functionParams, expectedVar);
     }
 
     private static string GetArrangeWrapped(string content, int testCaseIndex) =>
@@ -209,27 +210,17 @@ public class FormStateLoadService : IFormStateLoadService
 
     private static void InterpolateTestCasePlaceholders(TestCaseJoined testCase, int index)
     {
-        Console.WriteLine(index);
-        Console.WriteLine($"Old setup: {testCase.Setup}");
-        Console.WriteLine(testCase.VariableCount);
         for (var i = 0; i < testCase.VariableCount; ++i)
         {
             var interpolationString = $"{{tc_{index}_var_{i}}}";
-            Console.WriteLine(interpolationString);
             testCase.Setup = testCase.Setup.Replace(interpolationString, $"var{i}");
-            for (var j = 0; j < testCase.Call.Length; j++)
+            foreach (var testCaseCallArg in testCase.Call)
             {
-                testCase.Call[j] = testCase.Call[j].Replace(interpolationString, $"var{i}");
+                testCaseCallArg.VarName = testCaseCallArg.VarName.Replace(interpolationString, $"var{i}");
             }
 
             testCase.Expected = testCase.Expected.Replace(interpolationString, $"var{i}");
         }
-
-        Console.WriteLine($"New setup: {testCase.Setup}");
-        Console.WriteLine();
-        Console.WriteLine();
-        Console.WriteLine();
-        Console.WriteLine();
     }
 
     private static KeyValuePair<AstNodeMemberFunc<AstNodeClass>, string>? ResolveCallMethodWithQualifiedName(

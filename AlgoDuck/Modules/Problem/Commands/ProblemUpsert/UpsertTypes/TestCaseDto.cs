@@ -14,5 +14,7 @@ public class TestCaseDto
     public required FunctionParam Expected { get; set; }
     public required bool IsPublic { get; set; }
     public required bool OrderMatters { get; set; }
+    public required bool InPlace { get; set; }
+    
     internal string? ResolvedFunctionCall { get; set; }
 }

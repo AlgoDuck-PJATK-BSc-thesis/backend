@@ -37,8 +37,6 @@ public class LoadAutoSaveRepository : ILoadAutoSaveRepository
         if (autoSaveGetResult.IsErr)
             return Result<AutoSaveResponseDto?, ErrorObject<string>>.Err(autoSaveGetResult.AsT1);
 
-        Console.WriteLine(autoSaveGetResult.AsOk!.UserCodeB64);
-
         return Result<AutoSaveResponseDto?, ErrorObject<string>>.Ok(new AutoSaveResponseDto
         {
             ProblemId = autoSaveGetResult.AsT0.ProblemId,

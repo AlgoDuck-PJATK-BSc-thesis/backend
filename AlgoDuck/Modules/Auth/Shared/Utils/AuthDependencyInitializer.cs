@@ -462,8 +462,6 @@ public static class AuthDependencyInitializer
                 {
                     OnRemoteFailure = ctx =>
                     {
-                        Console.WriteLine($"[MS OAUTH ERROR] {ctx.Failure?.Message}");
-                        Console.WriteLine($"[MS OAUTH ERROR] Inner: {ctx.Failure?.InnerException?.Message}");
                         return RedirectRemoteFailure(ctx, configuration, "microsoft");
                     },
                     OnRedirectToIdentityProvider = context =>

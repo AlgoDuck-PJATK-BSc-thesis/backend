@@ -28,7 +28,6 @@ public class CreateLayoutService: ICreateLayoutService
             
             if (editorLayout.Select(l => l.Name).Contains(createDto.LayoutName))
             {
-                Console.WriteLine("duplicate");
                 return Result<LayoutCreateResultDto, ErrorObject<string>>.Err(
                     ErrorObject<string>.BadRequest("Duplicate layout name"));
             }

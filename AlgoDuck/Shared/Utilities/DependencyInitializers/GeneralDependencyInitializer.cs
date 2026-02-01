@@ -45,9 +45,6 @@ internal static class GeneralDependencyInitializer
             keysPath = "/var/app-keys";
         }
 
-        Console.WriteLine($"[DATA PROTECTION] Keys path: {keysPath}");
-        Console.WriteLine($"[DATA PROTECTION] Directory exists: {Directory.Exists(keysPath)}");
-
         try
         {
             Directory.CreateDirectory(keysPath);
@@ -64,9 +61,6 @@ internal static class GeneralDependencyInitializer
             Directory.CreateDirectory(fallback);
             keysPath = fallback;
         }
-
-        Console.WriteLine($"[DATA PROTECTION] After create, exists: {Directory.Exists(keysPath)}");
-        Console.WriteLine($"[DATA PROTECTION] Final keys path: {keysPath}");
 
         builder.Services.AddDataProtection()
             .PersistKeysToFileSystem(new DirectoryInfo(keysPath))

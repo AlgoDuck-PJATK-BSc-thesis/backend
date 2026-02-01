@@ -71,9 +71,7 @@ public class AwsS3Client : IAwsS3Client
     public async Task<Result<T, ErrorObject<string>>> GetJsonObjectByPathAsync<T>(string path,
         CancellationToken cancellationToken = default) where T : class
     {
-        Console.WriteLine(path);
         var stringResult = await GetDocumentStringByPathAsync(path, cancellationToken);
-        Console.WriteLine(stringResult);
         if (stringResult.IsErr)
             return Result<T, ErrorObject<string>>.Err(stringResult.AsT1);
 
@@ -171,6 +169,8 @@ public class AwsS3Client : IAwsS3Client
             await using (var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), leaveOpen: true))
             {
                 serializer.Serialize(writer, obj);
+                await writer.WriteLineAsync();
+                await writer.FlushAsync(cancellationToken);
             }
 
             memoryStream.Position = 0;

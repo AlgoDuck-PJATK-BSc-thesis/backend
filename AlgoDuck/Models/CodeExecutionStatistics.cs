@@ -30,6 +30,9 @@ public class CodeExecutionStatistics : IEntityTypeConfiguration<CodeExecutionSta
         builder.HasKey(x => x.CodeExecutionId)
             .HasName("code_execution_statistics_id");
 
+        builder.HasIndex(x => x.ExecutionStartNs).HasMethod("brin");
+
+        
         builder.Property(x => x.CodeExecutionId)
             .HasColumnName("code_execution_statistics_id");
         

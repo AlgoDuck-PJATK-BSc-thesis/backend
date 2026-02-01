@@ -85,7 +85,6 @@ public class CreateProblemRepository : ICreateProblemRepository
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(p => p.Status, ProblemStatus.Verified),
                 cancellationToken);
-
         if (rowsUpdated == 0)
         {
             return Result<Guid, ErrorObject<string>>.Err(
@@ -115,11 +114,14 @@ public class CreateProblemRepository : ICreateProblemRepository
 
             dbTestCases.Add(new TestCase
             {
-                CallFunc = tc.CallFunc ?? "", // Should be non-null at this point
+                CallFunc = tc.CallFunc ?? "",
                 Display = tc.Display,
                 IsPublic = tc.IsPublic,
+                OrderMatters = tc.OrderMatters,
                 DisplayRes = tc.DisplayRes,
-                TestCaseId = testCaseId
+                TestCaseId = testCaseId,
+                ArrangeVariableCount = tc.VariableCount,
+                InPlace = tc.InPlace
             });
         }
 

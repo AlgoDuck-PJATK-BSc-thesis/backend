@@ -110,18 +110,6 @@ public class TestCaseProcessor : ITestCaseProcessor
         return content.Substring(startIndex, length);
     }
 
-    private static (int, int) ExtractMainMethodLengthAndStartingIndex(CodeAnalysisResult analysis)
-    {
-        if (analysis.MainMethodIndices == null)
-            return (0, 0);
-        
-        var startIndex = analysis.MainMethodIndices.MethodFileBeginIndex + 1;
-        var length = analysis.MainMethodIndices.MethodFileEndIndex 
-                     - analysis.MainMethodIndices.MethodFileBeginIndex - 1;
-        
-        return (startIndex, length);
-    }
-
     private static Dictionary<string, string> CreateVariableMappings(List<AstNodeScopeMemberVar> variables, int testCaseIndex)
     {
         return variables
@@ -161,9 +149,11 @@ public class TestCaseProcessor : ITestCaseProcessor
         return new TestCaseJoined
         {
             TestCaseId = testCase.TestCaseId ?? Guid.NewGuid(),
-            Call = testCase.CallArgs
-                .Select(ca => arrange.VariableMappings.TryGetValue(ca.Name, out var mapped) ? mapped : ca.Name)
-                .ToArray(),
+            Call = testCase.CallArgs.Select(ca => new TestCaseCallArg
+                {
+                    VarName = arrange.VariableMappings.TryGetValue(ca.Name, out var mapped) ? mapped : ca.Name,
+                    IsMutated = ca.IsMutated
+                }).ToList(),
             CallFunc = testCase.ResolvedFunctionCall ?? "",
             Display = testCase.Display,
             DisplayRes = testCase.DisplayRes,
@@ -174,7 +164,8 @@ public class TestCaseProcessor : ITestCaseProcessor
             OrderMatters = testCase.OrderMatters,
             ProblemProblemId = Guid.Empty,
             Setup = arrange.ArrangeStripped,
-            VariableCount = arrange.VariableMappings.Count
+            VariableCount = arrange.VariableMappings.Count,
+            InPlace = testCase.InPlace,
         };
     }
 }

@@ -5,7 +5,6 @@ namespace AlgoDuck.Modules.Problem.Commands.ProblemUpsert.UpsertTypes;
 
 public class UpsertProblemDto
 {
-    private const int MaxCodeLengthBytes = 128 * 1024;
     public required string TemplateB64 { get; set; }
     public required string ProblemTitle { get; set; }
     public required string ProblemDescription { get; set; }

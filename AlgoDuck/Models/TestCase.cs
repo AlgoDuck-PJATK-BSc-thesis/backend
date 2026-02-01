@@ -20,6 +20,8 @@ public partial class TestCase : IEntityTypeConfiguration<TestCase>
     public string Display { get; set; } = null!;
 
     public string DisplayRes { get; set; } = null!;
+    public bool InPlace { get; set; }
+    
 
     public virtual Problem ProblemProblem { get; set; } = null!;
 
@@ -43,6 +45,8 @@ public partial class TestCase : IEntityTypeConfiguration<TestCase>
         builder.Property(e => e.OrderMatters)
             .HasColumnName("order_matters");
 
+        builder.Property(e => e.InPlace).HasColumnName("in_place");
+        
         builder.Property(e => e.ArrangeVariableCount)
             .HasColumnName("arrange_variable_count");
         

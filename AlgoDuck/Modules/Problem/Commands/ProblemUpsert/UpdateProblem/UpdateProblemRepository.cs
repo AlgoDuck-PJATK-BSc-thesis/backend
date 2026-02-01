@@ -42,8 +42,6 @@ public class UpdateProblemRepository : IUpdateProblemRepository
             return Result<Guid, ErrorObject<string>>.Err(
                 ErrorObject<string>.NotFound($"Problem with id: {problemId} not found"));
 
-        Console.WriteLine(problem.CategoryId);
-        Console.WriteLine(upsertProblemDto.CategoryId);
         problem.CategoryId = upsertProblemDto.CategoryId;
         problem.ProblemTitle = upsertProblemDto.ProblemTitle;
         problem.LastUpdatedAt = DateTime.UtcNow;
@@ -73,6 +71,7 @@ public class UpdateProblemRepository : IUpdateProblemRepository
             problemTestCase.DisplayRes = testCase.DisplayRes;
             problemTestCase.IsPublic = testCase.IsPublic;
             problemTestCase.OrderMatters = testCase.OrderMatters;
+            problemTestCase.InPlace = testCase.InPlace;
             testCases.Remove(problemTestCase.TestCaseId);
         }
 
@@ -113,9 +112,11 @@ public class UpdateProblemRepository : IUpdateProblemRepository
                 CallFunc = tc.CallFunc,
                 Display = tc.Display,
                 IsPublic = tc.IsPublic,
+                OrderMatters = tc.OrderMatters,
                 DisplayRes = tc.DisplayRes,
                 TestCaseId = testCaseId,
-                ArrangeVariableCount = tc.VariableCount
+                ArrangeVariableCount = tc.VariableCount,
+                InPlace = tc.InPlace
             });
         }
 

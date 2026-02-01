@@ -76,15 +76,32 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
     public async Task<Result<ChurnMetrics, ErrorObject<string>>> GetChurnMetricsAsync(Guid problemId,
         CancellationToken cancellationToken = default)
     {
+        var snapshotUserIds = await _dbContext.UserSolutionSnapshots
+            .Where(p => p.ProblemId == problemId)
+            .Select(u => u.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var statisticsUserIds = await _dbContext.CodeExecutionStatisticss
+            .Where(p => p.ProblemId == problemId && p.ExecutionType == JobType.Testing)
+            .Select(u => u.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var allInteractedUserIds = snapshotUserIds
+            .Union(statisticsUserIds)
+            .Distinct()
+            .Count();
+
         return Result<ChurnMetrics, ErrorObject<string>>.Ok(new ChurnMetrics
         {
-            UserStartCount = await _dbContext.UserSolutionSnapshots.Where(p => problemId == p.ProblemId)
-                .Select(u => u.UserId).Distinct().CountAsync(cancellationToken: cancellationToken),
-            UserFinishCount = await _dbContext.UserSolutions.Where(p => problemId == p.ProblemId).Select(u => u.UserId)
-                .Distinct().CountAsync(cancellationToken),
-            UserSubmitCount = await _dbContext.CodeExecutionStatisticss
-                .Where(p => problemId == p.ProblemId && p.ExecutionType == JobType.Testing).Select(u => u.UserId)
-                .Distinct().CountAsync(cancellationToken),
+            UserStartCount = allInteractedUserIds,
+            UserFinishCount = await _dbContext.CodeExecutionStatisticss
+                .Where(p => p.ProblemId == problemId && p.TestCaseResult == TestCaseResult.Accepted)
+                .Select(u => u.UserId)
+                .Distinct()
+                .CountAsync(cancellationToken),
+            UserSubmitCount = statisticsUserIds.Count,
         });
     }
 
@@ -141,7 +158,7 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
         var runtimeBuckets = Enumerable.Range(0, runtimeBucketCount)
             .Select(i => new BucketData
             {
-                Range = $"{NanosToMillis(i * performanceRequest.RuntimeBucketSize + minRuntime)} - {NanosToMillis((i + 1) * performanceRequest.RuntimeBucketSize + minRuntime)}",
+                Range = $"{NanosToMillis((long)i * performanceRequest.RuntimeBucketSize + minRuntime)} - {NanosToMillis(((long)i + 1) * performanceRequest.RuntimeBucketSize + minRuntime)}",
                 Count = runtimeCounts.GetValueOrDefault(i, 0)
             }).ToList();
 
@@ -156,7 +173,7 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
         var memoryUsageBuckets = Enumerable.Range(0, memoryBucketCount)
             .Select(i => new BucketData
             {
-                Range = $"{i * performanceRequest.MemoryBucketSize + minMemory} - {(i + 1) * performanceRequest.MemoryBucketSize + minMemory}KB",
+                Range = $"{(long)i * performanceRequest.MemoryBucketSize + minMemory} - {((long)i + 1) * performanceRequest.MemoryBucketSize + minMemory}KB",
                 Count = memoryCounts.GetValueOrDefault(i, 0)
             }).ToList();
 
@@ -227,7 +244,6 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
                 IsAccepted = p.TestCaseResult == TestCaseResult.Accepted
             }).ToListAsync(cancellationToken: cancellationToken);
 
-        Console.WriteLine(attemptMetrics.Count);
         return Result<AttemptMetrics, ErrorObject<string>>.Ok(new AttemptMetrics
         {
             AcceptanceRate = attemptMetrics.Select(a => a.IsAccepted ? 1 : 0).DefaultIfEmpty().Average(),
@@ -245,12 +261,11 @@ public class ProblemDetailsAdminRepository : IProblemDetailsAdminRepository
         var lower = request.StartDate.DateTimeToNanos();
         var upper = request.EndDate.DateTimeToNanos();
         var submissions = await _dbContext.CodeExecutionStatisticss
-            .Include(e => e.TestingResults)
             .Where(e => e.ProblemId == request.ProblemId && e.ExecutionType == JobType.Testing)
             .Select(e => new
             {
                 Timestamp = e.ExecutionStartNs,
-                IsPassed = e.TestingResults.All(tr => tr.IsPassed)
+                IsPassed = e.TestCaseResult == TestCaseResult.Accepted
             })
             .Where(e => e.Timestamp >= lower && e.Timestamp <= upper)
             .ToListAsync(cancellationToken);

@@ -27,6 +27,8 @@ public abstract class Item : IEntityTypeConfiguration<Item>
             .HasValue<DuckItem>("duck")
             .HasValue<PlantItem>("plant");
 
+        builder.Property<string>("type").HasMaxLength(16);
+        
         builder.Property(e => e.ItemId)
             .ValueGeneratedNever()
             .HasColumnName("item_id");

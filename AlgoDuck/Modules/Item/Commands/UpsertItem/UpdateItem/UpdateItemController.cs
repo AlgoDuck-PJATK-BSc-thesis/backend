@@ -63,11 +63,6 @@ public class UpdateItemService : IUpdateItemService
 
     public async Task<Result<ItemUpdateResult, ErrorObject<string>>> UpdateItemAsync(ItemUpdateRequestDto updateItemUpdateRequestDto, CancellationToken cancellationToken = default)
     {
-        foreach (var formFile in updateItemUpdateRequestDto.Sprites)
-        {
-            Console.WriteLine(formFile.FileName);
-        }
-
         return await _updateItemRepository.UpdateItemAsync(updateItemUpdateRequestDto, cancellationToken);
     }
 }
@@ -156,11 +151,6 @@ public class UpdateItemRepository : IUpdateItemRepository
             PlantItem => "plant",
             _ => throw new ArgumentOutOfRangeException(nameof(item), item, null)
         };
-        Console.WriteLine(itemTypeName);
-        foreach (var valueLegalFileName in _legalFileNames.Value.LegalFileNames)
-        {
-            Console.WriteLine($"key: {valueLegalFileName.Key} | value: {JsonSerializer.Serialize(valueLegalFileName.Value)}");
-        }
         var objectKeyBase = $"{itemTypeName}/{item.ItemId}";
 
         List<FilePostingResult> results = [];

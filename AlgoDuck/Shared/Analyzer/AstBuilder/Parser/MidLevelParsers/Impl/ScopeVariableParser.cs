@@ -1,10 +1,11 @@
+using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.NodeUtils.Enums;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.AstNodes.Statements;
-using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Exceptions;
 using AlgoDuck.Shared.Analyzer._AnalyzerUtils.Types;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.LowLevelParsers;
 using AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Abstr;
 using AlgoDuck.Shared.Analyzer.AstBuilder.SymbolTable;
+using OneOf;
 
 namespace AlgoDuck.Shared.Analyzer.AstBuilder.Parser.MidLevelParsers.Impl;
 
@@ -13,11 +14,33 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition, 
     private readonly SymbolTableBuilder _symbolTableBuilder = symbolTableBuilder;
     public AstNodeScopeMemberVar ParseScopeMemberVariableDeclaration(MemberModifier[] permittedModifiers)
     {
+        var modifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]);
+        var type = ParseStandardType();
         
-        AstNodeScopeMemberVar scopedVar = new()
+        var scopedVar = ParseSingleVariable(modifiers, type);
+        
+        while (CheckTokenType(TokenType.Comma))
         {
-            VarModifiers = ParseModifiers([MemberModifier.Static, MemberModifier.Final]),
-            Type = ParseStandardType(),
+            ConsumeToken();
+            ParseSingleVariable(modifiers, type);
+        }
+
+        if (CheckTokenType(TokenType.Semi))
+        {
+            ConsumeToken();
+        }
+        
+        return scopedVar;
+    }
+
+    private AstNodeScopeMemberVar ParseSingleVariable(
+        List<MemberModifier> modifiers,
+        OneOf<MemberType, ArrayType, ComplexTypeDeclaration> type)
+    {
+        var scopedVar = new AstNodeScopeMemberVar
+        {
+            VarModifiers = modifiers,
+            Type = type,
             Identifier = ConsumeIfOfType("ident", TokenType.Ident)
         };
 
@@ -27,20 +50,13 @@ public class ScopeVariableParser(List<Token> tokens, FilePosition filePosition, 
             Name = scopedVar.Identifier!.Value!,
             SymbolType = scopedVar.Type,
         });
-        
-        if (CheckTokenType(TokenType.Assign))//TODO suboptimal
+
+        if (CheckTokenType(TokenType.Assign))
         {
             ConsumeToken();
-            while (!CheckTokenType(TokenType.Semi))
-            {
-                scopedVar.VariableValue = ParseExpr();
-            }
+            scopedVar.VariableValue = ParseExpr();
         }
 
-        if (CheckTokenType(TokenType.Semi))
-        {
-            ConsumeToken(); 
-        }
         return scopedVar;
     }
 }

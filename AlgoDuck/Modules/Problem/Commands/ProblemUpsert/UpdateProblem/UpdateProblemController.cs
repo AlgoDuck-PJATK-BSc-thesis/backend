@@ -33,7 +33,6 @@ public class UpdateProblemController : ControllerBase
       var validationResult = await  _validator.ValidateAsync(upsertProblemDto, cancellationToken);
       if (!validationResult.IsValid)
          return BadRequest(validationResult.Errors);
-      
       return await User
          .GetUserId()
          .BindAsync(async userId =>

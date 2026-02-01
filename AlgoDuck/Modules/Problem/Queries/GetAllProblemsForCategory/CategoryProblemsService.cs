@@ -1,10 +1,11 @@
+using System.Text.Json;
 using AlgoDuck.Shared.Http;
 
 namespace AlgoDuck.Modules.Problem.Queries.GetAllProblemsForCategory;
 
 public interface ICategoryProblemsService
 {
-    public Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default);
+    public Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, Guid userId, CancellationToken cancellationToken = default);
 }
 
 public class CategoryProblemsService : ICategoryProblemsService
@@ -16,8 +17,9 @@ public class CategoryProblemsService : ICategoryProblemsService
         _categoryProblemsRepository = categoryProblemsRepository;
     }
 
-    public async Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default)
+    public async Task<Result<CategoryDto, ErrorObject<string>>> GetAllProblemsForCategoryAsync(Guid categoryId, Guid userId, CancellationToken cancellationToken = default)
     {
-        return await _categoryProblemsRepository.GetAllProblemsForCategoryAsync(categoryId, cancellationToken);
+        return await _categoryProblemsRepository.GetAllProblemsForCategoryAsync(categoryId, userId,
+            cancellationToken);
     }
 }

@@ -20,8 +20,6 @@ public class UserSolutionsController : ControllerBase
 
     public async Task<IActionResult> GetAllUserSolutionsAsync([FromQuery] Guid problemId, [FromQuery] int pageSize, [FromQuery] int currentPage, CancellationToken cancellationToken)
     {
-        
-        Console.WriteLine("huh");
         var userIdResult = User.GetUserId();
         if (userIdResult.IsErr)
             return userIdResult.ToActionResult();

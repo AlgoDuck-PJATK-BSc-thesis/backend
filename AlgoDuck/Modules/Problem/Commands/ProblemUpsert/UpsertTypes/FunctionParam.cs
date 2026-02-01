@@ -7,4 +7,5 @@ public class FunctionParam
     public required string Type { get; set; }
     
     public required string Name { get; set; }
+    public bool IsMutated { get; set; } = false;
 }

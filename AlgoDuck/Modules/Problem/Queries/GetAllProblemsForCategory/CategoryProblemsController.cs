@@ -1,3 +1,4 @@
+using AlgoDuck.Modules.Item.Queries.GetOwnedUsedItemsByUserId;
 using AlgoDuck.Shared.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,8 +20,10 @@ public class CategoryProblemsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllProblemsForCategory([FromQuery] Guid categoryId, CancellationToken cancellationToken)
     {
-        return await _categoryProblemsService
-            .GetAllProblemsForCategoryAsync(categoryId, cancellationToken)
+        return await User
+            .GetUserId()
+            .BindAsync(async userId => await _categoryProblemsService.GetAllProblemsForCategoryAsync(categoryId, userId, cancellationToken))
             .ToActionResultAsync();
+ 
     }
 }
