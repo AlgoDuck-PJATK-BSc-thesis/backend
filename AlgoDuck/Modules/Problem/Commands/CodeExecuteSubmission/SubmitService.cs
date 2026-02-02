@@ -106,6 +106,12 @@ internal sealed class SubmitService : IExecutorSubmitService, IAsyncDisposable
         {
             return await SendExecutionRequestToQueueAsync(userSolutionData, submission.UserId,  cancellationToken);
         }
+
+        if (!codeAnalysisResult.PassedValidation)
+        {
+            return Result<ExecutionEnqueueingResultDto, ErrorObject<string>>.Err(
+                ErrorObject<string>.BadRequest("Illegal template modification. \nCannot proceed testing. Exiting"));
+        }
         
         var helper = new ExecutorFileOperationHelper
         {

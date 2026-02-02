@@ -44,7 +44,10 @@ public class AwsS3Client : IAwsS3Client
 
             while (totalBytesRead < response.ContentLength)
             {
-                var bytesRead = await response.ResponseStream.ReadAsync(buffer, cancellationToken);
+                var bytesRead = await response.ResponseStream.ReadAsync(
+                    buffer.AsMemory(totalBytesRead),
+                    cancellationToken
+                );
                 if (bytesRead == 0) break;
                 totalBytesRead += bytesRead;
             }

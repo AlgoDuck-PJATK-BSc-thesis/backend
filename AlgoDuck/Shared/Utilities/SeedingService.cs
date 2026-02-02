@@ -991,6 +991,7 @@ private async Task SeedTestCases()
                 Display = "head = [1, 2, 3, 4, 5]",
                 DisplayRes = "[5, 4, 3, 2, 1]",
                 ArrangeVariableCount = 11,
+                OrderMatters = true,
                 ProblemProblemId = Guid.Parse("a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d")
             },
             new TestCase
@@ -1000,7 +1001,8 @@ private async Task SeedTestCases()
                 IsPublic = true,
                 Display = "head = [1, 2]",
                 DisplayRes = "[2, 1]",
-                ArrangeVariableCount = 5, 
+                ArrangeVariableCount = 5,
+                OrderMatters = true,
                 ProblemProblemId = Guid.Parse("a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d")
             },
             new TestCase
@@ -1011,6 +1013,7 @@ private async Task SeedTestCases()
                 Display = "head = []",
                 DisplayRes = "[]",
                 ArrangeVariableCount = 2,
+                OrderMatters = true,
                 ProblemProblemId = Guid.Parse("a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d")
             },
             new TestCase
@@ -1020,7 +1023,8 @@ private async Task SeedTestCases()
                 IsPublic = false,
                 Display = "head = [1]",
                 DisplayRes = "[1]",
-                ArrangeVariableCount = 3, 
+                ArrangeVariableCount = 3,
+                OrderMatters = true,
                 ProblemProblemId = Guid.Parse("a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d")
             },
             
